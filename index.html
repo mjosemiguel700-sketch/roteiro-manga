@@ -257,8 +257,53 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 }
 @media (max-width:520px){.campos-painel{grid-template-columns:1fr}}
 </style>
+.inicio{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--papel);
+  color:var(--tinta);
+}
+
+.inicio-conteudo{
+  width:min(520px,90vw);
+  text-align:center;
+}
+
+.inicio h1{
+  margin:0 0 10px;
+  font-family:var(--mincho);
+  font-size:42px;
+}
+
+.inicio p{
+  margin:0 0 28px;
+  color:var(--fraco);
+  font-size:16px;
+}
+
+.inicio .bt{
+  padding:10px 24px;
+  font-size:15px;
+}
 </head>
 <body>
+<div id="inicio" class="inicio">
+  <div class="inicio-conteudo">
+    <h1>Mesa de Roteiro</h1>
+
+    <p>
+      Planeje seu mangá painel por painel.
+    </p>
+
+    <button class="bt forte" id="btComecar">
+      Começar
+    </button>
+  </div>
+</div>
 <div class="app">
   <aside class="lateral" id="lateral">
     <div class="marca">
@@ -444,7 +489,9 @@ var pendente=null, salvando=false, sujo=false;
 
 var el=function(id){return document.getElementById(id);};
 var tela=el("tela"), estado=el("estado");
-
+el("btComecar").addEventListener("click", function(){
+  el("inicio").classList.add("oculto");
+});
 function id(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
