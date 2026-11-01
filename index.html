@@ -103,10 +103,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .nota-editor{background:var(--papel);border:1px solid var(--calha);box-shadow:3px 3px 0 var(--sombra);padding:18px}
 .nota-editor input{font-family:var(--mincho);font-weight:700;font-size:20px;margin-bottom:10px}
 .nota-editor textarea{min-height:420px;line-height:1.65;font-size:15px;resize:vertical}
+.nota-referencia-aviso{margin:0 0 14px;padding:10px 11px;border:1px solid var(--calha);background:var(--papel-2);color:var(--fraco);font-size:12px;line-height:1.5}
 .nota-meta{margin:10px 0 0;color:var(--fraco);font-size:12px}
 .nota-busca-marca{background:#ffe58f;color:inherit;padding:0 1px;border-radius:2px}
 .notas-filtro{width:calc(100% - 16px);margin:0 8px 7px;padding:6px 8px;font-size:12px;background:var(--papel);border:1px solid var(--calha);border-radius:3px}
-.nota-anexos{border-top:1px solid var(--calha);margin-top:16px;padding-top:14px}.nota-anexos-cab{display:flex;align-items:center;gap:8px;margin-bottom:9px}.nota-anexos-cab strong{font-size:13px}.nota-anexos-cab span{font-size:11px;color:var(--fraco);flex:1}.nota-anexos input[type=file]{display:none}.nota-imagens-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.nota-imagem-item{position:relative;min-width:0;border:1px solid var(--calha);background:var(--papel-2);padding:5px}.nota-imagem-item img{display:block;width:100%;height:170px;object-fit:contain;background:#fff;cursor:zoom-in}.nota-imagem-nome{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fraco);font-size:11px;padding:5px 2px 1px}.nota-imagem-remover{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.94);border-color:#aaa}.nota-imagens-vazio{color:var(--fraco);font-size:12px;border:1px dashed var(--calha);padding:12px;text-align:center}.nota-imagem-lightbox{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.88)}.nota-imagem-lightbox.oculto{display:none}.nota-imagem-lightbox img{display:block;max-width:96vw;max-height:92vh;width:auto;height:auto;object-fit:contain;box-shadow:0 0 0 1px rgba(255,255,255,.35)}.nota-imagem-lightbox .bt{position:absolute;top:14px;right:14px;background:#fff;color:#111;border-color:#fff}.nota-imagem-lightbox .bt:hover{background:#eee}.estado-conexao{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fraco);white-space:nowrap}.estado-conexao::before{content:"";width:7px;height:7px;border-radius:50%;background:#4e9b5b}.estado-conexao.offline{color:#8b4f22}.estado-conexao.offline::before{background:#d4862f}.estado-conexao.pendente{color:#775000}.estado-conexao.pendente::before{background:#d6a21d}.bt-instalar{display:none}.bt-instalar.visivel{display:inline-flex}
+.nota-anexos{border-top:1px solid var(--calha);margin-top:16px;padding-top:14px}.nota-anexos-cab{display:flex;align-items:center;gap:8px;margin-bottom:9px}.nota-anexos-cab strong{font-size:13px}.nota-anexos-cab span{font-size:11px;color:var(--fraco);flex:1}.nota-anexos input[type=file]{display:none}.nota-imagens-soltar{margin:0 0 10px;padding:9px 10px;border:1px dashed var(--calha);border-radius:4px;color:var(--fraco);font-size:11px;text-align:center;transition:background .15s,border-color .15s}.nota-imagens-soltar.arrastando{border-color:var(--tinta);background:var(--papel-2);color:var(--tinta)}.nota-imagens-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.nota-imagem-item{position:relative;min-width:0;border:1px solid var(--calha);background:var(--papel-2);padding:5px}.nota-imagem-item img{display:block;width:100%;height:170px;object-fit:contain;background:#fff;cursor:zoom-in}.nota-imagem-nome{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fraco);font-size:11px;padding:5px 2px 1px}.nota-imagem-remover{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.94);border-color:#aaa}.nota-imagens-vazio{color:var(--fraco);font-size:12px;border:1px dashed var(--calha);padding:12px;text-align:center}.nota-imagem-lightbox{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.88)}.nota-imagem-lightbox.oculto{display:none}.nota-imagem-lightbox img{display:block;max-width:96vw;max-height:92vh;width:auto;height:auto;object-fit:contain;box-shadow:0 0 0 1px rgba(255,255,255,.35)}.nota-imagem-lightbox .bt{position:absolute;top:14px;right:14px;background:#fff;color:#111;border-color:#fff}.nota-imagem-lightbox .bt:hover{background:#eee}.estado-conexao{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fraco);white-space:nowrap}.estado-conexao::before{content:"";width:7px;height:7px;border-radius:50%;background:#4e9b5b}.estado-conexao.offline{color:#8b4f22}.estado-conexao.offline::before{background:#d4862f}.estado-conexao.pendente{color:#775000}.estado-conexao.pendente::before{background:#d6a21d}.bt-instalar{display:none}.bt-instalar.visivel{display:inline-flex}
 .nota-etiquetas{margin:4px 0 11px}.nota-etiquetas label{display:block;margin-bottom:4px;font-size:12px;color:var(--fraco)}.nota-etiquetas input{font-family:var(--gotico);font-size:13px;font-weight:400;margin:0}.nota-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}.nota-tag{display:inline-block;padding:1px 6px;border:1px solid var(--calha);border-radius:999px;color:var(--fraco);font-size:11px;line-height:1.5}
 .cap-resumo{display:flex;align-items:center;gap:6px;padding:3px 8px 6px 18px;color:var(--fraco);font-size:11px}.cap-selo{display:inline-flex;align-items:center;border:1px solid var(--calha);border-radius:999px;padding:0 5px;line-height:1.55;font-size:10px;white-space:nowrap}.cap-selo.status-finalizado{background:#e8f5ea;border-color:#7cb887;color:#205c31}.cap-selo.status-desenhando{background:#fff5d9;border-color:#caa045;color:#775000}.cap-selo.status-rascunho{background:#edf3ff;border-color:#8aa8d2;color:#255184}
 .cap-controles{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding:10px 12px;border:1px solid var(--calha);background:var(--papel-2)}.cap-controles label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}.cap-controles select{max-width:150px;background:var(--papel);border:1px solid var(--calha);border-radius:3px;padding:3px 5px;color:var(--tinta)}.cap-controles input[type=range]{width:120px;accent-color:var(--tinta)}.cap-progresso-num{min-width:32px;font-variant-numeric:tabular-nums}.barra-progresso{width:92px;height:5px;background:var(--calha);overflow:hidden}.barra-progresso i{display:block;height:100%;background:var(--tinta)}
@@ -465,6 +466,12 @@ body.ed-aberto{overflow:hidden}
 /* Gerenciador de páginas: mantém a edição no estúdio, com conjuntos em miniatura. */
 .ed-pg-janela{position:absolute;inset:0;z-index:120;display:grid;place-items:center;padding:18px;background:rgba(25,25,25,.42);overflow:auto}
 .ed-pg-dialog{width:min(820px,calc(100vw - 32px));max-height:min(760px,calc(100vh - 32px));overflow:auto;background:var(--e-bg);border:1px solid var(--e-bd);box-shadow:0 12px 34px rgba(0,0,0,.35);border-radius:6px;color:var(--e-tx);padding:16px}
+.ed-ref-janela{position:absolute;inset:0;z-index:125;display:grid;place-items:center;padding:18px;background:rgba(25,25,25,.48);overflow:auto}
+.ed-ref-dialog{width:min(900px,calc(100vw - 32px));max-height:min(760px,calc(100vh - 32px));overflow:auto;background:var(--e-bg);border:1px solid var(--e-bd);box-shadow:0 12px 34px rgba(0,0,0,.38);border-radius:6px;color:var(--e-tx);padding:16px}
+.ed-ref-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}.ed-ref-cab h2{margin:0;font-size:18px}.ed-ref-cab p{margin:4px 0 0;color:var(--e-fr);font-size:12px}.ed-ref-acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding-bottom:10px;border-bottom:1px solid var(--e-bd)}.ed-ref-busca{flex:1 1 220px;min-width:180px;background:var(--e-in);color:var(--e-tx);border:1px solid var(--e-bd);border-radius:3px;padding:5px 7px;font-size:12px}.ed-ref-contagem{color:var(--e-fr);font-size:11px;white-space:nowrap}
+.ed-ref-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}.ed-ref-grupo{grid-column:1/-1}.ed-ref-grupo.oculto-filtro{display:none}.ed-ref-grupo h3{margin:4px 0 7px;font-size:12px;color:var(--e-fr);font-weight:700}.ed-ref-card{display:flex;flex-direction:column;gap:4px;min-width:0;padding:6px;text-align:left;background:var(--e-in);color:var(--e-tx);border:1px solid var(--e-bd);border-radius:4px;cursor:pointer}.ed-ref-card:hover:not(:disabled){border-color:var(--e-acb);box-shadow:0 0 0 2px rgba(79,143,220,.18)}.ed-ref-card:disabled{opacity:.55;cursor:wait}.ed-ref-card.oculto-filtro{display:none}.ed-ref-card img{display:block;width:100%;height:130px;object-fit:contain;background:#fff;border:1px solid var(--e-bd)}.ed-ref-card strong,.ed-ref-card small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ed-ref-card strong{font-size:11.5px}.ed-ref-card small{color:var(--e-fr);font-size:10.5px}.ed-ref-vazio{margin:0;padding:18px;border:1px dashed var(--e-bd);color:var(--e-fr);text-align:center}
+.ed-ref-bt{background:#eaf3ff!important;color:#174b7a!important;border-color:#78a6d4!important;font-weight:700!important}.ed-ref-bt:hover{background:#d6eaff!important;border-color:#397bb7!important}
+@media (max-width:520px){.ed-ref-janela{padding:8px}.ed-ref-dialog{width:calc(100vw - 16px);max-height:calc(100vh - 16px);padding:12px}.ed-ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ed-ref-card img{height:108px}.ed-ref-cab h2{font-size:16px}}
 .ed-pg-janela.edicao{background:transparent;pointer-events:none;place-items:start end;padding:12px}.ed-pg-janela.edicao .ed-pg-dialog{pointer-events:auto;width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);margin:0}
 .ed-pg-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:13px}
 .ed-pg-cab h2{margin:0;font-size:17px}.ed-pg-cab p{margin:3px 0 0;color:var(--e-fr);font-size:12px}
@@ -1723,12 +1730,16 @@ function montarDOM(){
     '<span class="ed-esp"></span>'+
     '<button type="button" class="bt mini" data-ed="preencher" title="Enquadrar a folha inteira na área de desenho">Preencher tela</button>'+
     '<button type="button" class="bt mini" data-ed="foco" title="Ocultar toda a interface e deixar apenas a folha (Tab ou Esc para voltar)">Tela cheia</button>'+
+    '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir notas de imagens e inserir uma referência no desenho">🖼 Referências</button>'+
     '<button type="button" class="bt mini" data-ed="img-importar">＋ Imagem</button>'+
     '<button type="button" class="bt mini" data-ed="png">Baixar PNG</button>'+
     '<button type="button" class="bt mini ed-bt-lat" data-ed="lat">Paletas</button>'+
   '</div>'+
   '<div class="ed-pg-janela oculto" data-r="paginaJanela" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Gerenciador de páginas">'+
     '<section class="ed-pg-dialog" data-r="paginaConteudo"></section>'+
+  '</div>'+
+  '<div class="ed-ref-janela oculto" data-r="referenciasJanela" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Notas de imagens e referências">'+
+    '<section class="ed-ref-dialog" data-r="referenciasConteudo"></section>'+ 
   '</div>'+  '<input type="file" data-r="imagemArquivo" accept="image/*" style="display:none" aria-label="Escolher imagem para importar">'+
   '<input type="color" data-r="tomDesenho" value="#1d1d1d" class="ed-tom-in" tabindex="-1" aria-label="Tom para converter imagem em lápis ou caneta">'+
   '<div class="ed-corpo">'+
@@ -3304,6 +3315,26 @@ function fecharJanelaPagina(){
   E.paginaJanela.classList.add("oculto");
   E.paginaJanela.setAttribute("aria-hidden","true");
 }
+function fecharJanelaReferencias(){
+  if(!E.referenciasJanela) return;
+  E.referenciasJanela.classList.add("oculto");
+  E.referenciasJanela.setAttribute("aria-hidden","true");
+}
+function abrirJanelaReferencias(){
+  if(!S||!E.referenciasJanela||!E.referenciasConteudo) return false;
+  if(!window.MesaReferencias||typeof window.MesaReferencias.render!=="function"){
+    aviso("As notas de imagens ainda estão carregando. Tente novamente em instantes.");
+    return false;
+  }
+  fecharMenus(); fecharJanelaPagina();
+  E.referenciasJanela.classList.remove("oculto");
+  E.referenciasJanela.setAttribute("aria-hidden","false");
+  window.MesaReferencias.render(E.referenciasConteudo,{
+    inserir:function(src,nome,tipo){ return inserirImagemDados(src,nome,tipo); },
+    fechar:fecharJanelaReferencias
+  });
+  return true;
+}
 function irPaginaEditor(indice){
   if(!S||!S.modoPagina||S.trocandoPagina) return false;
   var pags=S.opts&&typeof S.opts.obterPaginas==="function"?S.opts.obterPaginas():(S.opts&&S.opts.paginas)||[], ir=S.opts&&S.opts.irPagina;
@@ -3434,6 +3465,21 @@ function mudarTamanho(chave){
 }
 
 /* ---------- importação e ajustes de imagens ---------- */
+function dadosImagemParaArquivo(src,nome,tipo){
+  try{
+    var texto=String(src||""), partes=texto.split(","), cab=partes[0]||"", mime=(cab.match(/data:([^;]+)/i)||[])[1]||tipo||"image/png", bin=atob(partes[1]||""), bytes=new Uint8Array(bin.length), i;
+    for(i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    var blob=new Blob([bytes],{type:mime}), nomeArquivo=(nome||"referencia.png").replace(/[\\/:*?"<>|]+/g,"_")||"referencia.png";
+    if(window.File){ return new File([blob],nomeArquivo,{type:mime}); }
+    try{ blob.name=nomeArquivo; }catch(e){}
+    return blob;
+  }catch(e){ return null; }
+}
+function inserirImagemDados(src,nome,tipo){
+  var arquivo=dadosImagemParaArquivo(src,nome,tipo);
+  if(!arquivo){ aviso("Não foi possível abrir esta referência."); return false; }
+  importarImagem(arquivo); return true;
+}
 function importarImagem(arquivo){
   if(!S||!arquivo) return;
   if(!/^image\//i.test(arquivo.type||"")){ aviso("Escolha um arquivo de imagem (JPG, PNG, WebP ou outro formato aceito pelo navegador)."); return; }
@@ -3725,6 +3771,8 @@ function acao(n,b){
     case "pagina-gerenciar": abrirJanelaPagina("conjuntos"); break;
     case "pagina-opcoes": abrirJanelaPagina("editar"); break;
     case "pagina-modal-fechar": fecharJanelaPagina(); break;
+    case "referencias": abrirJanelaReferencias(); break;
+    case "referencias-fechar": fecharJanelaReferencias(); break;
     case "pagina-ant": moverPaginaEditor(-1); break;
     case "pagina-prox": moverPaginaEditor(1); break;
     case "painel-editar":
@@ -3819,6 +3867,7 @@ function ligarEventos(){
   $ed.addEventListener("click",function(ev){
     if(ev.target===E.ajuda){ fecharAjuda(); return; }
     if(ev.target===E.paginaJanela){ fecharJanelaPagina(); return; }
+    if(ev.target===E.referenciasJanela){ fecharJanelaReferencias(); return; }
     var mb=ev.target.closest(".ed-mb");
     if(mb){ if(mb.classList.contains("aberto")) fecharMenus(); else abrirMenu(mb); return; }
     var pt=ev.target.closest("[data-pn-tog]");
@@ -4086,6 +4135,11 @@ if(document.fonts&&document.fonts.load){
 }
 window.EditorDesenho={
   abrir:abrir,
+  fechar:function(){ fecharJanelaReferencias(); return sair(); },
+  estaAberto:function(){ return !!S; },
+  abrirReferencias:abrirJanelaReferencias,
+  fecharReferencias:fecharJanelaReferencias,
+  inserirImagemDados:inserirImagemDados,
   apagar:function(id){ return bdApagar(id); },
   copiar:function(de,para){
     return bdLer(de).then(function(rec){ if(rec) return bdGravar(para,rec); });
@@ -4395,7 +4449,7 @@ async function carregarListas(){
       return {id:v.id,obraId:v.obraId,numero:v.numero,titulo:v.titulo,
         nPaineis:v.nPaineis||contarPaineis(v.paginas),paginas:v.nPaginas||((v.paginas||[]).length),status:statusCapitulo(v.status),progresso:progressoCapitulo(v.progresso),atualizadoEm:v.atualizadoEm||0};
     });
-    notas=sn.docs.map(function(d){var v=d.data();return {id:d.id,titulo:v.titulo||"",texto:v.texto||"",tags:tagsNota(v.tags),imagens:Array.isArray(v.imagens)?v.imagens:[],criadoEm:v.criadoEm||0,atualizadoEm:v.atualizadoEm||0};});
+    notas=sn.docs.map(function(d){var v=d.data(), tags=tagsNota(v.tags), somenteImagens=v.tipo==="imagens"||tags.some(function(t){return String(t).toLocaleLowerCase("pt-BR")==="imagens";});return {id:d.id,titulo:v.titulo||"",texto:somenteImagens?"":(v.texto||""),tags:tags,imagens:Array.isArray(v.imagens)?v.imagens:[],tipo:somenteImagens?"imagens":"texto",criadoEm:v.criadoEm||0,atualizadoEm:v.atualizadoEm||0};});
     try{ localStorage.setItem("mesa:offline-cache",JSON.stringify({obras:obras,caps:capsBrutos,notas:notas,em:Date.now()})); }catch(e){}
   }catch(e){
     try{
@@ -4403,7 +4457,7 @@ async function carregarListas(){
       if(!cache) throw e;
       obras=cache.obras||[]; window.__mesaCapsOffline=cache.caps||[];
        caps=(cache.caps||[]).map(function(v){return {id:v.id,obraId:v.obraId,numero:v.numero,titulo:v.titulo,nPaineis:v.nPaineis||contarPaineis(v.paginas),paginas:v.nPaginas||((v.paginas||[]).length),status:statusCapitulo(v.status),progresso:progressoCapitulo(v.progresso),atualizadoEm:v.atualizadoEm||0};});
-      notas=cache.notas||[]; aviso("Modo offline: usando a última cópia deste celular.");
+      notas=(cache.notas||[]).map(function(v){var tags=tagsNota(v.tags), somenteImagens=v.tipo==="imagens"||tags.some(function(t){return String(t).toLocaleLowerCase("pt-BR")==="imagens";});return {id:v.id,titulo:v.titulo||"",texto:somenteImagens?"":(v.texto||""),tags:tags,imagens:Array.isArray(v.imagens)?v.imagens:[],tipo:somenteImagens?"imagens":"texto",criadoEm:v.criadoEm||0,atualizadoEm:v.atualizadoEm||0};}); aviso("Modo offline: usando a última cópia deste celular.");
     }catch(f){ throw e; }
   }
 }function contarPaineis(pgs){
@@ -4454,6 +4508,14 @@ async function salvar(){
 function notaObj(idNota){
   return notas.filter(function(n){ return n.id===idNota; })[0]||null;
 }
+function notaSomenteImagens(n){
+  if(!n) return false;
+  if(n.tipo==="imagens") return true;
+  return tagsNota(n.tags).some(function(t){ return String(t).toLocaleLowerCase("pt-BR")==="imagens"; });
+}
+function notasDeImagens(){
+  return notas.filter(function(n){ return notaSomenteImagens(n)&&(n.imagens||[]).length>0; }).sort(function(a,b){ return (b.atualizadoEm||0)-(a.atualizadoEm||0); });
+}
 function dataNota(v,completa){
   if(!v) return "agora";
   try{
@@ -4491,6 +4553,64 @@ async function hidratarImagensNota(n){
     else host.querySelector(".nota-imagem-carregando").textContent="Imagem não guardada neste aparelho";
   }
 }
+function renderReferenciasEditor(host,opcoes){
+  if(!host) return;
+  opcoes=opcoes||{};
+  var grupos=notasDeImagens(), referencias=[], dados={};
+  grupos.forEach(function(n){
+    (Array.isArray(n.imagens)?n.imagens:[]).forEach(function(im){
+      var chave="r"+referencias.length;
+      referencias.push({chave:chave,nota:n,meta:im});
+    });
+  });
+  var corpo=grupos.length?grupos.map(function(n){
+    var imagens=(n.imagens||[]).map(function(im){
+      var item=referencias.filter(function(r){return r.nota.id===n.id&&r.meta.id===im.id;})[0], chave=item?item.chave:"";
+      return '<button type="button" class="ed-ref-card" data-ref-inserir="'+esc(chave)+'" data-ref-pesquisa="'+esc(((im.nome||"")+" "+(n.titulo||"")).toLocaleLowerCase("pt-BR"))+'" disabled><img class="oculto" data-ref-img="'+esc(chave)+'" alt="'+esc(im.nome||"Imagem de referência")+'"><span class="ed-ref-carregando">Carregando…</span><strong title="'+esc(im.nome||"Imagem")+'">'+esc(im.nome||"Imagem")+'</strong><small>Inserir no desenho</small></button>';
+    }).join("");
+    return '<section class="ed-ref-grupo"><h3>'+esc((n.titulo||"Biblioteca de imagens").trim()||"Biblioteca de imagens")+'</h3><div class="ed-ref-grid">'+imagens+'</div></section>';
+  }).join(""):'<p class="ed-ref-vazio">Nenhuma nota de imagens foi criada ainda. Crie uma em Notas e guarde referências para reutilizar nos desenhos.</p>';
+  host.innerHTML='<div class="ed-ref-cab"><div><h2>Referências · notas de imagens</h2><p>Escolha uma imagem guardada para inserir como nova camada no desenho atual.</p></div><button type="button" class="bt mini" data-ed="referencias-fechar">Fechar</button></div><div class="ed-ref-acoes"><input class="ed-ref-busca" type="search" data-ref-busca placeholder="Buscar por nome da imagem ou nota" aria-label="Buscar referências"><span class="ed-ref-contagem" data-ref-contagem>'+referencias.length+' imagem(ns)</span><button type="button" class="bt mini ed-ref-bt" data-ref-abrir-notas>Gerenciar notas de imagens</button></div><div class="ed-ref-grid">'+corpo+'</div>';
+  host.onclick=function(ev){
+    var card=ev.target.closest&&ev.target.closest("[data-ref-inserir]");
+    if(card&&host.contains(card)){
+      var ref=referencias.filter(function(r){return r.chave===card.getAttribute("data-ref-inserir");})[0], dado=ref&&dados[ref.chave];
+      if(!dado||!dado.src){ aviso("Esta referência ainda está carregando."); return; }
+      if(opcoes.inserir&&opcoes.inserir(dado.src,ref.meta.nome,ref.meta.tipo)) aviso("Referência inserida como nova camada.");
+      return;
+    }
+    var gerenciar=ev.target.closest&&ev.target.closest("[data-ref-abrir-notas]");
+    if(gerenciar&&host.contains(gerenciar)&&window.MesaReferencias&&window.MesaReferencias.abrirNotas) window.MesaReferencias.abrirNotas();
+  };
+  function aplicarFiltroReferencias(valor){
+    var q=String(valor||"").toLocaleLowerCase("pt-BR").trim(), visiveis=0;
+    Array.prototype.forEach.call(host.querySelectorAll(".ed-ref-grupo"),function(grupo){
+      var grupoVisivel=0;
+      Array.prototype.forEach.call(grupo.querySelectorAll(".ed-ref-card"),function(card){
+        var ok=!q||String(card.getAttribute("data-ref-pesquisa")||"").indexOf(q)>-1;
+        card.classList.toggle("oculto-filtro",!ok); if(ok) grupoVisivel++;
+      });
+      grupo.classList.toggle("oculto-filtro",grupoVisivel===0); visiveis+=grupoVisivel;
+    });
+    var contador=host.querySelector("[data-ref-contagem]"); if(contador) contador.textContent=visiveis+" imagem(ns)"+(q?" encontrada(s)":"");
+  }
+  host.oninput=function(ev){ if(ev.target&&ev.target.matches("[data-ref-busca]")) aplicarFiltroReferencias(ev.target.value); };
+  referencias.forEach(function(ref){
+    bdLer(notaImagemChave(ref.nota.id,ref.meta.id)).then(function(rec){
+      var img=host.querySelector('[data-ref-img="'+ref.chave+'"]'), card=img&&img.closest("[data-ref-inserir]"), carregando=card&&card.querySelector(".ed-ref-carregando");
+      if(!img||!card) return;
+      if(rec&&rec.src){ dados[ref.chave]={src:rec.src}; img.src=rec.src; img.classList.remove("oculto"); if(carregando) carregando.remove(); card.disabled=false; }
+      else if(carregando) carregando.textContent="Imagem indisponível neste aparelho";
+    }).catch(function(){});
+  });
+}
+window.MesaReferencias={
+  render:renderReferenciasEditor,
+  abrirNotas:function(){
+    var fechar=window.EditorDesenho&&window.EditorDesenho.fechar?window.EditorDesenho.fechar():Promise.resolve();
+    Promise.resolve(fechar).then(function(){ abrirNotas(); });
+  }
+};
 async function enviarImagemNota(){ return null; }
 async function apagarImagemNotaNuvem(){ return; }
 async function sincronizarImagensNuvem(){ return; }
@@ -4524,18 +4644,19 @@ async function salvarNota(){
   salvandoNota=true; estado.textContent="salvando…";
   try{
     n.atualizadoEm=Date.now();
+    var imagemApenas=notaSomenteImagens(n), textoNota=imagemApenas?"":(n.texto||""), tipoNota=imagemApenas?"imagens":"texto";
     await colNotas().doc(n.id).set({
-      titulo:n.titulo||"", texto:n.texto||"", tags:tagsNota(n.tags), imagens:Array.isArray(n.imagens)?n.imagens:[], criadoEm:n.criadoEm||n.atualizadoEm,
+      titulo:n.titulo||"", texto:textoNota, tags:imagemApenas?["imagens"]:tagsNota(n.tags), tipo:tipoNota, imagens:Array.isArray(n.imagens)?n.imagens:[], criadoEm:n.criadoEm||n.atualizadoEm,
       atualizadoEm:n.atualizadoEm
     });
-    try{ await dbLocal.collection(baseLocal+"/notas").doc(n.id).set({titulo:n.titulo||"",texto:n.texto||"",tags:tagsNota(n.tags),imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm}); }catch(localErr){}
+    try{ await dbLocal.collection(baseLocal+"/notas").doc(n.id).set({titulo:n.titulo||"",texto:textoNota,tags:imagemApenas?["imagens"]:tagsNota(n.tags),tipo:tipoNota,imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm}); }catch(localErr){}
     if(nuvemAtiva) removerFilaNuvem("notas",n.id);
     salvarCacheOffline();
     notaSuja=false; estado.textContent="salvo"; registrarSincronizacao();
     notas.sort(function(a,b){ return (b.atualizadoEm||0)-(a.atualizadoEm||0); });
     desenharNotasLateral();
   }catch(e){
-    var dadosNota={titulo:n.titulo||"",texto:n.texto||"",tags:tagsNota(n.tags),imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm||Date.now()};
+    var somenteImagens=notaSomenteImagens(n), dadosNota={titulo:n.titulo||"",texto:somenteImagens?"":(n.texto||""),tags:somenteImagens?["imagens"]:tagsNota(n.tags),tipo:somenteImagens?"imagens":"texto",imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm||Date.now()};
     try{ await dbLocal.collection(baseLocal+"/notas").doc(n.id).set(dadosNota); }catch(localErr){}
     enfileirarNuvem("notas",n.id,dadosNota); salvarCacheOffline();
     estado.textContent="erro ao salvar";
@@ -4554,7 +4675,7 @@ async function criarNota(opcoes){
   if(!db){ aviso("Sem armazenamento disponível nesta visualização."); return; }
   if(sujo){ clearTimeout(pendente); await salvar(); }
   if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
-  var cfg=opcoes||{}, agora=Date.now(), n={titulo:cfg.titulo||"Sem título",texto:cfg.texto||"",tags:Array.isArray(cfg.tags)?cfg.tags:[],imagens:[],criadoEm:agora,atualizadoEm:agora};
+  var cfg=opcoes||{}, agora=Date.now(), somenteImagens=cfg.tipo==="imagens", n={titulo:cfg.titulo||"Sem título",texto:somenteImagens?"":(cfg.texto||""),tags:somenteImagens?["imagens"]:(Array.isArray(cfg.tags)?cfg.tags:[]),tipo:somenteImagens?"imagens":"texto",imagens:[],criadoEm:agora,atualizadoEm:agora};
   var ref=colNotas().doc(id("n"));
   try{ await ref.set(n); registrarSincronizacao(); }
   catch(e){
@@ -4625,8 +4746,8 @@ function atualizarBuscaNotaEditor(){
 function htmlNotasNavegador(){
   var lista=notas.slice().sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});
   return '<section class="notas-navegador" aria-labelledby="notasNavegadorTitulo"><div class="notas-navegador-cab"><div><strong id="notasNavegadorTitulo">Suas notas</strong><span> · '+lista.length+' nota'+(lista.length===1?'':'s')+'</span></div><button type="button" class="bt mini" data-nota-acao="nova">+ Nova nota</button></div><input class="notas-navegador-busca" id="notaBuscaInterna" type="search" data-nota-busca value="'+esc(filtroNotas)+'" placeholder="Buscar por título, texto ou etiqueta" aria-label="Buscar por título, texto ou etiqueta"><div class="notas-navegador-lista">'+(lista.length?lista.map(function(item){
-    var titulo=(item.titulo||"").trim()||"Sem título", imagens=(item.imagens||[]).length, etiquetas=tagsNota(item.tags), etiqueta=etiquetas.length?marcarBuscaNota("#"+etiquetas[0],filtroNotas)+" · ":"";
-    return '<button type="button" class="nota-navegador-item" data-nota-interna="'+esc(item.id)+'" aria-current="'+(notaAtual===item.id)+'"><strong>'+marcarBuscaNota(titulo,filtroNotas)+'</strong><small>'+((imagens?imagens+' imagem'+(imagens===1?'':'ns')+' · ':'')+etiqueta+esc(dataNota(item.atualizadoEm||item.criadoEm||Date.now(),false)))+'</small></button>';
+    var titulo=(item.titulo||"").trim()||"Sem título", imagens=(item.imagens||[]).length, etiquetas=tagsNota(item.tags), etiqueta=etiquetas.length?marcarBuscaNota("#"+etiquetas[0],filtroNotas)+" · ":"", tipo=notaSomenteImagens(item)?"Biblioteca de imagens · ":"";
+    return '<button type="button" class="nota-navegador-item" data-nota-interna="'+esc(item.id)+'" aria-current="'+(notaAtual===item.id)+'"><strong>'+marcarBuscaNota(titulo,filtroNotas)+'</strong><small>'+tipo+((imagens?imagens+' imagem'+(imagens===1?'':'ns')+' · ':'')+etiqueta+esc(dataNota(item.atualizadoEm||item.criadoEm||Date.now(),false)))+'</small></button>';
   }).join(""):'<p class="notas-navegador-vazio">Nenhuma nota criada ainda.</p>')+'</div></section>';
 }
 function desenharNotas(){
@@ -4641,14 +4762,16 @@ function desenharNotas(){
     tela.innerHTML='<div class="centro"><button type="button" class="bt" data-nota-acao="entrada">← Voltar à entrada</button><h2 style="margin-top:18px">Suas notas</h2><p>Guarde ideias, lembretes ou qualquer texto em notas separadas.</p>'+htmlNotasNavegador()+'<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap"><button type="button" class="bt forte" data-nota-acao="nova">Criar nota</button><button type="button" class="bt" data-nota-acao="nova-imagens">Nota de imagens</button></div></div>';
     return;
   }
+  var somenteImagens=notaSomenteImagens(n), camposNota=somenteImagens
+    ? '<p class="nota-referencia-aviso">Biblioteca de imagens e referências. Esta nota não possui campo de texto; adicione imagens e consulte-as no editor de obras ou desenho livre.</p>'
+    : '<div class="nota-etiquetas"><label for="notaTags">Etiquetas</label><input id="notaTags" type="text" data-nota-campo="tags" value="'+esc(textoTags(n.tags))+'" placeholder="Ex.: capítulo 1, personagem, ideia" aria-label="Etiquetas separadas por vírgula">'+htmlTags(n.tags)+'</div><textarea id="notaTexto" data-nota-campo="texto" placeholder="Escreva o que quiser…" aria-label="Conteúdo da nota">'+esc(n.texto)+'</textarea>';
   tela.innerHTML='<div class="folha notas-tela">'+
     '<div class="notas-cabeca"><button type="button" class="bt" data-nota-acao="entrada">← Entrada</button><h2>Notas</h2><button type="button" class="bt forte" data-nota-acao="nova">+ Nova nota</button><button type="button" class="bt" data-nota-acao="nova-imagens">+ Nota de imagens</button><button type="button" class="bt risco" data-nota-acao="apagar" data-nota-id="'+esc(n.id)+'">Apagar</button></div>'+
     htmlNotasNavegador()+
     '<article class="nota-editor">'+
       '<input id="notaTitulo" type="text" data-nota-campo="titulo" value="'+esc(n.titulo)+'" placeholder="Título da nota" aria-label="Título da nota">'+
-      '<div class="nota-etiquetas"><label for="notaTags">Etiquetas</label><input id="notaTags" type="text" data-nota-campo="tags" value="'+esc(textoTags(n.tags))+'" placeholder="Ex.: capítulo 1, personagem, ideia" aria-label="Etiquetas separadas por vírgula">'+htmlTags(n.tags)+'</div>'+
-      '<textarea id="notaTexto" data-nota-campo="texto" placeholder="Escreva o que quiser…" aria-label="Conteúdo da nota">'+esc(n.texto)+'</textarea>'+ 
-      '<section class="nota-anexos" aria-labelledby="notaImagensTitulo"><div class="nota-anexos-cab"><strong id="notaImagensTitulo">Imagens da nota</strong><span>Adicione quantas quiser. Elas ficam guardadas neste aparelho e entram no backup.</span><button type="button" class="bt mini" data-nota-acao="anexar-imagens">+ Adicionar imagens</button><input id="notaImagens" type="file" accept="image/*" multiple data-nota-anexos></div><div id="notaImagensGrade">'+htmlNotaImagens(n)+'</div></section>'+ 
+      camposNota+
+      '<section class="nota-anexos" aria-labelledby="notaImagensTitulo"><div class="nota-anexos-cab"><strong id="notaImagensTitulo">Imagens da nota · '+((n.imagens||[]).length)+'</strong><span>Adicione quantas quiser. Elas ficam guardadas neste aparelho e entram no backup.</span><button type="button" class="bt mini" data-nota-acao="anexar-imagens">+ Adicionar imagens</button><input id="notaImagens" type="file" accept="image/*" multiple data-nota-anexos></div><div class="nota-imagens-soltar" data-nota-soltar-imagens>Arraste imagens para cá ou cole uma imagem copiada.</div><div id="notaImagensGrade">'+htmlNotaImagens(n)+'</div></section>'+ 
       '<p class="nota-meta">Salvamento automático · última alteração '+esc(dataNota(n.atualizadoEm,true))+'</p>'+ 
     '</article></div>';
   hidratarImagensNota(n);
@@ -6133,7 +6256,7 @@ function aoClicarNotas(ev){
   var acao=b.getAttribute("data-nota-acao");
   if(acao==="entrada"){ voltarEntrada(); return; }
   if(acao==="nova"){ criarNota(); return; }
-  if(acao==="nova-imagens"){ criarNota({titulo:"Imagens",tags:["imagens"]}); return; }
+  if(acao==="nova-imagens"){ criarNota({titulo:"Imagens",tipo:"imagens"}); return; }
   if(acao==="limpar-busca"){ filtroNotas=""; var busca=el("notaBuscaTexto"); if(busca) busca.value=""; var interna=el("notaBuscaInterna"); if(interna) interna.value=""; var lateral=el("filtroNotas"); if(lateral) lateral.value=""; desenharNotasLateral(); atualizarBuscaNotaEditor(); return; }
   if(acao==="anexar-imagens"){ var inp=el("notaImagens"); if(inp) inp.click(); return; }
   if(acao==="remover-imagem"){ removerImagemNota(b.getAttribute("data-nota-img-id")); return; }
@@ -6164,6 +6287,37 @@ tela.addEventListener("change",function(ev){
     ev.target.value="";
     if(arquivos.length) anexarImagensNota(arquivos);
   }
+});
+function imagensDaTransferencia(dt){
+  var lista=[];
+  try{ if(dt&&dt.files) lista=Array.prototype.slice.call(dt.files); }catch(e){ lista=[]; }
+  if(!lista.length&&dt&&dt.items){
+    Array.prototype.forEach.call(dt.items,function(item){ if(item&&item.kind==="file"){ var f=item.getAsFile&&item.getAsFile(); if(f) lista.push(f); } });
+  }
+  return lista.filter(function(f){ return f&&/^image\//i.test(f.type||""); });
+}
+tela.addEventListener("dragover",function(ev){
+  var zona=ev.target&&ev.target.closest?ev.target.closest("[data-nota-soltar-imagens]"):null;
+  if(!zona) return;
+  var n=notaObj(notaAtual); if(!modoNotas||!notaSomenteImagens(n)) return;
+  ev.preventDefault(); zona.classList.add("arrastando");
+});
+tela.addEventListener("dragleave",function(ev){
+  var zona=ev.target&&ev.target.closest?ev.target.closest("[data-nota-soltar-imagens]"):null;
+  if(zona&&!zona.contains(ev.relatedTarget)) zona.classList.remove("arrastando");
+});
+tela.addEventListener("drop",function(ev){
+  var zona=ev.target&&ev.target.closest?ev.target.closest("[data-nota-soltar-imagens]"):null;
+  if(!zona) return;
+  var n=notaObj(notaAtual); if(!modoNotas||!notaSomenteImagens(n)) return;
+  ev.preventDefault(); zona.classList.remove("arrastando");
+  var arquivos=imagensDaTransferencia(ev.dataTransfer); if(arquivos.length) anexarImagensNota(arquivos);
+});
+document.addEventListener("paste",function(ev){
+  if(!modoNotas) return;
+  var n=notaObj(notaAtual); if(!notaSomenteImagens(n)) return;
+  var arquivos=imagensDaTransferencia(ev.clipboardData); if(!arquivos.length) return;
+  ev.preventDefault(); anexarImagensNota(arquivos);
 });
 
 
