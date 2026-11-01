@@ -1890,6 +1890,9 @@ function camadaImagemAlvo(){
   var A=camadaAtiva();
   if(ehCamadaImagem(A)) return A;
   if(A&&A.sobreImagemId){ var associada=porId(A.sobreImagemId); if(ehCamadaImagem(associada)) return associada; }
+  /* O botão de retirar imagem não deve obrigar o usuário a trocar de camada.
+     Se a camada ativa não tiver vínculo, usa a imagem mais recente do painel. */
+  for(var i=S.camadas.length-1;i>=0;i--) if(ehCamadaImagem(S.camadas[i])) return S.camadas[i];
   return null;
 }
 function criarCamadaDesenhoSobreImagem(L){
@@ -3609,14 +3612,15 @@ function importarImagem(arquivo){
 function retirarImagemAtiva(){
   if(!S) return;
   commitFlut();
-  var L=camadaImagemAlvo(); if(!L){ aviso("Selecione uma camada de imagem para retirar."); return; }
+  var L=camadaImagemAlvo(); if(!L){ aviso("Não há imagem para retirar neste painel."); return; }
   var remover=function(){
     if(!S||!porId(L.id)) return;
-    var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h);
-    L.cx.clearRect(0,0,S.dim.w,S.dim.h); L.sujo=true;
-    var depois=recortar(L.cv,0,0,S.dim.w,S.dim.h);
-    empurrar({t:"px",layer:L.id,x:0,y:0,antes:antes,depois:depois});
-    S.sel=null; pedir(true); aviso("Imagem retirada. O desenho separado foi preservado. Use Ctrl+Z para desfazer.");
+    var antes=estadoEstrutura(), associados=S.camadas.filter(function(C){return C.sobreImagemId===L.id;}), eraAtiva=S.ativa;
+    var idx=S.camadas.indexOf(L); S.camadas.splice(idx,1);
+    associados.forEach(function(C){ C.sobreImagemId=null; C.tipo="desenho"; if(/^Desenho sobre:/i.test(C.nome||"")) C.nome="Desenho (imagem retirada): "+String(C.nome).replace(/^Desenho sobre:\s*/i,""); C.sujo=true; });
+    if(eraAtiva===L.id){ var destino=associados[0]||S.camadas[Math.max(0,Math.min(idx,S.camadas.length-1))]||S.camadas[0]||null; S.ativa=destino?destino.id:null; }
+    empurrar({t:"estrutura",antes:antes,depois:estadoEstrutura()});
+    S.sel=null; listaCamadas(); pedir(true); aviso("Camada da imagem retirada. O desenho foi mantido separado. Use Ctrl+Z para desfazer.");
   };
   separarDesenhoMisturado(L).then(remover);
 }
