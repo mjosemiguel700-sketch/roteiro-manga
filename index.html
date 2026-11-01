@@ -471,6 +471,9 @@ body.ed-aberto{overflow:hidden}
 .ed-ref-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}.ed-ref-cab h2{margin:0;font-size:18px}.ed-ref-cab p{margin:4px 0 0;color:var(--e-fr);font-size:12px}.ed-ref-acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding-bottom:10px;border-bottom:1px solid var(--e-bd)}.ed-ref-busca{flex:1 1 220px;min-width:180px;background:var(--e-in);color:var(--e-tx);border:1px solid var(--e-bd);border-radius:3px;padding:5px 7px;font-size:12px}.ed-ref-contagem{color:var(--e-fr);font-size:11px;white-space:nowrap}
 .ed-ref-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}.ed-ref-grupo{grid-column:1/-1}.ed-ref-grupo.oculto-filtro{display:none}.ed-ref-grupo h3{margin:4px 0 7px;font-size:12px;color:var(--e-fr);font-weight:700}.ed-ref-card{display:flex;flex-direction:column;gap:4px;min-width:0;padding:6px;text-align:left;background:var(--e-in);color:var(--e-tx);border:1px solid var(--e-bd);border-radius:4px;cursor:pointer}.ed-ref-card:hover:not(:disabled){border-color:var(--e-acb);box-shadow:0 0 0 2px rgba(79,143,220,.18)}.ed-ref-card:disabled{opacity:.55;cursor:wait}.ed-ref-card.oculto-filtro{display:none}.ed-ref-card img{display:block;width:100%;height:130px;object-fit:contain;background:#fff;border:1px solid var(--e-bd)}.ed-ref-card strong,.ed-ref-card small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ed-ref-card strong{font-size:11.5px}.ed-ref-card small{color:var(--e-fr);font-size:10.5px}.ed-ref-vazio{margin:0;padding:18px;border:1px dashed var(--e-bd);color:var(--e-fr);text-align:center}
 .ed-ref-bt{background:#eaf3ff!important;color:#174b7a!important;border-color:#78a6d4!important;font-weight:700!important}.ed-ref-bt:hover{background:#d6eaff!important;border-color:#397bb7!important}
+.ed-acesso-tableta{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 8px;background:var(--e-hd);border-bottom:1px solid var(--e-bd)}
+.ed-acesso-tableta .bt{min-width:38px;min-height:28px;font-weight:700}.ed-acesso-tableta .bt span{font-weight:400;font-size:10px;margin-left:2px}
+.ed-forma-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}.ed-forma-opcoes label{display:grid;gap:3px;color:var(--e-fr);font-size:11px}.ed-forma-opcoes select,.ed-forma-opcoes input{min-width:0}
 @media (max-width:520px){.ed-ref-janela{padding:8px}.ed-ref-dialog{width:calc(100vw - 16px);max-height:calc(100vh - 16px);padding:12px}.ed-ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ed-ref-card img{height:108px}.ed-ref-cab h2{font-size:16px}}
 .ed-pg-janela.edicao{background:transparent;pointer-events:none;place-items:start end;padding:12px}.ed-pg-janela.edicao .ed-pg-dialog{pointer-events:auto;width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);margin:0}
 .ed-pg-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:13px}
@@ -494,9 +497,9 @@ body.ed-aberto{overflow:hidden}
 @media (max-width:820px){.ed-paginas-ed{max-width:190px}.ed-pagina-acoes{max-width:360px}.ed-sobre-aviso{font-size:10.5px}}
 
 /* corpo: ferramentas | docks | tela | docks */
-.ed-corpo{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:42px 238px minmax(0,1fr) 274px;grid-template-rows:minmax(0,1fr)}
-.ed-tools{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 3px;border-right:1px solid var(--e-bd);background:var(--e-bg);overflow-y:auto}
-.ed-tb{display:grid;place-items:center;width:34px;height:32px;flex:0 0 32px;background:none;border:1px solid transparent;border-radius:3px;color:var(--e-tx);cursor:pointer;padding:0;position:relative}
+.ed-corpo{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:52px 250px minmax(0,1fr) 286px;grid-template-rows:minmax(0,1fr)}
+.ed-tools{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-right:1px solid var(--e-bd);background:var(--e-bg);overflow-y:auto}
+.ed-tb{display:grid;place-items:center;width:42px;height:38px;flex:0 0 38px;background:none;border:1px solid transparent;border-radius:5px;color:var(--e-tx);cursor:pointer;padding:0;position:relative}
 .ed-tb svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .ed-tb:hover{border-color:var(--e-bd);background:var(--e-in)}
 .ed-tb.ativo{background:var(--e-ac);border-color:var(--e-acb)}
@@ -590,7 +593,7 @@ body.ed-aberto{overflow:hidden}
 /* Preencher tela: mantém todas as barras e painéis; apenas enquadra a folha inteira. */
 .ed.preencher-tela .ed-palco{background:#fff}
 /* Folha inteira: o palco vira a própria folha. Não há área externa cinza. */
-.ed.modo-foco{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:10000;background:#fff;padding:0!important}.ed.modo-foco .ed-menus,.ed.modo-foco .ed-cmd,.ed.modo-foco .ed-tools,.ed.modo-foco .ed-lat,.ed.modo-foco .ed-abas,.ed.modo-foco .ed-status{display:none!important}.ed.modo-foco .ed-corpo{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);width:100%;height:100%}.ed.modo-foco .ed-centro{grid-column:1;grid-row:1;width:100%;height:100%;background:#fff}.ed.modo-foco .ed-palco{width:100%;height:100%;background:#fff}
+.ed.modo-foco{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:10000;background:#fff;padding:0!important}.ed.modo-foco .ed-menus,.ed.modo-foco .ed-cmd,.ed.modo-foco .ed-acesso-tableta,.ed.modo-foco .ed-tools,.ed.modo-foco .ed-lat,.ed.modo-foco .ed-abas,.ed.modo-foco .ed-status{display:none!important}.ed.modo-foco .ed-corpo{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);width:100%;height:100%}.ed.modo-foco .ed-centro{grid-column:1;grid-row:1;width:100%;height:100%;background:#fff}.ed.modo-foco .ed-palco{width:100%;height:100%;background:#fff}
 .ed-carregando{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px;background:rgba(0,0,0,.25);pointer-events:none}
 .ed-status{display:flex;align-items:center;gap:12px;padding:2px 8px;background:var(--e-bg);border-top:1px solid var(--e-bd);color:var(--e-fr);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
 .ed-status .estado{min-width:0;color:var(--e-fr);font-size:11.5px}
@@ -608,7 +611,7 @@ body.ed-aberto{overflow:hidden}
 .ed-ajuda-c .ed-atalhos-detalhados kbd{display:inline-block;min-width:62px;padding:3px 7px;border:1px solid var(--e-bd);border-bottom-width:2px;border-radius:5px;background:var(--e-ac);color:var(--e-tx);font:600 11px/1.4 inherit;text-align:center;box-shadow:inset 0 1px rgba(255,255,255,.12)}
 
 @media (max-width:1120px){
-  .ed-corpo{grid-template-columns:42px 214px minmax(0,1fr) 236px}
+  .ed-corpo{grid-template-columns:48px 214px minmax(0,1fr) 236px}
 }
 /* modo independente: editor de desenho sem ferramentas específicas de painel/roteiro */
 .ed.modo-livre .ed-cmd [data-ed="ant"],
@@ -1058,7 +1061,7 @@ async function exportarDesenhos(){
     if(String(todos[i].id).indexOf("nota-imagem/")===0) continue;
     var rec=todos[i].rec||{}, copia={v:rec.v,w:rec.w,h:rec.h,ativa:rec.ativa,baloes:rec.baloes||[],camadas:[]};
     for(var j=0;j<(rec.camadas||[]).length;j++){
-      var c=rec.camadas[j], nc={id:c.id,nome:c.nome,vis:c.vis,bloqueada:c.bloqueada,op:c.op,modo:c.modo,blob:await blobParaData(c.blob),originalBlob:await blobParaData(c.originalBlob)}; copia.camadas.push(nc);
+      var c=rec.camadas[j], nc={id:c.id,nome:c.nome,tipo:c.tipo,sobreImagemId:c.sobreImagemId,vis:c.vis,bloqueada:c.bloqueada,op:c.op,modo:c.modo,blob:await blobParaData(c.blob),originalBlob:await blobParaData(c.originalBlob)}; copia.camadas.push(nc);
     }
     saida.push({id:todos[i].id,rec:copia});
   }
@@ -1164,7 +1167,7 @@ var HTML_ATALHOS_DETALHADOS=IDS_ATALHOS_DETALHADOS.map(function(id,i){
 }).join("");
 
 var AMOSTRAS=["#000000","#ffffff","#555555","#aaaaaa","#d63a3a","#e8892b","#f2d13b","#3fa34d","#2a6fdb","#7a45c9","#e46ab0","#7a4a2b"];
-var CFG={ferr:"caneta",cor:"#000000",tomDesenho:"#1d1d1d",imgFerr:"lapis",pressao:true,tol:24,ref:true,preencher:false,sim:"",simN:6,balTipo:"fala",ajust:{},perfilTraco:"livre",curvaPressao:"normal",favoritos:[],guia:{grade:false,persp:false,tipo:"1",op:35,h:.42,v1:.18,v2:.82,edit:false},manequim:{pose:"neutro",angulo:0,escala:1,opacidade:.55}};
+var CFG={ferr:"caneta",cor:"#000000",tomDesenho:"#1d1d1d",imgFerr:"lapis",pressao:true,tol:24,ref:true,preencher:false,formaTraco:"solido",formaRot:0,sim:"",simN:6,balTipo:"fala",ajust:{},perfilTraco:"livre",curvaPressao:"normal",favoritos:[],guia:{grade:false,persp:false,tipo:"1",op:35,h:.42,v1:.18,v2:.82,edit:false},manequim:{pose:"neutro",angulo:0,escala:1,opacidade:.55}};
 try{
   var tomDesenhoGuardado=localStorage.getItem("mesa.ed.tomDesenho");
   if(/^#[0-9a-f]{6}$/i.test(tomDesenhoGuardado||"")) CFG.tomDesenho=tomDesenhoGuardado.toLowerCase();
@@ -1604,7 +1607,7 @@ function montarDOM(){
     menu("Editar",mi("desfazer","Desfazer","Ctrl+Z")+mi("refazer","Refazer","Ctrl+Y")+'<hr>'+mi("m-cortar","Cortar","Ctrl+X")+mi("m-copiar","Copiar","Ctrl+C")+mi("m-colar","Colar","Ctrl+V")+mi("m-apagar","Apagar seleção","Del"))+
     menu("Camada",mi("c-nova","Nova camada")+mi("c-dup","Duplicar camada")+mi("c-mescla","Mesclar com a de baixo")+mi("c-apaga","Apagar camada")+'<hr>'+mi("c-sobe","Subir camada")+mi("c-desce","Descer camada"))+
     menu("Seleção",mi("m-sel-tudo","Selecionar tudo","Ctrl+A")+mi("m-sel-nada","Desfazer seleção","Esc")+'<hr>'+mi("s-fh","Espelhar horizontalmente")+mi("s-fv","Espelhar verticalmente")+mi("s-gira","Girar 90°"))+
-    menu("Imagem",mi("img-importar","Importar imagem…")+seletorFerrConversao+mi("img-converter-ferr","Converter com a ferramenta escolhida")+mi("img-tom-desenho","Escolher tom de lápis/caneta…")+'<hr>'+mi("img-ajustar-folha","Ajustar imagem à folha")+mi("img-preencher-folha","Preencher folha (cortar bordas)")+mi("img-desenho-lapis","Transformar em desenho: Lápis")+mi("img-desenho-caneta","Transformar em desenho: Caneta / mangá")+mi("img-desenho-nanquim","Transformar em desenho: Nanquim")+mi("img-desenho-colorido","Transformar em desenho: Lápis de cor")+mi("img-desenho-aquarela","Transformar em desenho: Aquarela")+mi("img-remover","Retirar imagem da camada ativa")+mi("img-original","Restaurar imagem original")+mi("img-saturacao","Ajustar saturação…")+mi("img-filtro-sepia","Filtro: Sépia")+mi("img-filtro-quente","Filtro: Quente")+mi("img-filtro-frio","Filtro: Frio")+mi("img-filtro-contraste","Filtro: Alto contraste")+mi("img-filtro-vintage","Filtro: Vintage")+mi("img-filtro-negativo","Filtro: Negativo")+mi("img-cinza","Converter camada ativa para tons de cinza")+mi("img-recortar","Recortar camada à seleção"))+
+    menu("Imagem",seletorFerrConversao+mi("img-converter-ferr","Converter com a ferramenta escolhida")+mi("img-tom-desenho","Escolher tom de lápis/caneta…")+'<hr>'+mi("img-ajustar-folha","Ajustar imagem à folha")+mi("img-preencher-folha","Preencher folha (cortar bordas)")+mi("img-desenho-lapis","Transformar em desenho: Lápis")+mi("img-desenho-caneta","Transformar em desenho: Caneta / mangá")+mi("img-desenho-nanquim","Transformar em desenho: Nanquim")+mi("img-desenho-colorido","Transformar em desenho: Lápis de cor")+mi("img-desenho-aquarela","Transformar em desenho: Aquarela")+mi("img-remover","Retirar imagem da camada ativa")+mi("img-original","Restaurar imagem original")+mi("img-saturacao","Ajustar saturação…")+mi("img-filtro-sepia","Filtro: Sépia")+mi("img-filtro-quente","Filtro: Quente")+mi("img-filtro-frio","Filtro: Frio")+mi("img-filtro-contraste","Filtro: Alto contraste")+mi("img-filtro-vintage","Filtro: Vintage")+mi("img-filtro-negativo","Filtro: Negativo")+mi("img-cinza","Converter camada ativa para tons de cinza")+mi("img-recortar","Recortar camada à seleção"))+ 
     menu("Balão",mi("b-novo","Novo balão no centro")+mi("b-dup","Duplicar balão")+mi("b-frente","Trazer para a frente")+mi("b-apaga","Apagar balão"))+
     menu("Visualizar",mi("zoom+","Aumentar zoom","+")+mi("zoom-","Diminuir zoom","−")+mi("ajustar","Ajustar à tela","0")+mi("preencher","Preencher toda a área")+mi("zoom100","Tamanho real (100%)"))+
     menu("Janela",janela)+
@@ -1620,8 +1623,8 @@ function montarDOM(){
     '<h4>Lápis e lapiseiras</h4><p><b>2H, H e F:</b> traço fino e claro, bons para construção e esboço leve. <b>HB/B/1B–3B:</b> esboço geral e linhas mais visíveis. <b>4B–6B:</b> traço escuro para sombras e desenho expressivo. <b>7B–10B:</b> muito macios e escuros; use opacidade/tamanho menores para detalhes. <b>Lapiseiras 0,3/0,5 mm:</b> detalhes finos; <b>0,7/0,9 mm:</b> esboço e contorno; <b>2,0 mm:</b> traço mais grosso.</p>'+
     '<h4>Canetas e arte-final</h4><p><b>Caneta G:</b> varie a pressão para linhas expressivas e contornos de mangá. <b>003–009 e 01–02:</b> detalhes, cílios e hachuras finas. <b>03–05:</b> contornos comuns. <b>06–09 e 1–3:</b> linhas grossas, silhuetas e impacto. <b>BR · Brush:</b> linhas com aparência de pincel. <b>Nanquim:</b> linha uniforme e limpa. <b>Esferográfica:</b> rascunho com linha firme.</p>'+
     '<h4>Pincéis, efeitos e borracha</h4><p><b>Marcador:</b> preenchimentos e sombras gráficas; reduza a opacidade para tons suaves. <b>Aerógrafo:</b> luz, brilho e sombra gradual; use tamanho grande e opacidade baixa. <b>Pincel macio:</b> pintura e transições suaves. <b>Pincel seco:</b> textura, cabelo, tecido e hachuras. <b>Esfumar:</b> arraste sobre cores existentes para misturá-las. <b>Borracha:</b> apague com cuidado; ajuste o tamanho para limpar detalhes ou áreas grandes.</p>'+
-    '<h4>Imagens e fotografias</h4><p><b>＋ Imagem / menu Imagem:</b> importe JPG, PNG, WebP e outros formatos aceitos pelo navegador. A imagem entra em uma nova camada e fica salva localmente junto do desenho para uso off-line. Use <b>Selecionar (V)</b> para mover ou redimensionar; o menu Seleção permite espelhar e girar. Ajuste a opacidade nas propriedades da camada. O menu Imagem também permite converter a camada ativa para tons de cinza ou recortá-la à seleção. Imagens muito grandes podem ocupar bastante armazenamento; o limite de importação é 25 MB por arquivo.</p>'+
-    '<h4>Formas, balões e edição</h4><p><b>Linha/Retângulo/Elipse:</b> arraste para criar; Shift restringe ângulo/proporção quando aplicável. <b>Balde:</b> clique na área fechada e ajuste Tolerância se sobrar espaço ou vazar cor; “Usar todas as camadas” considera o desenho combinado. <b>Conta-gotas:</b> clique para copiar uma cor do desenho. <b>Seleção:</b> arraste para selecionar, mova dentro da seleção e use as alças para transformar. <b>Balão:</b> escolha o tipo na paleta Material [Balão] e clique na página; selecione o balão para editar. <b>Mão:</b> arraste para navegar sem desenhar.</p>'+
+    '<h4>Imagens e fotografias</h4><p><b>Referências:</b> abra o botão 🖼 Referências para escolher imagens guardadas nas notas de imagens. Cada referência entra em uma camada própria, com uma camada de desenho separada por cima. Selecione a camada da imagem para aplicar ajustes, filtros, conversão para lápis/caneta ou restauração; desenhe na camada “Desenho sobre…” para que retirar a imagem não apague o traço. Use <b>Selecionar (V)</b> para mover ou redimensionar e o menu Seleção para espelhar ou girar.</p>'+ 
+    '<h4>Formas, balões e edição</h4><p><b>Linha/Retângulo/Elipse e formas 3D:</b> arraste para criar. Nas propriedades da forma, escolha traço contínuo, tracejado ou pontilhado e ajuste a rotação antes ou durante o desenho. Shift restringe ângulo/proporção quando aplicável. <b>Balde:</b> clique na área fechada e ajuste Tolerância se sobrar espaço ou vazar cor; “Usar todas as camadas” considera o desenho combinado. <b>Conta-gotas:</b> clique para copiar uma cor do desenho. <b>Seleção:</b> arraste para selecionar, mova dentro da seleção e use as alças para transformar. <b>Balão:</b> escolha o tipo na paleta Material [Balão] e clique na página; selecione o balão para editar. <b>Mão:</b> arraste para navegar sem desenhar.</p>'+ 
     '<p class="ed-dica">Dica: selecione qualquer ferramenta para ver uma dica específica logo abaixo das propriedades. Clique no grupo da esquerda e escolha uma opção na lista “Sub ferramenta” para acessar todas as pontas e graduações. Os valores de tamanho e opacidade são ajustáveis por ferramenta.</p>'+
     '<div class="ed-acoes-cam"><button type="button" class="bt" data-ed="ajuda">Fechar</button></div></div></div>';
 
@@ -1636,10 +1639,16 @@ function montarDOM(){
       '<label class="ed-lin" data-g="tol">Tolerância <input type="range" data-r="pTol" min="0" max="100"><output data-r="pTolV"></output></label>'+
       '<label class="ed-lin ed-chk" data-g="ref"><input type="checkbox" data-r="pRef"> Usar todas as camadas</label>'+
       '<label class="ed-lin ed-chk" data-g="fill"><input type="checkbox" data-r="pFill"> Preencher forma</label>'+
+      '<div class="ed-forma-opcoes" data-g="forma">'+
+        '<label>Traço <select data-r="pFormaTraco" aria-label="Tipo de traço da forma"><option value="solido">Contínuo</option><option value="tracejado">Tracejado</option><option value="pontilhado">Pontilhado</option></select></label>'+ 
+        '<label>Rotação <input type="range" data-r="pFormaRot" min="-180" max="180" step="1"><output data-r="pFormaRotV">0°</output></label>'+ 
+      '</div>'+ 
       '<div class="ed-acoes-cam" data-r="selAcoes">'+
         '<button type="button" class="bt mini" data-ed="s-fh">Espelhar ↔</button>'+
         '<button type="button" class="bt mini" data-ed="s-fv">Espelhar ↕</button>'+
-        '<button type="button" class="bt mini" data-ed="s-gira">Girar 90°</button>'+
+        '<button type="button" class="bt mini" data-ed="s-gira-esq">↺ 15°</button>'+ 
+        '<button type="button" class="bt mini" data-ed="s-gira-dir">↻ 15°</button>'+ 
+        '<button type="button" class="bt mini" data-ed="s-gira">Girar 90°</button>'+ 
       '</div>'+
       '<p class="ed-dica" data-r="dica"></p>')+
     pn("tam",'Tamanho do pincel','<div class="ed-tams" data-r="tams">'+tams+'</div>')+
@@ -1730,8 +1739,7 @@ function montarDOM(){
     '<span class="ed-esp"></span>'+
     '<button type="button" class="bt mini" data-ed="preencher" title="Enquadrar a folha inteira na área de desenho">Preencher tela</button>'+
     '<button type="button" class="bt mini" data-ed="foco" title="Ocultar toda a interface e deixar apenas a folha (Tab ou Esc para voltar)">Tela cheia</button>'+
-    '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir notas de imagens e inserir uma referência no desenho">🖼 Referências</button>'+
-    '<button type="button" class="bt mini" data-ed="img-importar">＋ Imagem</button>'+
+    '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir notas de imagens e inserir uma referência no desenho">🖼 Referências</button>'+ 
     '<button type="button" class="bt mini" data-ed="png">Baixar PNG</button>'+
     '<button type="button" class="bt mini ed-bt-lat" data-ed="lat">Paletas</button>'+
   '</div>'+
@@ -1742,6 +1750,16 @@ function montarDOM(){
     '<section class="ed-ref-dialog" data-r="referenciasConteudo"></section>'+ 
   '</div>'+  '<input type="file" data-r="imagemArquivo" accept="image/*" style="display:none" aria-label="Escolher imagem para importar">'+
   '<input type="color" data-r="tomDesenho" value="#1d1d1d" class="ed-tom-in" tabindex="-1" aria-label="Tom para converter imagem em lápis ou caneta">'+
+  '<div class="ed-acesso-tableta" role="toolbar" aria-label="Acesso rápido para mesa digitalizadora">'+
+    '<button type="button" class="bt mini" data-ferr="selecionar" title="Selecionar e transformar (V)">V <span>Selecionar</span></button>'+ 
+    '<button type="button" class="bt mini" data-ferr="caneta" title="Caneta G (B)">B <span>Caneta</span></button>'+ 
+    '<button type="button" class="bt mini" data-ferr="borracha" title="Borracha (E)">E <span>Borracha</span></button>'+ 
+    '<button type="button" class="bt mini" data-ferr="mao" title="Mover a folha (H / Espaço)">H <span>Mover</span></button>'+ 
+    '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir referências guardadas">🖼 <span>Referências</span></button>'+ 
+    '<button type="button" class="bt mini" data-ed="desfazer" title="Desfazer (Ctrl+Z)">↶</button>'+ 
+    '<button type="button" class="bt mini" data-ed="refazer" title="Refazer (Ctrl+Y)">↷</button>'+ 
+    '<button type="button" class="bt mini" data-ed="foco" title="Esconder painéis e deixar somente a folha">⛶ <span>Folha</span></button>'+ 
+  '</div>'+ 
   '<div class="ed-corpo">'+
     '<div class="ed-tools" role="toolbar" aria-label="Ferramentas">'+tools+'</div>'+
     '<div class="ed-centro">'+
@@ -1823,7 +1841,7 @@ function abrir(opts){
     });
     var pend=rec.camadas.map(function(c){
       var L=criarCamada(c.nome||"Camada",c.id);
-      L.vis=c.vis!==false; L.bloqueada=!!c.bloqueada; L.op=c.op==null?100:c.op; L.modo=c.modo||"normal"; L.blob=c.blob||null; L.originalBlob=c.originalBlob||null; L.sujo=false;
+      L.vis=c.vis!==false; L.bloqueada=!!c.bloqueada; L.op=c.op==null?100:c.op; L.modo=c.modo||"normal"; L.tipo=c.tipo||(/^Imagem:/i.test(L.nome)?"imagem":null); L.sobreImagemId=c.sobreImagemId||null; L.blob=c.blob||null; L.originalBlob=c.originalBlob||null; L.sujo=false;
       s.camadas.push(L);
       return decodificar(c.blob).then(function(img){
         if(img){ L.cx.drawImage(img,ox,oy); if(ox||oy) L.sujo=true; }
@@ -1859,6 +1877,37 @@ function criarCamada(nome,id){
 }
 function porId(id){ for(var i=0;i<S.camadas.length;i++) if(S.camadas[i].id===id) return S.camadas[i]; return null; }
 function camadaAtiva(){ return porId(S.ativa); }
+function ehCamadaImagem(L){ return !!L&&(L.tipo==="imagem"||/^Imagem:/i.test(L.nome||"")); }
+function camadaImagemAlvo(){
+  var A=camadaAtiva();
+  if(ehCamadaImagem(A)) return A;
+  if(A&&A.sobreImagemId){ var associada=porId(A.sobreImagemId); if(ehCamadaImagem(associada)) return associada; }
+  return null;
+}
+function criarCamadaDesenhoSobreImagem(L){
+  if(!S||!ehCamadaImagem(L)) return L;
+  for(var i=0;i<S.camadas.length;i++) if(S.camadas[i].sobreImagemId===L.id) { S.ativa=S.camadas[i].id; listaCamadas(); return S.camadas[i]; }
+  var desenho=criarCamada("Desenho sobre: "+String(L.nome||"Imagem").replace(/^Imagem:\s*/i,"").slice(0,28));
+  desenho.tipo="desenho"; desenho.sobreImagemId=L.id;
+  var idx=S.camadas.indexOf(L); S.camadas.splice(idx+1,0,desenho); S.ativa=desenho.id;
+  listaCamadas(); agendarSalvar(); aviso("Camada de desenho criada. A imagem e o desenho agora ficam independentes.");
+  return desenho;
+}
+function separarDesenhoMisturado(L){
+  if(!S||!L||!L.originalBlob||S.camadas.some(function(C){return C.sobreImagemId===L.id;})) return Promise.resolve();
+  return decodificar(L.originalBlob).then(function(img){
+    if(!img||!S||!porId(L.id)) return;
+    var base=novoCanvas(S.dim.w,S.dim.h), bx=base.getContext("2d");
+    bx.drawImage(img,0,0,S.dim.w,S.dim.h);
+    var atual=L.cx.getImageData(0,0,S.dim.w,S.dim.h), original=bx.getImageData(0,0,S.dim.w,S.dim.h), saida=bx.createImageData(S.dim.w,S.dim.h), tem=false;
+    for(var i=0;i<atual.data.length;i+=4){
+      var a=atual.data[i+3], ba=original.data[i+3], dif=Math.abs(atual.data[i]-original.data[i])+Math.abs(atual.data[i+1]-original.data[i+1])+Math.abs(atual.data[i+2]-original.data[i+2])+Math.abs(a-ba);
+      if(a>4&&(ba<4||dif>28)){saida.data[i]=atual.data[i];saida.data[i+1]=atual.data[i+1];saida.data[i+2]=atual.data[i+2];saida.data[i+3]=a;tem=true;}
+    }
+    var desenho=criarCamada("Desenho separado: "+String(L.nome||"Imagem").replace(/^Imagem:\s*/i,"").slice(0,24)); desenho.tipo="desenho"; desenho.sobreImagemId=L.id; if(tem) desenho.cx.putImageData(saida,0,0);
+    var idx=S.camadas.indexOf(L); S.camadas.splice(idx+1,0,desenho); S.ativa=desenho.id; desenho.sujo=true; listaCamadas(); agendarSalvar();
+  }).catch(function(){});
+}
 function qa(sel){ return Array.prototype.slice.call($ed.querySelectorAll(sel)); }
 function aviso(t){ if(S&&S.opts.aviso) S.opts.aviso(t); }
 function bordaAtual(){
@@ -1897,7 +1946,7 @@ function salvarAgora(){
     return new Promise(function(res){ L.cv.toBlob(function(b){ L.blob=b; res(); },"image/png"); });
   })).then(function(){
     var rec={v:1,w:s.dim.w,h:s.dim.h,ativa:s.ativa,baloes:s.baloes.map(cloneBal),camadas:s.camadas.map(function(L){
-      return {id:L.id,nome:L.nome,vis:L.vis,bloqueada:!!L.bloqueada,op:L.op,modo:L.modo,blob:L.blob,originalBlob:L.originalBlob||null};
+      return {id:L.id,nome:L.nome,tipo:L.tipo||null,sobreImagemId:L.sobreImagemId||null,vis:L.vis,bloqueada:!!L.bloqueada,op:L.op,modo:L.modo,blob:L.blob,originalBlob:L.originalBlob||null};
     })};
     return bdGravar(s.painel.id,rec);
   }).then(function(ok){
@@ -2448,6 +2497,8 @@ function addPonto(vv,x,y,p){
 function iniciarTraco(e,w){
   commitFlut();
   var L=camadaAtiva(); if(!L) return;
+  if(ehCamadaImagem(L)&&(L.bloqueada||!L.vis)){ aviso(L.bloqueada?"Desbloqueie a camada da imagem antes de desenhar.":"Mostre a camada da imagem antes de desenhar."); return; }
+  if(ehCamadaImagem(L)) L=criarCamadaDesenhoSobreImagem(L);
   if(!L.vis){ aviso("A camada está oculta. Mostre-a para desenhar."); return; } if(L.bloqueada){ aviso("Desbloqueie a camada antes de desenhar."); return; } if(L.bloqueada){ aviso("Desbloqueie a camada antes de desenhar."); return; }
   var B=PINCEIS[S.ferr], aj=CFG.ajust[S.ferr];
   var vv={B:B,L:L,cv:S.live,cx:S.live.getContext("2d"),borracha:!!B.borracha,op:aj.op/100,
@@ -2514,9 +2565,11 @@ function finalizarTraco(){
 function iniciarForma(e,w){
   commitFlut();
   var L=camadaAtiva(); if(!L) return;
+  if(ehCamadaImagem(L)&&(L.bloqueada||!L.vis)){ aviso(L.bloqueada?"Desbloqueie a camada da imagem antes de desenhar.":"Mostre a camada da imagem antes de desenhar."); return; }
+  if(ehCamadaImagem(L)) L=criarCamadaDesenhoSobreImagem(L);
   if(!L.vis){ aviso("A camada está oculta. Mostre-a para desenhar."); return; } if(L.bloqueada){ aviso("Desbloqueie a camada antes de desenhar."); return; } if(L.bloqueada){ aviso("Desbloqueie a camada antes de desenhar."); return; }
   var aj=CFG.ajust[S.ferr];
-  var vv={forma:{tipo:S.ferr,x0:w.x,y0:w.y,x1:w.x,y1:w.y},L:L,cv:S.live,cx:S.live.getContext("2d"),
+  var vv={forma:{tipo:S.ferr,x0:w.x,y0:w.y,x1:w.x,y1:w.y,rot:CFG.formaRot||0,traco:CFG.formaTraco||"solido"},L:L,cv:S.live,cx:S.live.getContext("2d"),
     borracha:false,op:aj.op/100,cor:CFG.cor,tam:aj.tam,fill:CFG.preencher,id:e.pointerId,bb:null};
   vv.cx.setTransform(1,0,0,1,0,0); vv.cx.clearRect(0,0,S.dim.w,S.dim.h);
   S.vivo=vv; redesenharForma(vv); pedir(true);
@@ -2535,8 +2588,12 @@ function ajustarForma(f,w,shift){
   }
   f.x1=x; f.y1=y;
 }
-function tracarForma(c,f,cor,lw,fill){
+function tracarForma(c,f,cor,lw,fill,traco,rot){
   c.save(); c.strokeStyle=cor; c.fillStyle=cor; c.lineWidth=lw; c.lineCap="round"; c.lineJoin="round";
+  var ang=((f&&f.rot!=null?f.rot:rot)||0)*Math.PI/180, tcx=(f.x0+f.x1)/2, tcy=(f.y0+f.y1)/2;
+  if(ang){ c.translate(tcx,tcy); c.rotate(ang); c.translate(-tcx,-tcy); }
+  traco=traco||(f&&f.traco)||"solido";
+  c.setLineDash(traco==="tracejado"?[Math.max(3,lw*3),Math.max(2,lw*2)]:traco==="pontilhado"?[Math.max(1,lw),Math.max(3,lw*2.8)]:[]);
   if(f.tipo==="linha"){
     c.beginPath(); c.moveTo(f.x0,f.y0); c.lineTo(f.x1,f.y1); c.stroke();
   }else if(f.tipo==="retangulo"){
@@ -2557,14 +2614,14 @@ function tracarForma(c,f,cor,lw,fill){
     else if(f.tipo==="esfera"){ var g=c.createRadialGradient(cx-a*.35,cy-b*.4,1,cx,cy,a);g.addColorStop(0,"#fff");g.addColorStop(1,cor);c.fillStyle=fill?g:cor;c.beginPath();c.ellipse(cx,cy,a,b,0,0,TAU);if(fill)c.fill();c.stroke(); }
     else { c.beginPath(); c.ellipse(cx,cy,a,b,0,0,TAU); if(fill)c.fill(); c.stroke(); }
   }
-  c.restore();
+  c.setLineDash([]); c.restore();
 }
 function redesenharForma(vv){
   var c=vv.cx;
   c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,S.dim.w,S.dim.h);
   transfSim().forEach(function(m){
     c.save(); c.setTransform(m[0],m[1],m[2],m[3],m[4],m[5]);
-    tracarForma(c,vv.forma,vv.cor,vv.tam,vv.fill);
+    tracarForma(c,vv.forma,vv.cor,vv.tam,vv.fill,vv.forma.traco,vv.forma.rot);
     c.restore();
   });
 }
@@ -2811,6 +2868,17 @@ function miniaturasBaloes(){
 }
 
 /* ---------- seleção: espelhar e girar ---------- */
+function girarSelecaoGraus(graus){
+  if(!S.flut){
+    if(!S.sel||!levantar()){ aviso("Faça uma seleção primeiro (ferramenta Selecionar)."); return; }
+  }
+  var f=S.flut, rad=(+graus||0)*Math.PI/180, co=Math.abs(Math.cos(rad)), si=Math.abs(Math.sin(rad));
+  var nw=Math.max(1,Math.ceil(f.ow*co+f.oh*si)), nh=Math.max(1,Math.ceil(f.ow*si+f.oh*co));
+  var c=novoCanvas(nw,nh), x=c.getContext("2d");
+  x.translate(nw/2,nh/2); x.rotate(rad); x.drawImage(f.cv,-f.ow/2,-f.oh/2);
+  var cx=f.x+f.w/2, cy=f.y+f.h/2; f.cv=c; f.ow=nw; f.oh=nh; f.w=nw; f.h=nh; f.x=cx-nw/2; f.y=cy-nh/2;
+  pedir(true);
+}
 function transformarSel(op){
   if(!S.flut){
     if(!S.sel||!levantar()){ aviso("Faça uma seleção primeiro (ferramenta Selecionar)."); return; }
@@ -3165,7 +3233,7 @@ function atualizarFerr(){
   qa("[data-grp]").forEach(function(b){ b.classList.toggle("ativo",b.getAttribute("data-grp")===gr.id); });
   qa("[data-sg]").forEach(function(b){ b.classList.toggle("oculto",b.getAttribute("data-sg")!==gr.id); });
   CFG.ultimo[gr.id]=n;
-  var mostrar={tam:!!B||F,op:!!B||F,estab:!!B,pres:!!(B&&B.pres),tol:n==="balde",ref:n==="balde",fill:!!F&&n!=="linha"};
+  var mostrar={tam:!!B||F,op:!!B||F,estab:!!B,pres:!!(B&&B.pres),tol:n==="balde",ref:n==="balde",fill:!!F&&n!=="linha",forma:!!F};
   qa("[data-g]").forEach(function(l){ l.classList.toggle("oculto",!mostrar[l.getAttribute("data-g")]); });
   if(B||F){
     var a=CFG.ajust[n];
@@ -3175,6 +3243,8 @@ function atualizarFerr(){
     E.pPres.checked=CFG.pressao;
   }
   E.pTol.value=CFG.tol; E.pTolV.textContent=CFG.tol; E.pRef.checked=CFG.ref; E.pFill.checked=CFG.preencher;
+  if(E.pFormaTraco) E.pFormaTraco.value=CFG.formaTraco||"solido";
+  if(E.pFormaRot){ E.pFormaRot.value=CFG.formaRot||0; E.pFormaRotV.textContent=(CFG.formaRot||0)+"°"; }
   E.selAcoes.classList.toggle("oculto",n!=="selecionar");
   var dicas={
     selecionar:"Seleção: arraste para selecionar; arraste dentro para mover e use as alças para redimensionar. Enter confirma, Esc cancela e Delete apaga.",
@@ -3403,7 +3473,7 @@ function novaCamada(nome,pixels){
 function duplicarCamada(){
   var A=camadaAtiva(); if(!A) return;
   novaCamada(A.nome+" cópia",A.cv);
-  var L=camadaAtiva(); L.op=A.op; L.modo=A.modo; listaCamadas();
+  var L=camadaAtiva(); L.op=A.op; L.modo=A.modo; L.tipo=A.tipo||null; L.sobreImagemId=A.sobreImagemId||null; listaCamadas();
 }
 function moverCamada(dir){
   commitFlut();
@@ -3495,16 +3565,18 @@ function importarImagem(arquivo){
       var w=Math.max(1,Math.round(img.naturalWidth*escala)), h=Math.max(1,Math.round(img.naturalHeight*escala));
       var listaAntes=S.camadas.slice(), ativaAntes=S.ativa;
       var nome=(arquivo.name||"Imagem").replace(/\.[^.]+$/,"").slice(0,26)||"Imagem";
-      var L=criarCamada("Imagem: "+nome); L.cx.drawImage(img,Math.round((S.dim.w-w)/2),Math.round((S.dim.h-h)/2),w,h); L.sujo=true;
+      var L=criarCamada("Imagem: "+nome); L.tipo="imagem"; L.cx.drawImage(img,Math.round((S.dim.w-w)/2),Math.round((S.dim.h-h)/2),w,h); L.sujo=true;
       /* A base dos efeitos deve ser ImageData, não um elemento canvas. */
       L._baseEfeitos=L.cx.getImageData(0,0,S.dim.w,S.dim.h);
       /* Guarda uma cópia original para restaurar mesmo depois de filtros e ao reabrir o projeto. */
       L.cv.toBlob(function(blob){ if(blob){ L.originalBlob=blob; agendarSalvar(); } },"image/png");
-      S.camadas.push(L); S.ativa=L.id; S.sel={x:Math.round((S.dim.w-w)/2),y:Math.round((S.dim.h-h)/2),w:w,h:h};
+      var desenho=criarCamada("Desenho sobre: "+nome); desenho.tipo="desenho"; desenho.sobreImagemId=L.id;
+      var posInsercao=S.camadas.indexOf(camadaAtiva()); if(posInsercao<0) posInsercao=S.camadas.length-1;
+      S.camadas.splice(posInsercao+1,0,L,desenho); S.ativa=desenho.id; S.sel={x:Math.round((S.dim.w-w)/2),y:Math.round((S.dim.h-h)/2),w:w,h:h};
       S.tocou=true;
       empurrar({t:"estrutura",antes:{lista:listaAntes,ativa:ativaAntes},depois:{lista:S.camadas.slice(),ativa:S.ativa}});
       trocarFerr("selecionar"); listaCamadas(); atualizarBotoesHist(); pedir(true);
-      aviso("Imagem importada em uma nova camada. Use Selecionar (V) para mover, redimensionar, espelhar ou girar; ajuste a opacidade nas propriedades da camada.");
+      aviso("Imagem importada em uma camada própria, com uma camada de desenho separada por cima. Use Referências ou Camadas para editar cada parte.");
     }catch(e){ aviso("Não foi possível importar essa imagem. Tente uma imagem menor ou em JPG/PNG."); }
   };
   img.onerror=function(){ URL.revokeObjectURL(url); aviso("Não foi possível abrir essa imagem. Tente JPG, PNG ou WebP."); };
@@ -3513,19 +3585,21 @@ function importarImagem(arquivo){
 function retirarImagemAtiva(){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva(); if(!L) return;
-  if(!/^Imagem:/i.test(L.nome)){ aviso("Selecione a camada da imagem que deseja retirar."); return; }
-  var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h);
-  L.cx.clearRect(0,0,S.dim.w,S.dim.h); L.sujo=true;
-  var depois=recortar(L.cv,0,0,S.dim.w,S.dim.h);
-  empurrar({t:"px",layer:L.id,x:0,y:0,antes:antes,depois:depois});
-  S.sel=null; pedir(true); aviso("Imagem retirada. Use Ctrl+Z para desfazer.");
+  var L=camadaImagemAlvo(); if(!L){ aviso("Selecione uma camada de imagem para retirar."); return; }
+  var remover=function(){
+    if(!S||!porId(L.id)) return;
+    var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h);
+    L.cx.clearRect(0,0,S.dim.w,S.dim.h); L.sujo=true;
+    var depois=recortar(L.cv,0,0,S.dim.w,S.dim.h);
+    empurrar({t:"px",layer:L.id,x:0,y:0,antes:antes,depois:depois});
+    S.sel=null; pedir(true); aviso("Imagem retirada. O desenho separado foi preservado. Use Ctrl+Z para desfazer.");
+  };
+  separarDesenhoMisturado(L).then(remover);
 }
 function restaurarImagemOriginal(){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva(); if(!L) return;
-  if(!/^Imagem:/i.test(L.nome)){ aviso("Selecione a camada da imagem que deseja restaurar."); return; }
+  var L=camadaImagemAlvo(); if(!L){ aviso("Selecione uma camada de imagem para restaurar."); return; }
   if(!L.originalBlob){ aviso("Esta imagem foi importada antes da função de restauração. Importe-a novamente para poder restaurar o original."); return; }
   var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h), original=L.originalBlob;
   decodificar(original).then(function(img){
@@ -3553,7 +3627,7 @@ function copiarImageData(base,ctx){
 function converterCamadaCinza(){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva(); if(!L) return;
+  var L=camadaImagemAlvo()||camadaAtiva(); if(!L) return;
   var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h), c=L.cx, im;
   try{ im=copiarImageData(baseOriginalEfeitos(L),c); }catch(e){ aviso("Não foi possível editar os pixels dessa camada."); return; }
   var d=im.data;
@@ -3566,7 +3640,7 @@ function converterCamadaCinza(){
 function ajustarSaturacao(){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva(); if(!L) return;
+  var L=camadaImagemAlvo()||camadaAtiva(); if(!L) return;
   var atual=prompt("Saturação da camada ativa (0 a 200):\n0 = sem cor, 100 = original, 200 = cores intensas","100");
   if(atual===null) return;
   var fator=Number(atual);
@@ -3582,7 +3656,7 @@ function aplicarFiltroImagem(tipo){
 function aplicarAjusteImagem(tipo,valor){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva(); if(!L) return;
+  var L=camadaImagemAlvo()||camadaAtiva(); if(!L) return;
   var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h), c=L.cx, im;
   try{ im=copiarImageData(baseOriginalEfeitos(L),c); }catch(e){ aviso("Não foi possível editar os pixels dessa camada."); return; }
   var d=im.data;
@@ -3616,8 +3690,8 @@ function aplicarAjusteImagem(tipo,valor){
 function ajustarImagemFolha(modo){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva();
-  if(!L || !/^Imagem:/i.test(L.nome)){ aviso("Selecione a camada da imagem que deseja ajustar."); return; }
+  var L=camadaImagemAlvo();
+  if(!L){ aviso("Selecione uma camada de imagem para ajustar."); return; }
   var w=S.dim.w,h=S.dim.h, ctx=L.cx, data;
   try{ data=ctx.getImageData(0,0,w,h); }catch(e){ aviso("Não foi possível ler a imagem para ajustá-la."); return; }
   var d=data.data,minX=w,minY=h,maxX=-1,maxY=-1;
@@ -3635,8 +3709,8 @@ function ajustarImagemFolha(modo){
 function transformarFotoDesenho(estilo,ferramenta){
   if(!S) return;
   commitFlut();
-  var L=camadaAtiva();
-  if(!L || !/^Imagem:/i.test(L.nome)){ aviso("Selecione a camada da imagem que deseja transformar."); return; }
+  var L=camadaImagemAlvo();
+  if(!L){ aviso("Selecione uma camada de imagem para transformar."); return; }
   var ferramentaEscolhida=ferramenta&&PINCEIS[ferramenta]?ferramenta:null, B=ferramentaEscolhida?PINCEIS[ferramentaEscolhida]:null;
   var modo=estilo;
   if(B) modo=ferramentaEscolhida==="nanquim"?"nanquim":((B.tipo==="lapis"||B.tipo==="macio")?"lapis":"caneta");
@@ -3835,6 +3909,8 @@ function acao(n,b){
     case "b-frente": balFrente(); break;
     case "s-fh": transformarSel("fh"); break;
     case "s-fv": transformarSel("fv"); break;
+    case "s-gira-esq": girarSelecaoGraus(-15); break;
+    case "s-gira-dir": girarSelecaoGraus(15); break;
     case "s-gira": transformarSel("gira"); break;
     case "m-cortar": copiarSel(); apagarSel(); break;
     case "m-copiar": copiarSel(); break;
@@ -3947,6 +4023,10 @@ function ligarEventos(){
     else if(r==="pTol"){ CFG.tol=+t.value; E.pTolV.textContent=t.value; }
     else if(r==="cor"){ definirCor(t.value); }
     else if(r==="tomDesenho"){ CFG.tomDesenho=t.value.toLowerCase(); }
+    else if(r==="pFormaRot"){
+      CFG.formaRot=+t.value||0; if(E.pFormaRotV) E.pFormaRotV.textContent=CFG.formaRot+"°";
+      if(S.vivo&&S.vivo.forma){ S.vivo.forma.rot=CFG.formaRot; redesenharForma(S.vivo); pedir(true); }
+    }
     else if(r==="navZoom"){ var nz=0.05*Math.pow(320,(+t.value)/100); zoomEm(nz/S.z,S.pw/2,S.ph/2); }
     else if(r==="simN"){ CFG.simN=+t.value; E.simNV.textContent=t.value; pedir(false); }
     else if(r==="balTxt"){ balEdit(function(b){ b.txt=t.value; }); }
@@ -3983,6 +4063,9 @@ function ligarEventos(){
     }
     else if(r==="pPres") CFG.pressao=t.checked;
     else if(r==="pFill") CFG.preencher=t.checked;
+    else if(r==="pFormaTraco"){
+      CFG.formaTraco=t.value||"solido"; if(S.vivo&&S.vivo.forma){ S.vivo.forma.traco=CFG.formaTraco; redesenharForma(S.vivo); pedir(true); }
+    }
     else if(r==="sim"){ CFG.sim=t.value; E.simNBox.classList.toggle("oculto",t.value!=="r"); pedir(false); }
     else if(r==="balTxt"||r==="balFs") fecharEdicaoBal();
     else if(r==="pRef") CFG.ref=t.checked;
@@ -4570,7 +4653,7 @@ function renderReferenciasEditor(host,opcoes){
     }).join("");
     return '<section class="ed-ref-grupo"><h3>'+esc((n.titulo||"Biblioteca de imagens").trim()||"Biblioteca de imagens")+'</h3><div class="ed-ref-grid">'+imagens+'</div></section>';
   }).join(""):'<p class="ed-ref-vazio">Nenhuma nota de imagens foi criada ainda. Crie uma em Notas e guarde referências para reutilizar nos desenhos.</p>';
-  host.innerHTML='<div class="ed-ref-cab"><div><h2>Referências · notas de imagens</h2><p>Escolha uma imagem guardada para inserir como nova camada no desenho atual.</p></div><button type="button" class="bt mini" data-ed="referencias-fechar">Fechar</button></div><div class="ed-ref-acoes"><input class="ed-ref-busca" type="search" data-ref-busca placeholder="Buscar por nome da imagem ou nota" aria-label="Buscar referências"><span class="ed-ref-contagem" data-ref-contagem>'+referencias.length+' imagem(ns)</span><button type="button" class="bt mini ed-ref-bt" data-ref-abrir-notas>Gerenciar notas de imagens</button></div><div class="ed-ref-grid">'+corpo+'</div>';
+  host.innerHTML='<div class="ed-ref-cab"><div><h2>Referências · notas de imagens</h2><p>Escolha uma imagem guardada para inserir como nova camada. O desenho é criado em uma camada separada; depois selecione a imagem nas Camadas para editar filtros, tom, escala ou recorte.</p></div><button type="button" class="bt mini" data-ed="referencias-fechar">Fechar</button></div><div class="ed-ref-acoes"><input class="ed-ref-busca" type="search" data-ref-busca placeholder="Buscar por nome da imagem ou nota" aria-label="Buscar referências"><span class="ed-ref-contagem" data-ref-contagem>'+referencias.length+' imagem(ns)</span><button type="button" class="bt mini ed-ref-bt" data-ref-abrir-notas>Gerenciar notas de imagens</button></div><div class="ed-ref-grid">'+corpo+'</div>';
   host.onclick=function(ev){
     var card=ev.target.closest&&ev.target.closest("[data-ref-inserir]");
     if(card&&host.contains(card)){
