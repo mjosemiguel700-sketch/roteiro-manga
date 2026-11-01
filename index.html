@@ -4495,11 +4495,16 @@ async function enviarImagemNota(){ return null; }
 async function apagarImagemNotaNuvem(){ return; }
 async function sincronizarImagensNuvem(){ return; }
 async function anexarImagensNota(arquivos){
-  var n=notaObj(notaAtual); if(!n||!arquivos||!arquivos.length) return;
+  /* FileList é um objeto "vivo": limpar o <input> logo após a seleção no
+     celular pode zerá-lo antes de o processamento assíncrono terminar.
+     Copie os arquivos para um Array comum antes do primeiro await. */
+  var selecionados=[];
+  try{ selecionados=Array.prototype.slice.call(arquivos||[]); }catch(e){ selecionados=[]; }
+  var n=notaObj(notaAtual); if(!n||!selecionados.length) return;
   if(!Array.isArray(n.imagens)) n.imagens=[];
   var adicionadas=0;
-  for(var i=0;i<arquivos.length;i++){
-    var arquivo=arquivos[i]; if(!arquivo||!/^image\//i.test(arquivo.type||"")) continue;
+  for(var i=0;i<selecionados.length;i++){
+    var arquivo=selecionados[i]; if(!arquivo||!/^image\//i.test(arquivo.type||"")) continue;
     try{
       var iid=id("ni"), src=await arquivoDataUrl(arquivo), meta={id:iid,nome:arquivo.name||"Imagem",tipo:arquivo.type||"image/*",tamanho:arquivo.size||0,criadoEm:Date.now()};
       await bdGravar(notaImagemChave(n.id,iid),{src:src,nome:meta.nome,tipo:meta.tipo,tamanho:meta.tamanho,criadoEm:meta.criadoEm});
@@ -6152,7 +6157,13 @@ function aoEditarNotas(ev){
 tela.addEventListener("click",aoClicarNotas);
 tela.addEventListener("input",aoEditarNotas);
 tela.addEventListener("change",function(ev){
-  if(ev.target&&ev.target.matches("[data-nota-anexos]")){ anexarImagensNota(ev.target.files); ev.target.value=""; }
+  if(ev.target&&ev.target.matches("[data-nota-anexos]")){
+    /* Faça a cópia antes de resetar o campo: em alguns navegadores móveis,
+       ev.target.value="" também esvazia o FileList recebido pela função. */
+    var arquivos=Array.prototype.slice.call(ev.target.files||[]);
+    ev.target.value="";
+    if(arquivos.length) anexarImagensNota(arquivos);
+  }
 });
 
 
