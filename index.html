@@ -4158,20 +4158,21 @@ function ligarEventos(){
 /* ---------- teclado ---------- */
 function onKey(e){
   if(!S) return;
-  if(!E.ajuda.classList.contains("oculto")&&(e.key||"")==="Escape"){ e.preventDefault(); e.stopPropagation(); fecharAjuda(); return; }
-  if($ed&&$ed.classList.contains("modo-foco")&&(e.key||"")==="Escape"){ e.preventDefault(); e.stopPropagation(); alternarModoFoco(false); return; }
-  if((e.key||"")==="Tab"){ e.preventDefault(); e.stopPropagation(); girarFolha(90); return; }
-  if((e.key||"")==="Escape"&&sairPreencherTela()){ e.preventDefault(); e.stopPropagation(); return; }
-  if(menuAberto()&&(e.key||"")==="Escape"){ e.preventDefault(); e.stopPropagation(); fecharMenus(); return; }
+  var key=e.key||"", code=e.code||"", lower=key.toLowerCase();
+  if(!E.ajuda.classList.contains("oculto")&&(key==="Escape"||code==="Escape")){ e.preventDefault(); e.stopPropagation(); fecharAjuda(); return; }
+  if($ed&&$ed.classList.contains("modo-foco")&&(key==="Escape"||code==="Escape")){ e.preventDefault(); e.stopPropagation(); alternarModoFoco(false); return; }
+  if(key==="Tab"||code==="Tab"){ e.preventDefault(); e.stopPropagation(); girarFolha(90); return; }
+  if((key==="Escape"||code==="Escape")&&sairPreencherTela()){ e.preventDefault(); e.stopPropagation(); return; }
+  if(menuAberto()&&(key==="Escape"||code==="Escape")){ e.preventDefault(); e.stopPropagation(); fecharMenus(); return; }
   var t=e.target, tag=t&&t.tagName;
   if(tag==="TEXTAREA"||tag==="SELECT"||(tag==="INPUT"&&(t.type==="text"||t.type==="number"))) return;
-  var ctrl=e.ctrlKey||e.metaKey, k=(e.key||"").toLowerCase();
-  if(e.key==="Control"){ e.preventDefault(); e.stopPropagation(); trocarFerr("lapis"); return; }
-  if(e.key==="Alt"){ e.preventDefault(); e.stopPropagation(); trocarFerr("lapiseira05"); return; }
+  var ctrl=e.ctrlKey||e.metaKey, k=lower;
+  if(key==="Control"||code==="ControlLeft"||code==="ControlRight"){ e.preventDefault(); e.stopPropagation(); trocarFerr("lapis"); return; }
+  if(key==="Alt"||code==="AltLeft"||code==="AltRight"){ e.preventDefault(); e.stopPropagation(); trocarFerr("lapiseira05"); return; }
   /* Alt + tecla escolhe diretamente uma ponta/graduação específica. */
   if(e.altKey && !ctrl){
-    if(S.modoPagina&&((e.key||"")==="PageUp"||(e.key||"")==="PageDown")){
-      e.preventDefault(); e.stopPropagation(); moverPaginaEditor((e.key||"")==="PageUp"?-1:1); return;
+    if(S.modoPagina&&(key==="PageUp"||key==="PageDown"||code==="PageUp"||code==="PageDown")){
+      e.preventDefault(); e.stopPropagation(); moverPaginaEditor((key==="PageUp"||code==="PageUp")?-1:1); return;
     }
     var idAtalhoDetalhado=MAPA_ATALHOS_DETALHADOS[k];
     if(idAtalhoDetalhado){ e.preventDefault(); e.stopPropagation(); trocarFerr(idAtalhoDetalhado); return; }
@@ -4179,37 +4180,37 @@ function onKey(e){
   if(ctrl){
     if(k==="z"){ e.preventDefault(); e.stopPropagation(); if(e.shiftKey) refazer(); else desfazer(); }
     else if(k==="y"){ e.preventDefault(); e.stopPropagation(); refazer(); }
-    else if(k==="+"||((k==="=")&&e.shiftKey)||e.code==="NumpadAdd"){ e.preventDefault(); e.stopPropagation(); zoomCentro(1.25); }
-    else if(k==="-"||e.code==="NumpadSubtract"){ e.preventDefault(); e.stopPropagation(); zoomCentro(0.8); }
+    else if(k==="+"||((k==="=")&&e.shiftKey)||(code==="Equal"&&e.shiftKey)||code==="NumpadAdd"){ e.preventDefault(); e.stopPropagation(); zoomCentro(1.25); }
+    else if(k==="-"||code==="Minus"||code==="NumpadSubtract"){ e.preventDefault(); e.stopPropagation(); zoomCentro(0.8); }
     else if(k==="a"){ e.preventDefault(); e.stopPropagation(); selecionarTudo(); }
     else if(k==="c"){ e.preventDefault(); e.stopPropagation(); copiarSel(); }
     else if(k==="x"){ e.preventDefault(); e.stopPropagation(); copiarSel(); apagarSel(); }
     else if(k==="v"){ e.preventDefault(); e.stopPropagation(); colarSel(); }
     return;
   }
-  if(k===" "){
+  if(k===" "||code==="Space"){
     e.preventDefault(); e.stopPropagation();
     trocarFerr("cubo"); aviso("Formas tridimensionais ativadas. Escolha cubo, cilindro, cone, pirâmide ou prisma.");
     return;
   }
   if(S.cortando){
-    if(k==="escape"){ e.stopPropagation(); alternarCorte(false); return; }
+    if(k==="escape"||code==="Escape"){ e.stopPropagation(); alternarCorte(false); return; }
     if(k==="delete"||k==="backspace"){ e.preventDefault(); removerVerticeSel(); return; }
   }
-  if(k==="escape"){ e.stopPropagation(); if(S.ferr==="balao"&&S.balSel){ fecharEdicaoBal(); S.balSel=null; atualizarBal(); pedir(false); } else cancelarSel(); return; }
+  if(k==="escape"||code==="Escape"){ e.stopPropagation(); if(S.ferr==="balao"&&S.balSel){ fecharEdicaoBal(); S.balSel=null; atualizarBal(); pedir(false); } else cancelarSel(); return; }
   if(k==="enter"&&S.flut){ e.preventDefault(); commitFlut(); return; }
   if(k==="delete"||k==="backspace"){ e.preventDefault(); if(S.ferr==="balao") apagarBal(); else apagarSel(); return; }
-  if(k==="["){ e.preventDefault(); deslocarFolha(-48,0); return; }
-  if(k==="]"){ e.preventDefault(); deslocarFolha(48,0); return; }
-  if(k==="+"||((k==="=")&&e.shiftKey)||e.code==="NumpadAdd"){ e.preventDefault(); refazer(); return; }
-  if(k==="-"){ e.preventDefault(); desfazer(); return; }
+  if(k==="["||code==="BracketLeft"){ e.preventDefault(); deslocarFolha(-48,0); return; }
+  if(k==="]"||code==="BracketRight"){ e.preventDefault(); deslocarFolha(48,0); return; }
+  if(k==="+"||((k==="=")&&e.shiftKey)||(code==="Equal"&&e.shiftKey)||code==="NumpadAdd"){ e.preventDefault(); refazer(); return; }
+  if(k==="-"||code==="Minus"||code==="NumpadSubtract"){ e.preventDefault(); desfazer(); return; }
   if(k==="0"){ ajustar(); return; }
   var mapa={p:"lapis",q:"lapis6b",k:"esfero",b:"caneta",n:"nanquim",m:"marcador",r:"aerografo",a:"pincel",d:"seco",s:"esfumar",e:"borracha",l:"linha",u:"retangulo",o:"elipse",g:"balde",i:"gota",v:"selecionar",t:"balao",h:"mao"};
   if(mapa[k]) trocarFerr(mapa[k]);
 }
 function onKeyUp(e){
   if(!S) return;
-  if((e.key||"")===" "){
+  if((e.key||"")===" "||e.code==="Space"){
     e.preventDefault(); e.stopPropagation();
     S.espaco=false; E.over.style.cursor=S.ferr==="mao"?"grab":"crosshair"; pedir(false);
   }
