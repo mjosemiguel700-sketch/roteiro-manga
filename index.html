@@ -3147,15 +3147,11 @@ function paraObra(sx,sy){ var q=telaSemRotacao(sx,sy); return paraObraSemRotacao
 function deslocarFolha(dx,dy){
   if(!S) return;
   var fw=S.dim.w*S.z, fh=S.dim.h*S.z, mx=Math.max(72,Math.round(Math.min(S.pw||fw,S.ph||fh)*.35));
-  if(fw<=(S.pw||fw)){ var cx=((S.pw||fw)-fw)/2; S.tx=clamp(S.tx+(dx||0),cx-mx,cx+mx); }
-  else S.tx+=dx||0;
-  if(fh<=(S.ph||fh)){ var cy=((S.ph||fh)-fh)/2; S.ty=clamp(S.ty+(dy||0),cy-mx,cy+mx); }
-  else S.ty+=dy||0;
-  limitarNavegacao();
-  /* Quando a folha cabe inteira, limitarNavegacao a centraliza. Preserve o
-     deslocamento manual das barras dentro de uma margem controlada. */
-  if(fw<=(S.pw||fw)){ var cx2=((S.pw||fw)-fw)/2; S.tx=clamp(S.tx+(dx||0),cx2-mx,cx2+mx); }
-  if(fh<=(S.ph||fh)){ var cy2=((S.ph||fh)-fh)/2; S.ty=clamp(S.ty+(dy||0),cy2-mx,cy2+mx); }
+  var margem=($ed&&($ed.classList.contains("preencher-tela")||$ed.classList.contains("modo-foco")))?0:clamp(Math.round(Math.min(S.pw||fw,S.ph||fh)*.08),24,72);
+  if(fw<=(S.pw||fw)){ var cx=((S.pw||fw)-fw)/2; S.tx=clamp(cx+(S.tx-cx)+(dx||0),cx-mx,cx+mx); }
+  else S.tx=clamp(S.tx+(dx||0),(S.pw||fw)-fw-margem,margem);
+  if(fh<=(S.ph||fh)){ var cy=((S.ph||fh)-fh)/2; S.ty=clamp(cy+(S.ty-cy)+(dy||0),cy-mx,cy+mx); }
+  else S.ty=clamp(S.ty+(dy||0),(S.ph||fh)-fh-margem,margem);
   S.ajustado=false; pedir(true);
 }
 function girarFolha(graus){ if(!S) return; S.rot=(S.rot+(graus||90)*Math.PI/180)%TAU; if(S.rot<0) S.rot+=TAU; S.ajustado=false; limitarNavegacao(); pedir(true); aviso("Folha girada "+Math.round(S.rot*180/Math.PI)%360+"°. O zoom atual foi preservado."); }
@@ -4213,8 +4209,10 @@ function onKey(e){
   if(k==="escape"||code==="Escape"){ e.stopPropagation(); if(S.ferr==="balao"&&S.balSel){ fecharEdicaoBal(); S.balSel=null; atualizarBal(); pedir(false); } else cancelarSel(); return; }
   if(k==="enter"&&S.flut){ e.preventDefault(); commitFlut(); return; }
   if(k==="delete"||k==="backspace"){ e.preventDefault(); if(S.ferr==="balao") apagarBal(); else apagarSel(); return; }
-  if(k==="["||code==="BracketLeft"||code==="ArrowLeft"){ e.preventDefault(); deslocarFolha(-48,0); return; }
-  if(k==="]"||code==="BracketRight"||code==="ArrowRight"){ e.preventDefault(); deslocarFolha(48,0); return; }
+  var barraEsquerda=(k==="["||k==="{"||k==="arrowleft"||code==="BracketLeft"||code==="ArrowLeft"||e.which===219||e.keyCode===219);
+  var barraDireita=(k==="]"||k==="}"||k==="arrowright"||code==="BracketRight"||code==="ArrowRight"||e.which===221||e.keyCode===221);
+  if(barraEsquerda){ e.preventDefault(); e.stopPropagation(); deslocarFolha(-48,0); return; }
+  if(barraDireita){ e.preventDefault(); e.stopPropagation(); deslocarFolha(48,0); return; }
   if(k==="+"||k==="add"||((k==="=")&&e.shiftKey)||(code==="Equal"&&e.shiftKey)||code==="NumpadAdd"){ e.preventDefault(); refazer(); return; }
   if(k==="-"||code==="Minus"||code==="NumpadSubtract"){ e.preventDefault(); desfazer(); return; }
   if(k==="0"){ ajustar(); return; }
