@@ -1620,8 +1620,8 @@ function montarDOM(){
     '<h4>Atalhos de teclado</h4><dl><dt>P · Q · K</dt><dd>Lápis HB, Lápis 6B, Esferográfica</dd><dt>B · N · M</dt><dd>Caneta G, Nanquim, Marcador</dd>'+
     '<dt>R · A · D · S</dt><dd>Aerógrafo, Pincel macio, Pincel seco, Esfumar</dd><dt>E</dt><dd>Borracha</dd>'+
     '<dt>L · U · O</dt><dd>Linha, Retângulo, Elipse. Segure Shift para restringir ângulos ou proporções quando disponível.</dd><dt>G · I</dt><dd>Balde de tinta, Conta-gotas</dd>'+
-    '<dt>V · T · H</dt><dd>Seleção, Balão de fala, Mão</dd><dt>Espaço</dt><dd>Segure e arraste para mover a tela temporariamente</dd><dt>[ · ]</dt><dd>Diminuir / aumentar o tamanho da ferramenta</dd>'+
-    '<dt>+ · − · 0</dt><dd>Aumentar zoom, diminuir zoom, ajustar a folha à tela</dd><dt>Ctrl+Z · Ctrl+Y</dt><dd>Desfazer / refazer (Ctrl+Shift+Z também refaz)</dd>'+
+    '<dt>V · T · H</dt><dd>Seleção, Balão de fala, Mão</dd><dt>Tab</dt><dd>Girar a folha em 90°</dd><dt>Space</dt><dd>Ativar as formas tridimensionais</dd><dt>[ · ]</dt><dd>Mover a folha para a esquerda / direita</dd><dt>Ctrl</dt><dd>Ativar lápis</dd><dt>Alt</dt><dd>Ativar lapiseira</dd>'+ 
+    '<dt>Ctrl+ + · Ctrl+ −</dt><dd>Aumentar / diminuir o zoom da folha dentro do editor</dd><dt>+ · −</dt><dd>Refazer / desfazer; os botões + e − da mesa podem usar esses atalhos</dd><dt>0</dt><dd>Ajustar a folha à tela</dd><dt>Ctrl+Z · Ctrl+Y</dt><dd>Desfazer / refazer (Ctrl+Shift+Z também refaz)</dd>'+ 
     '<dt>Ctrl+A · C · X · V</dt><dd>Selecionar tudo, copiar, cortar, colar</dd><dt>Enter · Esc · Delete</dt><dd>Confirmar transformação, cancelar seleção, apagar seleção ou balão</dd></dl>'+
     '<h4>Atalhos individuais para cada ponta e graduação</h4><p>Use as teclas destacadas abaixo para selecionar diretamente cada ponta de caneta, graduação de lápis e lapiseira, sem precisar abrir a lista de subferramentas.</p><dl class="ed-atalhos-detalhados">'+HTML_ATALHOS_DETALHADOS+'</dl>'+
     '<h4>Lápis e lapiseiras</h4><p><b>2H, H e F:</b> traço fino e claro, bons para construção e esboço leve. <b>HB/B/1B–3B:</b> esboço geral e linhas mais visíveis. <b>4B–6B:</b> traço escuro para sombras e desenho expressivo. <b>7B–10B:</b> muito macios e escuros; use opacidade/tamanho menores para detalhes. <b>Lapiseiras 0,3/0,5 mm:</b> detalhes finos; <b>0,7/0,9 mm:</b> esboço e contorno; <b>2,0 mm:</b> traço mais grosso.</p>'+
@@ -1745,6 +1745,7 @@ function montarDOM(){
     '<label class="ed-rot">Borda <input type="range" data-r="borda" min="0" max="40" step="1"><output data-r="bordaV"></output></label>'+
     '<span class="ed-esp"></span>'+
     '<button type="button" class="bt mini" data-ed="preencher" title="Cobrir a área cinza do editor com a folha">Folha</button>'+ 
+    '<button type="button" class="bt mini" data-ed="rotar-folha" title="Girar a folha de desenho em 90 graus (Tab)">⟳ Girar folha</button>'+ 
     '<button type="button" class="bt mini" data-ed="foco" title="Ocultar toda a interface e deixar apenas a folha (Tab ou Esc para voltar)">Tela cheia</button>'+
     '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir notas de imagens e inserir uma referência no desenho">🖼 Referências</button>'+ 
     '<button type="button" class="bt mini" data-ed="png">Baixar PNG</button>'+
@@ -1801,7 +1802,7 @@ function abrir(opts){
   var s=S={
     opts:opts,painel:painel,chave:chave,dim:dim,camadas:[],ativa:null,fundo:opts.fundoPagina||null,modoPagina:!!opts.modoPagina,
     hist:[],refaz:[],bytes:0,
-    z:1,tx:0,ty:0,pw:0,ph:0,dpr:window.devicePixelRatio||1,ajustado:true,
+    z:1,tx:0,ty:0,rot:0,pw:0,ph:0,dpr:window.devicePixelRatio||1,ajustado:true,
     ptrs:{},nptr:0,vivo:null,flut:null,sel:null,selOp:null,baloes:[],balSel:null,balOp:null,balIni:null,balSnap:null,balValId:null,
     tmp:novoCanvas(dim.w,dim.h),live:novoCanvas(dim.w,dim.h),
     sujoView:true,sujoOver:true,carregando:true,tocou:false,sujo:false,
@@ -2122,7 +2123,7 @@ function cortarMove(p,e){
     if(Math.hypot(p.x-dr.p0.x,p.y-dr.p0.y)<4) return;   /* evita mexer o ponto num simples toque */
     dr.ativo=true;
   }
-  var w=paraObra(p.x,p.y), fx=clamp(w.x/S.dim.w,0,1), fy=clamp(w.y/S.dim.h,0,1);
+  var w=paraObraSemRotacao(p.x,p.y), fx=clamp(w.x/S.dim.w,0,1), fy=clamp(w.y/S.dim.h,0,1);
   if(!e.altKey){                                          /* gruda nas bordas do quadro (Alt desliga) */
     var tx=9/(S.z*S.dim.w), ty=9/(S.z*S.dim.h);
     if(fx<tx) fx=0; else if(fx>1-tx) fx=1;
@@ -2193,16 +2194,17 @@ function ajustar(){
   /* Sempre que o editor estiver em Tela cheia, a folha cobre o palco inteiro.
      Isso também é reaplicado depois de o navegador concluir a tela cheia nativa. */
   if($ed&&$ed.classList.contains("modo-foco")){ preencherModoFoco(); return; }
-  var m=28, z=Math.min((S.pw-m*2)/S.dim.w,(S.ph-m*2)/S.dim.h);
+  var m=28, vd=dimensoesVisuaisFolha(), z=Math.min((S.pw-m*2)/vd.w,(S.ph-m*2)/vd.h);
   S.z=clamp(z,0.05,1.5); S.tx=(S.pw-S.dim.w*S.z)/2; S.ty=(S.ph-S.dim.h*S.z)/2;
   limitarNavegacao();
   S.ajustado=true; atualizarZoom(); pedir(true);
 }
+function dimensoesVisuaisFolha(){ var q=Math.round(((S&&S.rot)||0)/(Math.PI/2)); return (Math.abs(q)%2)?{w:S.dim.h,h:S.dim.w}:{w:S.dim.w,h:S.dim.h}; }
 function preencherModoFoco(){
   if(!S||!S.pw||!S.ph||!S.dim||!S.dim.w||!S.dim.h) return;
   /* A folha usa o enquadramento de cobertura: cada ponto visível pertence à folha.
      Trechos fora da tela continuam acessíveis com a ferramenta Mover/arrastar. */
-  var z=Math.max(S.pw/S.dim.w,S.ph/S.dim.h);
+  var vd=dimensoesVisuaisFolha(), z=Math.max(S.pw/vd.w,S.ph/vd.h);
   S.z=clamp(z,0.01,16);
   S.tx=(S.pw-S.dim.w*S.z)/2;
   S.ty=(S.ph-S.dim.h*S.z)/2;
@@ -2220,7 +2222,7 @@ function preencherArea(){
     ajustarCanvasPalco();
     if(!S.pw||!S.ph) return;
     /* Folha cobre a área cinza do editor: a proporção é preservada e o palco fica preenchido. */
-    var z=Math.max(S.pw/S.dim.w,S.ph/S.dim.h);
+    var vd=dimensoesVisuaisFolha(), z=Math.max(S.pw/vd.w,S.ph/vd.h);
     S.z=clamp(z,0.01,16);
     S.tx=(S.pw-S.dim.w*S.z)/2;
     S.ty=(S.ph-S.dim.h*S.z)/2;
@@ -2301,6 +2303,7 @@ function renderView(){
   var v=E.view, c=v.getContext("2d"), d=S.dpr, z=S.z;
   c.setTransform(1,0,0,1,0,0); c.fillStyle=($ed&&($ed.classList.contains("preencher-tela")||$ed.classList.contains("modo-foco")))?"#fff":"#a4a4a4"; c.fillRect(0,0,v.width,v.height);
   c.setTransform(d*z,0,0,d*z,d*S.tx,d*S.ty);
+  if(S.rot){ c.translate(S.dim.w/2,S.dim.h/2); c.rotate(S.rot); c.translate(-S.dim.w/2,-S.dim.h/2); }
   c.imageSmoothingEnabled=z<2; c.imageSmoothingQuality="high";
   c.fillStyle="#fff"; c.fillRect(0,0,S.dim.w,S.dim.h);
   fundoEm(c);
@@ -2331,6 +2334,7 @@ function renderOver(){
   var o=E.over, c=o.getContext("2d");
   c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,o.width,o.height);
   c.setTransform(S.dpr,0,0,S.dpr,0,0);
+  if(S.rot){ var rcx=S.tx+S.dim.w*S.z/2, rcy=S.ty+S.dim.h*S.z/2; c.translate(rcx,rcy); c.rotate(S.rot); c.translate(-rcx,-rcy); }
   guiasSim(c);
   desenharGuiasConstrucao(c);
   guiasBal(c);
@@ -3136,11 +3140,16 @@ function ptoPalco(e){
   var rc=E.palco.getBoundingClientRect();
   return {x:e.clientX-rc.left,y:e.clientY-rc.top};
 }
-function paraObra(sx,sy){ return {x:(sx-S.tx)/S.z,y:(sy-S.ty)/S.z}; }
+function rotacionarPonto(x,y,ang,cx,cy){ var dx=x-cx,dy=y-cy,co=Math.cos(ang),si=Math.sin(ang); return {x:cx+dx*co-dy*si,y:cy+dx*si+dy*co}; }
+function telaSemRotacao(sx,sy){ if(!S||!S.rot) return {x:sx,y:sy}; var cx=S.tx+S.dim.w*S.z/2,cy=S.ty+S.dim.h*S.z/2; return rotacionarPonto(sx,sy,-S.rot,cx,cy); }
+function paraObraSemRotacao(sx,sy){ return {x:(sx-S.tx)/S.z,y:(sy-S.ty)/S.z}; }
+function paraObra(sx,sy){ var q=telaSemRotacao(sx,sy); return paraObraSemRotacao(q.x,q.y); }
+function deslocarFolha(dx,dy){ if(!S) return; S.tx+=dx||0; S.ty+=dy||0; limitarNavegacao(); S.ajustado=false; pedir(true); }
+function girarFolha(graus){ if(!S) return; S.rot=(S.rot+(graus||90)*Math.PI/180)%TAU; if(S.rot<0) S.rot+=TAU; S.ajustado=false; if(S.pw) ajustar(); else pedir(true); aviso("Folha girada "+Math.round(S.rot*180/Math.PI)%360+"°. Pressione Tab novamente para continuar girando."); }
 function onDown(e){
   if(!S||S.carregando) return;
   var p=ptoPalco(e);
-  var gh=guiaHit(p.x,p.y);
+  var q=telaSemRotacao(p.x,p.y), gh=guiaHit(q.x,q.y);
   if(gh){E.over.setPointerCapture(e.pointerId);S.guiaDrag={id:gh,pid:e.pointerId};return;}
   E.over.setPointerCapture(e.pointerId);
   S.ptrs[e.pointerId]={x:p.x,y:p.y}; S.nptr=Object.keys(S.ptrs).length;
@@ -3150,28 +3159,29 @@ function onDown(e){
   if((e.pointerType==="mouse"&&e.button===1)||S.espaco||(S.ferr==="mao"&&!S.cortando)){
     S.pan={x:p.x,y:p.y,tx:S.tx,ty:S.ty}; E.over.style.cursor="grabbing"; return;
   }
-  if(S.cortando){ cortarDown(p,e); return; }
+  if(S.cortando){ cortarDown(q,e); return; }
   var w=paraObra(p.x,p.y);
   if(PINCEIS[S.ferr]) iniciarTraco(e,w);
   else if(FORMAS[S.ferr]) iniciarForma(e,w);
-  else if(S.ferr==="balao") balDown(w,p.x,p.y);
+  else if(S.ferr==="balao") balDown(w,q.x,q.y);
   else if(S.ferr==="balde") balde(w);
   else if(S.ferr==="gota") gota(w);
-  else if(S.ferr==="selecionar") selDown(w,p.x,p.y,e);
+  else if(S.ferr==="selecionar") selDown(w,q.x,q.y,e);
 }
 function onMove(e){
   if(!S) return;
   var p=ptoPalco(e);
   if(S.guiaDrag&&S.guiaDrag.pid===e.pointerId){var gw=paraObra(p.x,p.y),gg=CFG.guia;if(S.guiaDrag.id==="v3"){gg.v3=clamp(gw.x/S.dim.w,.02,.98);gg.v3y=clamp(gw.y/S.dim.h,.02,.98);}else{gg.h=clamp(gw.y/S.dim.h,.05,.95);if(S.guiaDrag.id==="v1")gg.v1=clamp(gw.x/S.dim.w,.02,.98);if(S.guiaDrag.id==="v2")gg.v2=clamp(gw.x/S.dim.w,.02,.98);}salvarEstudo();pedir(false);return;}
-  S.cursor=p;
-  E.coord.textContent=Math.round((p.x-S.tx)/S.z)+", "+Math.round((p.y-S.ty)/S.z)+" px";
+  var q=telaSemRotacao(p.x,p.y), ow=paraObra(p.x,p.y);
+  S.cursor=q;
+  E.coord.textContent=Math.round(ow.x)+", "+Math.round(ow.y)+" px";
   if(S.ptrs[e.pointerId]){ S.ptrs[e.pointerId]={x:p.x,y:p.y}; }
   if(S.gesto){ atualizarGesto(); return; }
   if(S.pan){
     S.tx=S.pan.tx+(p.x-S.pan.x); S.ty=S.pan.ty+(p.y-S.pan.y);
     limitarNavegacao(); S.ajustado=false; pedir(true); return;
   }
-  if(S.vDrag&&e.pointerId===S.vDrag.id){ cortarMove(p,e); return; }
+  if(S.vDrag&&e.pointerId===S.vDrag.id){ cortarMove(q,e); return; }
   if(S.vivo&&e.pointerId===S.vivo.id){
     if(S.vivo.forma){ ajustarForma(S.vivo.forma,paraObra(p.x,p.y),e.shiftKey); redesenharForma(S.vivo); pedir(true); return; }
     var evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
@@ -3898,6 +3908,7 @@ function acao(n,b){
     case "zoom-": zoomCentro(0.8); break;
     case "ajustar": ajustar(); break;
     case "preencher": preencherArea(); break;
+    case "rotar-folha": girarFolha(90); break;
     case "foco": alternarModoFoco(); break;
     case "guias-editar": CFG.guia.edit=!CFG.guia.edit; salvarEstudo(); pedir(false); aviso(CFG.guia.edit?"Arraste os pontos azuis na folha.":"Movimentação das guias desativada."); break;
     case "guias-reset": CFG.guia.h=.42; CFG.guia.v1=.18; CFG.guia.v2=.82; CFG.guia.v3=.5; CFG.guia.v3y=.08; CFG.guia.passo=96; CFG.guia.div=12; salvarEstudo(); atualizarFerr(); pedir(false); break;
@@ -4148,12 +4159,15 @@ function ligarEventos(){
 function onKey(e){
   if(!S) return;
   if(!E.ajuda.classList.contains("oculto")&&(e.key||"")==="Escape"){ e.preventDefault(); e.stopPropagation(); fecharAjuda(); return; }
-  if($ed&&$ed.classList.contains("modo-foco")&&((e.key||"")==="Tab"||(e.key||"")==="Escape")){ e.preventDefault(); e.stopPropagation(); alternarModoFoco(false); return; }
+  if($ed&&$ed.classList.contains("modo-foco")&&(e.key||"")==="Escape"){ e.preventDefault(); e.stopPropagation(); alternarModoFoco(false); return; }
+  if((e.key||"")==="Tab"){ e.preventDefault(); e.stopPropagation(); girarFolha(90); return; }
   if((e.key||"")==="Escape"&&sairPreencherTela()){ e.preventDefault(); e.stopPropagation(); return; }
   if(menuAberto()&&(e.key||"")==="Escape"){ e.preventDefault(); e.stopPropagation(); fecharMenus(); return; }
   var t=e.target, tag=t&&t.tagName;
   if(tag==="TEXTAREA"||tag==="SELECT"||(tag==="INPUT"&&(t.type==="text"||t.type==="number"))) return;
   var ctrl=e.ctrlKey||e.metaKey, k=(e.key||"").toLowerCase();
+  if(e.key==="Control"){ e.preventDefault(); e.stopPropagation(); trocarFerr("lapis"); return; }
+  if(e.key==="Alt"){ e.preventDefault(); e.stopPropagation(); trocarFerr("lapiseira05"); return; }
   /* Alt + tecla escolhe diretamente uma ponta/graduação específica. */
   if(e.altKey && !ctrl){
     if(S.modoPagina&&((e.key||"")==="PageUp"||(e.key||"")==="PageDown")){
@@ -4165,6 +4179,8 @@ function onKey(e){
   if(ctrl){
     if(k==="z"){ e.preventDefault(); e.stopPropagation(); if(e.shiftKey) refazer(); else desfazer(); }
     else if(k==="y"){ e.preventDefault(); e.stopPropagation(); refazer(); }
+    else if(k==="+"||((k==="=")&&e.shiftKey)||e.code==="NumpadAdd"){ e.preventDefault(); e.stopPropagation(); zoomCentro(1.25); }
+    else if(k==="-"||e.code==="NumpadSubtract"){ e.preventDefault(); e.stopPropagation(); zoomCentro(0.8); }
     else if(k==="a"){ e.preventDefault(); e.stopPropagation(); selecionarTudo(); }
     else if(k==="c"){ e.preventDefault(); e.stopPropagation(); copiarSel(); }
     else if(k==="x"){ e.preventDefault(); e.stopPropagation(); copiarSel(); apagarSel(); }
@@ -4173,7 +4189,7 @@ function onKey(e){
   }
   if(k===" "){
     e.preventDefault(); e.stopPropagation();
-    if(!S.espaco){ S.espaco=true; E.over.style.cursor="grab"; pedir(false); }
+    trocarFerr("cubo"); aviso("Formas tridimensionais ativadas. Escolha cubo, cilindro, cone, pirâmide ou prisma.");
     return;
   }
   if(S.cortando){
@@ -4183,10 +4199,10 @@ function onKey(e){
   if(k==="escape"){ e.stopPropagation(); if(S.ferr==="balao"&&S.balSel){ fecharEdicaoBal(); S.balSel=null; atualizarBal(); pedir(false); } else cancelarSel(); return; }
   if(k==="enter"&&S.flut){ e.preventDefault(); commitFlut(); return; }
   if(k==="delete"||k==="backspace"){ e.preventDefault(); if(S.ferr==="balao") apagarBal(); else apagarSel(); return; }
-  if(k==="["){ ajustaTam(-1); return; }
-  if(k==="]"){ ajustaTam(1); return; }
-  if(k==="+"||k==="="){ zoomCentro(1.25); return; }
-  if(k==="-"){ zoomCentro(0.8); return; }
+  if(k==="["){ e.preventDefault(); deslocarFolha(-48,0); return; }
+  if(k==="]"){ e.preventDefault(); deslocarFolha(48,0); return; }
+  if(k==="+"||((k==="=")&&e.shiftKey)||e.code==="NumpadAdd"){ e.preventDefault(); refazer(); return; }
+  if(k==="-"){ e.preventDefault(); desfazer(); return; }
   if(k==="0"){ ajustar(); return; }
   var mapa={p:"lapis",q:"lapis6b",k:"esfero",b:"caneta",n:"nanquim",m:"marcador",r:"aerografo",a:"pincel",d:"seco",s:"esfumar",e:"borracha",l:"linha",u:"retangulo",o:"elipse",g:"balde",i:"gota",v:"selecionar",t:"balao",h:"mao"};
   if(mapa[k]) trocarFerr(mapa[k]);
