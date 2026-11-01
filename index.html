@@ -3144,8 +3144,21 @@ function rotacionarPonto(x,y,ang,cx,cy){ var dx=x-cx,dy=y-cy,co=Math.cos(ang),si
 function telaSemRotacao(sx,sy){ if(!S||!S.rot) return {x:sx,y:sy}; var cx=S.tx+S.dim.w*S.z/2,cy=S.ty+S.dim.h*S.z/2; return rotacionarPonto(sx,sy,-S.rot,cx,cy); }
 function paraObraSemRotacao(sx,sy){ return {x:(sx-S.tx)/S.z,y:(sy-S.ty)/S.z}; }
 function paraObra(sx,sy){ var q=telaSemRotacao(sx,sy); return paraObraSemRotacao(q.x,q.y); }
-function deslocarFolha(dx,dy){ if(!S) return; S.tx+=dx||0; S.ty+=dy||0; limitarNavegacao(); S.ajustado=false; pedir(true); }
-function girarFolha(graus){ if(!S) return; S.rot=(S.rot+(graus||90)*Math.PI/180)%TAU; if(S.rot<0) S.rot+=TAU; S.ajustado=false; if(S.pw) ajustar(); else pedir(true); aviso("Folha girada "+Math.round(S.rot*180/Math.PI)%360+"°. Pressione Tab novamente para continuar girando."); }
+function deslocarFolha(dx,dy){
+  if(!S) return;
+  var fw=S.dim.w*S.z, fh=S.dim.h*S.z, mx=Math.max(72,Math.round(Math.min(S.pw||fw,S.ph||fh)*.35));
+  if(fw<=(S.pw||fw)){ var cx=((S.pw||fw)-fw)/2; S.tx=clamp(S.tx+(dx||0),cx-mx,cx+mx); }
+  else S.tx+=dx||0;
+  if(fh<=(S.ph||fh)){ var cy=((S.ph||fh)-fh)/2; S.ty=clamp(S.ty+(dy||0),cy-mx,cy+mx); }
+  else S.ty+=dy||0;
+  limitarNavegacao();
+  /* Quando a folha cabe inteira, limitarNavegacao a centraliza. Preserve o
+     deslocamento manual das barras dentro de uma margem controlada. */
+  if(fw<=(S.pw||fw)){ var cx2=((S.pw||fw)-fw)/2; S.tx=clamp(S.tx+(dx||0),cx2-mx,cx2+mx); }
+  if(fh<=(S.ph||fh)){ var cy2=((S.ph||fh)-fh)/2; S.ty=clamp(S.ty+(dy||0),cy2-mx,cy2+mx); }
+  S.ajustado=false; pedir(true);
+}
+function girarFolha(graus){ if(!S) return; S.rot=(S.rot+(graus||90)*Math.PI/180)%TAU; if(S.rot<0) S.rot+=TAU; S.ajustado=false; limitarNavegacao(); pedir(true); aviso("Folha girada "+Math.round(S.rot*180/Math.PI)%360+"°. O zoom atual foi preservado."); }
 function onDown(e){
   if(!S||S.carregando) return;
   var p=ptoPalco(e);
@@ -4180,7 +4193,7 @@ function onKey(e){
   if(ctrl){
     if(k==="z"){ e.preventDefault(); e.stopPropagation(); if(e.shiftKey) refazer(); else desfazer(); }
     else if(k==="y"){ e.preventDefault(); e.stopPropagation(); refazer(); }
-    else if(k==="+"||((k==="=")&&e.shiftKey)||(code==="Equal"&&e.shiftKey)||code==="NumpadAdd"){ e.preventDefault(); e.stopPropagation(); zoomCentro(1.25); }
+    else if(k==="+"||k==="add"||k==="="||code==="Equal"||code==="NumpadAdd"){ e.preventDefault(); e.stopPropagation(); zoomCentro(1.25); }
     else if(k==="-"||code==="Minus"||code==="NumpadSubtract"){ e.preventDefault(); e.stopPropagation(); zoomCentro(0.8); }
     else if(k==="a"){ e.preventDefault(); e.stopPropagation(); selecionarTudo(); }
     else if(k==="c"){ e.preventDefault(); e.stopPropagation(); copiarSel(); }
@@ -4200,9 +4213,9 @@ function onKey(e){
   if(k==="escape"||code==="Escape"){ e.stopPropagation(); if(S.ferr==="balao"&&S.balSel){ fecharEdicaoBal(); S.balSel=null; atualizarBal(); pedir(false); } else cancelarSel(); return; }
   if(k==="enter"&&S.flut){ e.preventDefault(); commitFlut(); return; }
   if(k==="delete"||k==="backspace"){ e.preventDefault(); if(S.ferr==="balao") apagarBal(); else apagarSel(); return; }
-  if(k==="["||code==="BracketLeft"){ e.preventDefault(); deslocarFolha(-48,0); return; }
-  if(k==="]"||code==="BracketRight"){ e.preventDefault(); deslocarFolha(48,0); return; }
-  if(k==="+"||((k==="=")&&e.shiftKey)||(code==="Equal"&&e.shiftKey)||code==="NumpadAdd"){ e.preventDefault(); refazer(); return; }
+  if(k==="["||code==="BracketLeft"||code==="ArrowLeft"){ e.preventDefault(); deslocarFolha(-48,0); return; }
+  if(k==="]"||code==="BracketRight"||code==="ArrowRight"){ e.preventDefault(); deslocarFolha(48,0); return; }
+  if(k==="+"||k==="add"||((k==="=")&&e.shiftKey)||(code==="Equal"&&e.shiftKey)||code==="NumpadAdd"){ e.preventDefault(); refazer(); return; }
   if(k==="-"||code==="Minus"||code==="NumpadSubtract"){ e.preventDefault(); desfazer(); return; }
   if(k==="0"){ ajustar(); return; }
   var mapa={p:"lapis",q:"lapis6b",k:"esfero",b:"caneta",n:"nanquim",m:"marcador",r:"aerografo",a:"pincel",d:"seco",s:"esfumar",e:"borracha",l:"linha",u:"retangulo",o:"elipse",g:"balde",i:"gota",v:"selecionar",t:"balao",h:"mao"};
