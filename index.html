@@ -471,10 +471,11 @@ body.ed-aberto{overflow:hidden}
 .ed-ref-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}.ed-ref-cab h2{margin:0;font-size:18px}.ed-ref-cab p{margin:4px 0 0;color:var(--e-fr);font-size:12px}.ed-ref-acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding-bottom:10px;border-bottom:1px solid var(--e-bd)}.ed-ref-busca{flex:1 1 220px;min-width:180px;background:var(--e-in);color:var(--e-tx);border:1px solid var(--e-bd);border-radius:3px;padding:5px 7px;font-size:12px}.ed-ref-contagem{color:var(--e-fr);font-size:11px;white-space:nowrap}
 .ed-ref-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}.ed-ref-grupo{grid-column:1/-1}.ed-ref-grupo.oculto-filtro{display:none}.ed-ref-grupo h3{margin:4px 0 7px;font-size:12px;color:var(--e-fr);font-weight:700}.ed-ref-card{display:flex;flex-direction:column;gap:4px;min-width:0;padding:6px;text-align:left;background:var(--e-in);color:var(--e-tx);border:1px solid var(--e-bd);border-radius:4px;cursor:pointer}.ed-ref-card:hover:not(:disabled){border-color:var(--e-acb);box-shadow:0 0 0 2px rgba(79,143,220,.18)}.ed-ref-card:disabled{opacity:.55;cursor:wait}.ed-ref-card.oculto-filtro{display:none}.ed-ref-card img{display:block;width:100%;height:130px;object-fit:contain;background:#fff;border:1px solid var(--e-bd)}.ed-ref-card strong,.ed-ref-card small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ed-ref-card strong{font-size:11.5px}.ed-ref-card small{color:var(--e-fr);font-size:10.5px}.ed-ref-vazio{margin:0;padding:18px;border:1px dashed var(--e-bd);color:var(--e-fr);text-align:center}
 .ed-ref-bt{background:#eaf3ff!important;color:#174b7a!important;border-color:#78a6d4!important;font-weight:700!important}.ed-ref-bt:hover{background:#d6eaff!important;border-color:#397bb7!important}
+.ed-ref-estudo{position:absolute;right:16px;top:16px;z-index:135;width:min(360px,42vw);max-height:calc(100% - 32px);overflow:auto;background:var(--e-menu);color:var(--e-tx);border:1px solid var(--e-bd);box-shadow:0 10px 28px rgba(0,0,0,.35);border-radius:6px;padding:10px}.ed-ref-estudo .estudo-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}.ed-ref-estudo .estudo-cab strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ed-ref-estudo .estudo-cab small{display:block;color:var(--e-fr);font-size:10px;margin-top:2px}.ed-ref-estudo img{display:block;width:100%;max-height:45vh;object-fit:contain;background:#fff;border:1px solid var(--e-bd);user-select:none}.ed-ref-estudo .estudo-controles{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}.ed-ref-estudo .estudo-controles label{display:flex;align-items:center;gap:4px;color:var(--e-fr);font-size:10.5px;flex:1 1 150px}.ed-ref-estudo .estudo-controles input{min-width:100px;flex:1}
 .ed-acesso-tableta{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 8px;background:var(--e-hd);border-bottom:1px solid var(--e-bd)}
 .ed-acesso-tableta .bt{min-width:38px;min-height:28px;font-weight:700}.ed-acesso-tableta .bt span{font-weight:400;font-size:10px;margin-left:2px}
 .ed-forma-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}.ed-forma-opcoes label{display:grid;gap:3px;color:var(--e-fr);font-size:11px}.ed-forma-opcoes select,.ed-forma-opcoes input{min-width:0}
-@media (max-width:520px){.ed-ref-janela{padding:8px}.ed-ref-dialog{width:calc(100vw - 16px);max-height:calc(100vh - 16px);padding:12px}.ed-ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ed-ref-card img{height:108px}.ed-ref-cab h2{font-size:16px}}
+@media (max-width:520px){.ed-ref-janela{padding:8px}.ed-ref-dialog{width:calc(100vw - 16px);max-height:calc(100vh - 16px);padding:12px}.ed-ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ed-ref-card img{height:108px}.ed-ref-cab h2{font-size:16px}.ed-ref-estudo{right:8px;top:8px;width:min(340px,calc(100vw - 16px));max-height:calc(100% - 16px)}}
 .ed-pg-janela.edicao{background:transparent;pointer-events:none;place-items:start end;padding:12px}.ed-pg-janela.edicao .ed-pg-dialog{pointer-events:auto;width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);margin:0}
 .ed-pg-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:13px}
 .ed-pg-cab h2{margin:0;font-size:17px}.ed-pg-cab p{margin:3px 0 0;color:var(--e-fr);font-size:12px}
@@ -1167,7 +1168,7 @@ var HTML_ATALHOS_DETALHADOS=IDS_ATALHOS_DETALHADOS.map(function(id,i){
 }).join("");
 
 var AMOSTRAS=["#000000","#ffffff","#555555","#aaaaaa","#d63a3a","#e8892b","#f2d13b","#3fa34d","#2a6fdb","#7a45c9","#e46ab0","#7a4a2b"];
-var CFG={ferr:"caneta",cor:"#000000",tomDesenho:"#1d1d1d",imgFerr:"lapis",pressao:true,tol:24,ref:true,preencher:false,formaTraco:"solido",formaRot:0,sim:"",simN:6,balTipo:"fala",ajust:{},perfilTraco:"livre",curvaPressao:"normal",favoritos:[],guia:{grade:false,persp:false,tipo:"1",op:35,h:.42,v1:.18,v2:.82,edit:false},manequim:{pose:"neutro",angulo:0,escala:1,opacidade:.55}};
+var CFG={ferr:"caneta",cor:"#000000",tomDesenho:"#1d1d1d",imgFerr:"lapis",pressao:true,tol:24,ref:true,preencher:false,formaTraco:"solido",formaRot:0,sim:"",simN:6,balTipo:"fala",ajust:{},perfilTraco:"livre",curvaPressao:"normal",favoritos:[],guia:{grade:false,persp:false,tipo:"1",op:35,h:.42,v1:.18,v2:.82,v3:.5,v3y:.08,passo:96,div:12,edit:false},manequim:{pose:"neutro",angulo:0,escala:1,opacidade:.55}};
 try{
   var tomDesenhoGuardado=localStorage.getItem("mesa.ed.tomDesenho");
   if(/^#[0-9a-f]{6}$/i.test(tomDesenhoGuardado||"")) CFG.tomDesenho=tomDesenhoGuardado.toLowerCase();
@@ -1421,6 +1422,9 @@ function prevSVG(f){
   if(f==="hexagono") return '<svg viewBox="0 0 80 18" aria-hidden="true"><path d="M20 2H60L75 9 60 16H20L5 9z" '+o+'/></svg>';
   if(f==="cubo") return '<svg viewBox="0 0 80 18" aria-hidden="true"><path d="M14 6L42 2 67 7V14L39 17 14 13zM42 2v8m25-3L42 10 14 6" '+o+'/></svg>';
   if(f==="cilindro") return '<svg viewBox="0 0 80 18" aria-hidden="true"><path d="M18 5c0-4 44-4 44 0v8c0 4-44 4-44 0zM18 5c0 4 44 4 44 0" '+o+'/></svg>';
+  if(f==="cone") return '<svg viewBox="0 0 80 18" aria-hidden="true"><path d="M40 2L16 14c0 3 48 3 48 0zM16 14c0-3 48-3 48 0" '+o+'/></svg>';
+  if(f==="piramide") return '<svg viewBox="0 0 80 18" aria-hidden="true"><path d="M40 2L12 15h56zM40 2l-7 13m7-13 10 13M12 15l28-4 28 4" '+o+'/></svg>';
+  if(f==="prisma") return '<svg viewBox="0 0 80 18" aria-hidden="true"><path d="M18 5l20-3 24 5v8l-20 3-24-5zM18 5l24 5 20-3M42 10v8" '+o+'/></svg>';
   return "";
 }
 var POSES_MANEQUIM={neutro:{nome:"Neutro",bracos:0,pernas:0,tronco:0},acao:{nome:"Ação",bracos:-.55,pernas:.35,tronco:-.12},corrida:{nome:"Corrida",bracos:.7,pernas:-.65,tronco:.18},perfil:{nome:"Perfil",bracos:.18,pernas:.1,tronco:.25}};
@@ -1670,9 +1674,11 @@ function montarDOM(){
       '<label class="ed-lin ed-chk"><input type="checkbox" data-r="guiaGrade"> Grade</label>'+
       '<label class="ed-lin ed-chk"><input type="checkbox" data-r="guiaPersp"> Perspectiva com pontos de fuga</label>'+
       '<label class="ed-lin">Pontos <select data-r="guiaTipo"><option value="1">1 ponto</option><option value="2">2 pontos</option><option value="3">3 pontos</select></label>'+
-      '<label class="ed-lin">Opacidade <input type="range" data-r="guiaOp" min="10" max="80"><output data-r="guiaOpV"></output></label>'+
+      '<label class="ed-lin">Opacidade <input type="range" data-r="guiaOp" min="10" max="80"><output data-r="guiaOpV"></output></label>'+ 
+      '<label class="ed-lin">Espaçamento da grade <input type="range" data-r="guiaPasso" min="24" max="240" step="4"><output data-r="guiaPassoV"></output></label>'+ 
+      '<label class="ed-lin">Divisões da perspectiva <input type="range" data-r="guiaDiv" min="4" max="24" step="1"><output data-r="guiaDivV"></output></label>'+ 
       '<div class="ed-acoes-cam"><button type="button" class="bt mini" data-ed="guias-editar">Mover pontos</button><button type="button" class="bt mini" data-ed="guias-reset">Resetar</button></div>'+
-      '<p class="ed-dica">Ative “Mover pontos” e arraste os pontos azuis diretamente sobre a folha.</p>')+
+      '<p class="ed-dica">Ative “Mover pontos” e arraste os pontos azuis diretamente sobre a folha. O terceiro ponto da perspectiva de 3 pontos também pode ser reposicionado.</p>')+
     pn("mat",'Material <span class="pn-sub">[Balão]</span>',
       '<div class="ed-cat">Balão ▸ <b>Tipos</b></div>'+
       '<p class="ed-dica" data-r="balDica" style="margin:0 0 6px"></p>'+
@@ -1701,7 +1707,8 @@ function montarDOM(){
         '<button type="button" class="bt mini" data-ed="ajustar">Ajustar</button></div>')+
     pn("cprop",'Propriedade da camada',
       '<label class="ed-lin">Opacidade <input type="range" data-r="cOp" min="0" max="100"><output data-r="cOpV"></output></label>'+
-      '<label class="ed-lin">Modo <select data-r="cModo">'+MODOS_CAMADA.map(function(m){ return '<option value="'+m[0]+'">'+m[1]+'</option>'; }).join("")+'</select></label>')+
+      '<label class="ed-lin">Modo <select data-r="cModo">'+MODOS_CAMADA.map(function(m){ return '<option value="'+m[0]+'">'+m[1]+'</option>'; }).join("")+'</select></label>'+ 
+      '<button type="button" class="bt mini" data-ed="img-remover" title="Retirar somente a imagem e conservar o desenho sobre ela">Retirar imagem · manter desenho</button>')+
     pn("cam",'Camadas',
       '<div class="ed-camadas" data-r="camadas"></div>'+
       '<div class="ed-acoes-cam">'+
@@ -1737,7 +1744,7 @@ function montarDOM(){
     '<button type="button" class="bt mini" data-ed="cortar" title="Cortar painel: arraste os pontos; toque na linha para criar um ponto; toque duplo (ou Delete) remove o ponto selecionado">Cortar painel</button>'+
     '<label class="ed-rot">Borda <input type="range" data-r="borda" min="0" max="40" step="1"><output data-r="bordaV"></output></label>'+
     '<span class="ed-esp"></span>'+
-    '<button type="button" class="bt mini" data-ed="preencher" title="Enquadrar a folha inteira na área de desenho">Preencher tela</button>'+
+    '<button type="button" class="bt mini" data-ed="preencher" title="Cobrir a área cinza do editor com a folha">Folha</button>'+ 
     '<button type="button" class="bt mini" data-ed="foco" title="Ocultar toda a interface e deixar apenas a folha (Tab ou Esc para voltar)">Tela cheia</button>'+
     '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir notas de imagens e inserir uma referência no desenho">🖼 Referências</button>'+ 
     '<button type="button" class="bt mini" data-ed="png">Baixar PNG</button>'+
@@ -1748,17 +1755,18 @@ function montarDOM(){
   '</div>'+
   '<div class="ed-ref-janela oculto" data-r="referenciasJanela" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Notas de imagens e referências">'+
     '<section class="ed-ref-dialog" data-r="referenciasConteudo"></section>'+ 
-  '</div>'+  '<input type="file" data-r="imagemArquivo" accept="image/*" style="display:none" aria-label="Escolher imagem para importar">'+
+  '</div>'+ 
+  '<aside class="ed-ref-estudo oculto" data-r="referenciasEstudo" aria-label="Estudo de referência"><section data-r="referenciasEstudoConteudo"></section></aside>'+ 
+  '<input type="file" data-r="imagemArquivo" accept="image/*" style="display:none" aria-label="Escolher imagem para importar">'+
   '<input type="color" data-r="tomDesenho" value="#1d1d1d" class="ed-tom-in" tabindex="-1" aria-label="Tom para converter imagem em lápis ou caneta">'+
   '<div class="ed-acesso-tableta" role="toolbar" aria-label="Acesso rápido para mesa digitalizadora">'+
     '<button type="button" class="bt mini" data-ferr="selecionar" title="Selecionar e transformar (V)">V <span>Selecionar</span></button>'+ 
     '<button type="button" class="bt mini" data-ferr="caneta" title="Caneta G (B)">B <span>Caneta</span></button>'+ 
     '<button type="button" class="bt mini" data-ferr="borracha" title="Borracha (E)">E <span>Borracha</span></button>'+ 
     '<button type="button" class="bt mini" data-ferr="mao" title="Mover a folha (H / Espaço)">H <span>Mover</span></button>'+ 
-    '<button type="button" class="bt mini ed-ref-bt" data-ed="referencias" title="Abrir referências guardadas">🖼 <span>Referências</span></button>'+ 
     '<button type="button" class="bt mini" data-ed="desfazer" title="Desfazer (Ctrl+Z)">↶</button>'+ 
     '<button type="button" class="bt mini" data-ed="refazer" title="Refazer (Ctrl+Y)">↷</button>'+ 
-    '<button type="button" class="bt mini" data-ed="foco" title="Esconder painéis e deixar somente a folha">⛶ <span>Folha</span></button>'+ 
+    '<button type="button" class="bt mini" data-ed="preencher" title="Cobrir a área cinza do editor com a folha">⛶ <span>Folha</span></button>'+ 
   '</div>'+ 
   '<div class="ed-corpo">'+
     '<div class="ed-tools" role="toolbar" aria-label="Ferramentas">'+tools+'</div>'+
@@ -2208,8 +2216,8 @@ function preencherArea(){
     if(!S) return;
     ajustarCanvasPalco();
     if(!S.pw||!S.ph) return;
-    /* Ajusta a folha inteira à janela, mantendo a proporção e sem cortes. */
-    var z=Math.min(S.pw/S.dim.w,S.ph/S.dim.h);
+    /* Folha cobre a área cinza do editor: a proporção é preservada e o palco fica preenchido. */
+    var z=Math.max(S.pw/S.dim.w,S.ph/S.dim.h);
     S.z=clamp(z,0.01,16);
     S.tx=(S.pw-S.dim.w*S.z)/2;
     S.ty=(S.ph-S.dim.h*S.z)/2;
@@ -2632,28 +2640,29 @@ function bbForma(vv){
 }
 
 /* guias desenhadas por cima do palco */
-function guiaPontos(){var g=CFG.guia||{},tipo=String(g.tipo||"1"),h=clamp(+g.h||.42,.05,.95),a=[];if(tipo==="1")a.push({id:"v1",x:clamp(+g.v1||.5,.02,.98),y:h});else a.push({id:"v1",x:clamp(+g.v1||.18,.02,.98),y:h},{id:"v2",x:clamp(+g.v2||.82,.02,.98),y:h});return a;}
+function guiaPontos(){var g=CFG.guia||{},tipo=String(g.tipo||"1"),h=clamp(+g.h||.42,.05,.95),a=[];if(tipo==="1")a.push({id:"v1",x:clamp(+g.v1||.5,.02,.98),y:h});else{a.push({id:"v1",x:clamp(+g.v1||.18,.02,.98),y:h},{id:"v2",x:clamp(+g.v2||.82,.02,.98),y:h});if(tipo==="3")a.push({id:"v3",x:clamp(+g.v3||.5,.02,.98),y:clamp(+g.v3y||.08,.02,.98)});}return a;}
 function desenharGuiasConstrucao(c){
   var g=CFG.guia||{};if(!g.grade&&!g.persp)return;
   var x0=S.tx,y0=S.ty,W=S.dim.w*S.z,H=S.dim.h*S.z,h=clamp(+g.h||.42,.05,.92),hy=y0+H*h,tipo=String(g.tipo||"1");
   c.save();c.beginPath();c.rect(x0,y0,W,H);c.clip();c.globalAlpha=clamp((+g.op||35)/100,.08,.8);c.lineWidth=Math.max(.7,1/S.z);c.strokeStyle="#2a6fdb";c.setLineDash([5,5]);
   if(g.grade&&!g.persp){
-    var passo=Math.max(36,Math.round(96*S.z));
+    var passo=Math.max(18,Math.round((+g.passo||96)*S.z));
     for(var gx=x0-(x0%passo);gx<x0+W;gx+=passo){c.beginPath();c.moveTo(gx,y0);c.lineTo(gx,y0+H);c.stroke();}
     for(var gy=y0-(y0%passo);gy<y0+H;gy+=passo){c.beginPath();c.moveTo(x0,gy);c.lineTo(x0+W,gy);c.stroke();}
   }
   if(g.persp){
     var ps=guiaPontos(),vps=ps.map(function(p){return{x:x0+p.x*W,y:hy};}),i,j,t,px,py;
     c.setLineDash([7,5]);c.beginPath();c.moveTo(x0,hy);c.lineTo(x0+W,hy);c.stroke();
+    var div=clamp(+g.div||12,4,24);
     if(tipo==="1"){
       var vp=vps[0];
-      for(i=0;i<=12;i++){px=x0+W*i/12;c.beginPath();c.moveTo(vp.x,hy);c.lineTo(px,y0+H);c.stroke();}
-      for(j=1;j<=9;j++){t=Math.pow(j/10,1.65);py=hy+(y0+H-hy)*t;c.beginPath();c.moveTo(x0+(vp.x-x0)*t,py);c.lineTo(vp.x+(x0+W-vp.x)*t,py);c.stroke();}
+      for(i=0;i<=div;i++){px=x0+W*i/div;c.beginPath();c.moveTo(vp.x,hy);c.lineTo(px,y0+H);c.stroke();}
+      for(j=1;j<div;j++){t=Math.pow(j/div,1.65);py=hy+(y0+H-hy)*t;c.beginPath();c.moveTo(x0+(vp.x-x0)*t,py);c.lineTo(vp.x+(x0+W-vp.x)*t,py);c.stroke();}
     }else{
       var vl=vps[0],vr=vps[1];
-      for(i=0;i<=12;i++){px=x0+W*i/12;c.beginPath();c.moveTo(vl.x,hy);c.lineTo(px,y0+H);c.stroke();c.beginPath();c.moveTo(vr.x,hy);c.lineTo(px,y0+H);c.stroke();}
-      for(j=1;j<=9;j++){t=Math.pow(j/10,1.65);py=hy+(y0+H-hy)*t;c.beginPath();c.moveTo(vl.x+(x0-vl.x)*t,py);c.lineTo(vr.x+(x0+W-vr.x)*t,py);c.stroke();}
-      if(tipo==="3"){var vm={x:x0+W*.5,y:hy};for(i=1;i<7;i++){px=x0+W*i/7;c.beginPath();c.moveTo(vm.x,hy);c.lineTo(px,y0+H);c.stroke();}}
+      for(i=0;i<=div;i++){px=x0+W*i/div;c.beginPath();c.moveTo(vl.x,hy);c.lineTo(px,y0+H);c.stroke();c.beginPath();c.moveTo(vr.x,hy);c.lineTo(px,y0+H);c.stroke();}
+      for(j=1;j<div;j++){t=Math.pow(j/div,1.65);py=hy+(y0+H-hy)*t;c.beginPath();c.moveTo(vl.x+(x0-vl.x)*t,py);c.lineTo(vr.x+(x0+W-vr.x)*t,py);c.stroke();}
+      if(tipo==="3"){var vm=vps[2]||{x:x0+W*.5,y:y0+H*.08};for(i=0;i<=div;i++){px=x0+W*i/div;c.beginPath();c.moveTo(vm.x,vm.y);c.lineTo(px,y0+H);c.stroke();}}
     }
     vps.forEach(function(v){c.setLineDash([]);c.beginPath();c.arc(v.x,v.y,Math.max(5,7/S.z),0,TAU);c.fillStyle=g.edit?"#1c73d1":"rgba(42,111,219,.55)";c.fill();c.strokeStyle="#fff";c.stroke();c.setLineDash([7,5]);});
   }
@@ -3150,7 +3159,7 @@ function onDown(e){
 function onMove(e){
   if(!S) return;
   var p=ptoPalco(e);
-  if(S.guiaDrag&&S.guiaDrag.pid===e.pointerId){var gw=paraObra(p.x,p.y),gg=CFG.guia;gg.h=clamp(gw.y/S.dim.h,.05,.95);if(S.guiaDrag.id==="v1")gg.v1=clamp(gw.x/S.dim.w,.02,.98);if(S.guiaDrag.id==="v2")gg.v2=clamp(gw.x/S.dim.w,.02,.98);salvarEstudo();pedir(false);return;}
+  if(S.guiaDrag&&S.guiaDrag.pid===e.pointerId){var gw=paraObra(p.x,p.y),gg=CFG.guia;if(S.guiaDrag.id==="v3"){gg.v3=clamp(gw.x/S.dim.w,.02,.98);gg.v3y=clamp(gw.y/S.dim.h,.02,.98);}else{gg.h=clamp(gw.y/S.dim.h,.05,.95);if(S.guiaDrag.id==="v1")gg.v1=clamp(gw.x/S.dim.w,.02,.98);if(S.guiaDrag.id==="v2")gg.v2=clamp(gw.x/S.dim.w,.02,.98);}salvarEstudo();pedir(false);return;}
   S.cursor=p;
   E.coord.textContent=Math.round((p.x-S.tx)/S.z)+", "+Math.round((p.y-S.ty)/S.z)+" px";
   if(S.ptrs[e.pointerId]){ S.ptrs[e.pointerId]={x:p.x,y:p.y}; }
@@ -3245,6 +3254,8 @@ function atualizarFerr(){
   E.pTol.value=CFG.tol; E.pTolV.textContent=CFG.tol; E.pRef.checked=CFG.ref; E.pFill.checked=CFG.preencher;
   if(E.pFormaTraco) E.pFormaTraco.value=CFG.formaTraco||"solido";
   if(E.pFormaRot){ E.pFormaRot.value=CFG.formaRot||0; E.pFormaRotV.textContent=(CFG.formaRot||0)+"°"; }
+  if(E.guiaPasso){ E.guiaPasso.value=CFG.guia.passo||96; E.guiaPassoV.textContent=(CFG.guia.passo||96)+" px"; }
+  if(E.guiaDiv){ E.guiaDiv.value=CFG.guia.div||12; E.guiaDivV.textContent=String(CFG.guia.div||12); }
   E.selAcoes.classList.toggle("oculto",n!=="selecionar");
   var dicas={
     selecionar:"Seleção: arraste para selecionar; arraste dentro para mover e use as alças para redimensionar. Enter confirma, Esc cancela e Delete apaga.",
@@ -3390,6 +3401,18 @@ function fecharJanelaReferencias(){
   E.referenciasJanela.classList.add("oculto");
   E.referenciasJanela.setAttribute("aria-hidden","true");
 }
+var referenciaEstudoAtual=null;
+function fecharEstudoReferencia(){
+  referenciaEstudoAtual=null;
+  if(E.referenciasEstudo){ E.referenciasEstudo.classList.add("oculto"); E.referenciasEstudo.innerHTML="<section data-r=\"referenciasEstudoConteudo\"></section>"; E.referenciasEstudoConteudo=E.referenciasEstudo.querySelector("[data-r=referenciasEstudoConteudo]"); }
+}
+function abrirEstudoReferencia(src,nome,tipo){
+  if(!E.referenciasEstudo||!E.referenciasEstudoConteudo||!src) return false;
+  referenciaEstudoAtual={src:src,nome:nome||"Referência",tipo:tipo||"image/png"};
+  E.referenciasEstudoConteudo.innerHTML='<div class="estudo-cab"><div><strong title="'+esc(referenciaEstudoAtual.nome)+'">'+esc(referenciaEstudoAtual.nome)+'</strong><small>Estudo separado: desenhe na folha sem inserir a imagem.</small></div><button type="button" class="bt mini" data-ed="estudo-fechar" aria-label="Fechar estudo">×</button></div><img data-estudo-img src="'+esc(src)+'" alt="'+esc(referenciaEstudoAtual.nome)+'"><div class="estudo-controles"><label>Opacidade <input type="range" data-r="estudoOpacidade" min="20" max="100" value="100"><output>100%</output></label><button type="button" class="bt mini ed-ref-bt" data-ed="estudo-inserir">Inserir cópia na folha</button></div>';
+  E.referenciasEstudo.classList.remove("oculto");
+  return true;
+}
 function abrirJanelaReferencias(){
   if(!S||!E.referenciasJanela||!E.referenciasConteudo) return false;
   if(!window.MesaReferencias||typeof window.MesaReferencias.render!=="function"){
@@ -3401,6 +3424,7 @@ function abrirJanelaReferencias(){
   E.referenciasJanela.setAttribute("aria-hidden","false");
   window.MesaReferencias.render(E.referenciasConteudo,{
     inserir:function(src,nome,tipo){ return inserirImagemDados(src,nome,tipo); },
+    estudar:function(src,nome,tipo){ fecharJanelaReferencias(); return abrirEstudoReferencia(src,nome,tipo); },
     fechar:fecharJanelaReferencias
   });
   return true;
@@ -3847,6 +3871,8 @@ function acao(n,b){
     case "pagina-modal-fechar": fecharJanelaPagina(); break;
     case "referencias": abrirJanelaReferencias(); break;
     case "referencias-fechar": fecharJanelaReferencias(); break;
+    case "estudo-fechar": fecharEstudoReferencia(); break;
+    case "estudo-inserir": if(referenciaEstudoAtual){ inserirImagemDados(referenciaEstudoAtual.src,referenciaEstudoAtual.nome,referenciaEstudoAtual.tipo); } break;
     case "pagina-ant": moverPaginaEditor(-1); break;
     case "pagina-prox": moverPaginaEditor(1); break;
     case "painel-editar":
@@ -3870,7 +3896,7 @@ function acao(n,b){
     case "preencher": preencherArea(); break;
     case "foco": alternarModoFoco(); break;
     case "guias-editar": CFG.guia.edit=!CFG.guia.edit; salvarEstudo(); pedir(false); aviso(CFG.guia.edit?"Arraste os pontos azuis na folha.":"Movimentação das guias desativada."); break;
-    case "guias-reset": CFG.guia.h=.42; CFG.guia.v1=.18; CFG.guia.v2=.82; salvarEstudo(); pedir(false); break;
+    case "guias-reset": CFG.guia.h=.42; CFG.guia.v1=.18; CFG.guia.v2=.82; CFG.guia.v3=.5; CFG.guia.v3y=.08; CFG.guia.passo=96; CFG.guia.div=12; salvarEstudo(); atualizarFerr(); pedir(false); break;
     case "img-importar": if(E.imagemArquivo) E.imagemArquivo.click(); break;
     case "img-converter-ferr": transformarFotoDesenho("ferramenta",CFG.imgFerr); break;
     case "img-tom-desenho":
@@ -4023,6 +4049,10 @@ function ligarEventos(){
     else if(r==="pTol"){ CFG.tol=+t.value; E.pTolV.textContent=t.value; }
     else if(r==="cor"){ definirCor(t.value); }
     else if(r==="tomDesenho"){ CFG.tomDesenho=t.value.toLowerCase(); }
+    else if(r==="estudoOpacidade"){
+      var estudoImg=E.referenciasEstudoConteudo&&E.referenciasEstudoConteudo.querySelector("[data-estudo-img]");
+      if(estudoImg){ estudoImg.style.opacity=(+t.value/100); var estudoOut=t.parentNode&&t.parentNode.querySelector("output"); if(estudoOut) estudoOut.textContent=t.value+"%"; }
+    }
     else if(r==="pFormaRot"){
       CFG.formaRot=+t.value||0; if(E.pFormaRotV) E.pFormaRotV.textContent=CFG.formaRot+"°";
       if(S.vivo&&S.vivo.forma){ S.vivo.forma.rot=CFG.formaRot; redesenharForma(S.vivo); pedir(true); }
@@ -4032,6 +4062,8 @@ function ligarEventos(){
     else if(r==="balTxt"){ balEdit(function(b){ b.txt=t.value; }); }
     else if(r==="balFs"){ var fv=+t.value; E.balFsV.textContent=fv?fv:"auto"; balEdit(function(b){ b.fs=fv; }); }
     else if(r==="guiaOp"){CFG.guia.op=+t.value;if(E.guiaOpV)E.guiaOpV.textContent=t.value+"%";salvarEstudo();pedir(false);}
+    else if(r==="guiaPasso"){CFG.guia.passo=clamp(+t.value||96,24,240);if(E.guiaPassoV)E.guiaPassoV.textContent=CFG.guia.passo+" px";salvarEstudo();pedir(false);}
+    else if(r==="guiaDiv"){CFG.guia.div=clamp(+t.value||12,4,24);if(E.guiaDivV)E.guiaDivV.textContent=String(CFG.guia.div);salvarEstudo();pedir(false);}
     else if(r==="cOp"){
       var L=camadaAtiva(); if(!L) return;
       if(!S.propIni) S.propIni={id:L.id,op:L.op};
@@ -4218,7 +4250,7 @@ if(document.fonts&&document.fonts.load){
 }
 window.EditorDesenho={
   abrir:abrir,
-  fechar:function(){ fecharJanelaReferencias(); return sair(); },
+  fechar:function(){ fecharJanelaReferencias(); fecharEstudoReferencia(); return sair(); },
   estaAberto:function(){ return !!S; },
   abrirReferencias:abrirJanelaReferencias,
   fecharReferencias:fecharJanelaReferencias,
@@ -4649,17 +4681,18 @@ function renderReferenciasEditor(host,opcoes){
   var corpo=grupos.length?grupos.map(function(n){
     var imagens=(n.imagens||[]).map(function(im){
       var item=referencias.filter(function(r){return r.nota.id===n.id&&r.meta.id===im.id;})[0], chave=item?item.chave:"";
-      return '<button type="button" class="ed-ref-card" data-ref-inserir="'+esc(chave)+'" data-ref-pesquisa="'+esc(((im.nome||"")+" "+(n.titulo||"")).toLocaleLowerCase("pt-BR"))+'" disabled><img class="oculto" data-ref-img="'+esc(chave)+'" alt="'+esc(im.nome||"Imagem de referência")+'"><span class="ed-ref-carregando">Carregando…</span><strong title="'+esc(im.nome||"Imagem")+'">'+esc(im.nome||"Imagem")+'</strong><small>Inserir no desenho</small></button>';
+      return '<button type="button" class="ed-ref-card" data-ref-inserir="'+esc(chave)+'" data-ref-pesquisa="'+esc(((im.nome||"")+" "+(n.titulo||"")).toLocaleLowerCase("pt-BR"))+'" disabled><img class="oculto" data-ref-img="'+esc(chave)+'" alt="'+esc(im.nome||"Imagem de referência")+'"><span class="ed-ref-carregando">Carregando…</span><strong title="'+esc(im.nome||"Imagem")+'">'+esc(im.nome||"Imagem")+'</strong><small>Estudar referência</small></button>';
     }).join("");
     return '<section class="ed-ref-grupo"><h3>'+esc((n.titulo||"Biblioteca de imagens").trim()||"Biblioteca de imagens")+'</h3><div class="ed-ref-grid">'+imagens+'</div></section>';
   }).join(""):'<p class="ed-ref-vazio">Nenhuma nota de imagens foi criada ainda. Crie uma em Notas e guarde referências para reutilizar nos desenhos.</p>';
-  host.innerHTML='<div class="ed-ref-cab"><div><h2>Referências · notas de imagens</h2><p>Escolha uma imagem guardada para inserir como nova camada. O desenho é criado em uma camada separada; depois selecione a imagem nas Camadas para editar filtros, tom, escala ou recorte.</p></div><button type="button" class="bt mini" data-ed="referencias-fechar">Fechar</button></div><div class="ed-ref-acoes"><input class="ed-ref-busca" type="search" data-ref-busca placeholder="Buscar por nome da imagem ou nota" aria-label="Buscar referências"><span class="ed-ref-contagem" data-ref-contagem>'+referencias.length+' imagem(ns)</span><button type="button" class="bt mini ed-ref-bt" data-ref-abrir-notas>Gerenciar notas de imagens</button></div><div class="ed-ref-grid">'+corpo+'</div>';
+  host.innerHTML='<div class="ed-ref-cab"><div><h2>Referências · notas de imagens</h2><p>Clique numa miniatura para estudar a referência sem colocá-la no papel. No visualizador separado você pode ajustar a opacidade, desenhar na folha e inserir uma cópia somente se quiser.</p></div><button type="button" class="bt mini" data-ed="referencias-fechar">Fechar</button></div><div class="ed-ref-acoes"><input class="ed-ref-busca" type="search" data-ref-busca placeholder="Buscar por nome da imagem ou nota" aria-label="Buscar referências"><span class="ed-ref-contagem" data-ref-contagem>'+referencias.length+' imagem(ns)</span><button type="button" class="bt mini ed-ref-bt" data-ref-abrir-notas>Gerenciar notas de imagens</button></div><div class="ed-ref-grid">'+corpo+'</div>';
   host.onclick=function(ev){
     var card=ev.target.closest&&ev.target.closest("[data-ref-inserir]");
     if(card&&host.contains(card)){
       var ref=referencias.filter(function(r){return r.chave===card.getAttribute("data-ref-inserir");})[0], dado=ref&&dados[ref.chave];
       if(!dado||!dado.src){ aviso("Esta referência ainda está carregando."); return; }
-      if(opcoes.inserir&&opcoes.inserir(dado.src,ref.meta.nome,ref.meta.tipo)) aviso("Referência inserida como nova camada.");
+      if(opcoes.estudar&&opcoes.estudar(dado.src,ref.meta.nome,ref.meta.tipo)) aviso("Referência aberta para estudo. Ela não foi colocada no papel.");
+      else if(opcoes.inserir&&opcoes.inserir(dado.src,ref.meta.nome,ref.meta.tipo)) aviso("Referência inserida como nova camada.");
       return;
     }
     var gerenciar=ev.target.closest&&ev.target.closest("[data-ref-abrir-notas]");
@@ -4682,7 +4715,7 @@ function renderReferenciasEditor(host,opcoes){
     bdLer(notaImagemChave(ref.nota.id,ref.meta.id)).then(function(rec){
       var img=host.querySelector('[data-ref-img="'+ref.chave+'"]'), card=img&&img.closest("[data-ref-inserir]"), carregando=card&&card.querySelector(".ed-ref-carregando");
       if(!img||!card) return;
-      if(rec&&rec.src){ dados[ref.chave]={src:rec.src}; img.src=rec.src; img.classList.remove("oculto"); if(carregando) carregando.remove(); card.disabled=false; }
+      if(rec&&rec.src){ dados[ref.chave]={src:rec.src,tipo:ref.meta.tipo||"image/png"}; img.src=rec.src; img.classList.remove("oculto"); if(carregando) carregando.remove(); card.disabled=false; }
       else if(carregando) carregando.textContent="Imagem indisponível neste aparelho";
     }).catch(function(){});
   });
