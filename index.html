@@ -758,6 +758,7 @@ body.ed-aberto{overflow:hidden}
         <input id="tituloCap" type="text" placeholder="Título do capítulo" aria-label="Título do capítulo" disabled>
       </div>
       <button class="bt" id="btBackup" title="Guardar ou restaurar obras e notas">Backup</button>
+       <button class="bt mini" id="btContaNuvem" title="Entrar na conta da nuvem">Conectar nuvem</button>
       <button class="bt" id="btExportar" disabled>Exportar</button>
       <button type="button" class="bt mini bt-instalar" id="btInstalar" title="Instalar a Mesa de Roteiro neste aparelho">Instalar app</button>
       <span class="estado-conexao" id="estadoConexao" aria-live="polite">Salvo neste aparelho</span>
@@ -781,6 +782,17 @@ body.ed-aberto{overflow:hidden}
     <button class="bt" id="btBaixar">Baixar roteiro (.txt)</button>
     <button class="bt forte" id="btPdf" title="Uma folha por página, com os painéis desenhados e os balões">Baixar capítulo (PDF)</button>
   </div>
+</dialog>
+
+<dialog id="dlgNuvem">
+  <div class="dlg-topo"><h3>Conectar à nuvem</h3><button class="bt mini" id="fecharNuvem">Fechar</button></div>
+  <div class="dlg-corpo" style="max-width:480px">
+    <p>Entre com um e-mail para proteger seus dados no Supabase. A conexão <strong>não envia nenhum trabalho automaticamente</strong>.</p>
+    <label style="display:block;margin:10px 0 4px;font-weight:700">E-mail</label><input id="emailNuvem" type="email" autocomplete="email" placeholder="voce@exemplo.com" style="width:100%;box-sizing:border-box">
+    <label style="display:block;margin:10px 0 4px;font-weight:700">Senha</label><input id="senhaNuvem" type="password" autocomplete="current-password" minlength="8" placeholder="Mínimo de 8 caracteres" style="width:100%;box-sizing:border-box">
+    <p class="nota-meta" id="estadoContaNuvem" aria-live="polite">Use uma senha nova e forte. Nunca use a senha do banco de dados aqui.</p>
+  </div>
+  <div class="dlg-pe"><button class="bt" id="btEntrarNuvem">Entrar</button><button class="bt forte" id="btCriarContaNuvem">Criar conta</button></div>
 </dialog>
 
 <dialog id="dlgBackup">
@@ -930,9 +942,15 @@ var dbLocal={
   window.__mesaArmazenamento={db:dbLocal, baixador:baixadorLocal, temLocalStorage:!!ls, escolherPastaBackup:escolherPastaBackup, salvarEmPasta:salvarEmPasta, nomePastaBackup:nomePastaBackup, nomeVersao:nomeVersao, suportaPasta:!!window.showDirectoryPicker};
 })();
 </script>
-<!-- O site é local por escolha: não usa Google, Firebase ou Supabase. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-window.MesaNuvem=null;
+/* Chave publicável: segura no navegador somente com RLS ativado. Nunca coloque
+   aqui senha do banco, service_role ou qualquer chave marcada como secreta. */
+window.MesaNuvem={
+  url:"https://qtydeqbrouoclyczplhx.supabase.co",
+  publishableKey:"sb_publishable_nTbFjJ4kfbBeB2v34qIbKQ_R6luHnge",
+  client:null
+};
 </script>
 <script>
 /* ========== Editor de desenho em tela cheia (um por painel) ==========
@@ -4636,8 +4654,36 @@ async function copiarBibliotecaLocal(bancoDestino,raizDestino){
     }
   }
 }
-function atualizarContaNuvem(){ return; }
-async function usarContaNuvem(){ return false; }
+async function atualizarContaNuvem(){
+  var alvo=el("estadoNuvem"), botao=el("btContaNuvem"), cfg=window.MesaNuvem;
+  if(!cfg||!cfg.client){ if(alvo) alvo.textContent="Nuvem indisponível"; return null; }
+  var r=await cfg.client.auth.getSession(), usuario=r&&r.data&&r.data.session&&r.data.session.user;
+  nuvemAtiva=!!usuario; contaNuvemPronta=!!usuario;
+  if(alvo) alvo.textContent=usuario?"Conta conectada · sem envio automático":"Salvo neste aparelho";
+  if(botao) botao.textContent=usuario?"Conta conectada":"Conectar nuvem";
+  return usuario||null;
+}
+async function iniciarContaNuvem(){
+  var cfg=window.MesaNuvem;
+  if(!cfg||!window.supabase||!window.supabase.createClient) return;
+  cfg.client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});
+  await atualizarContaNuvem();
+}
+async function usarContaNuvem(){
+  var usuario=await atualizarContaNuvem();
+  if(usuario){ aviso("Sua conta já está conectada. A sincronização continuará manual até ser ativada por você."); return true; }
+  el("dlgNuvem").showModal(); return false;
+}
+async function enviarContaNuvem(criar){
+  var cfg=window.MesaNuvem, alvo=el("estadoContaNuvem"), email=(el("emailNuvem").value||"").trim(), senha=el("senhaNuvem").value||"";
+  if(!cfg||!cfg.client){ alvo.textContent="A conexão com a nuvem não foi carregada."; return; }
+  if(!email||senha.length<8){ alvo.textContent="Informe um e-mail e uma senha com pelo menos 8 caracteres."; return; }
+  alvo.textContent=criar?"Criando conta…":"Entrando…";
+  var r=criar?await cfg.client.auth.signUp({email:email,password:senha}):await cfg.client.auth.signInWithPassword({email:email,password:senha});
+  if(r.error){ alvo.textContent="Não foi possível continuar: "+r.error.message; return; }
+  if(criar&&!r.data.session){ alvo.textContent="Conta criada. Verifique seu e-mail para confirmar o acesso e depois entre."; return; }
+  await atualizarContaNuvem(); el("dlgNuvem").close(); el("senhaNuvem").value=""; aviso("Conta conectada. Nenhum dado local foi enviado automaticamente.");
+}
 async function iniciarArmazenamento(){
   dbLocal=window.__mesaArmazenamento.db;
   db=dbLocal; base=baseLocal;
@@ -4648,6 +4694,7 @@ async function iniciarArmazenamento(){
   if(window.__mesaFalhaIndexedDB){
     aviso("O armazenamento de imagens/desenhos falhou e está apenas temporário nesta sessão. Faça um backup e não feche a página antes de resolver.");
   }
+  try{ await iniciarContaNuvem(); }catch(e){ var estadoN=el("estadoNuvem"); if(estadoN) estadoN.textContent="Nuvem indisponível"; }
 }
 
 function colObras(){ return db.collection(base+"/obras"); }
@@ -6852,6 +6899,10 @@ atualizarConexao();
 
 el("btBackup").onclick=function(){ atualizarEstadoBackup(); atualizarPastaBackup(); el("dlgBackup").showModal(); };
 el("fecharBackup").onclick=function(){ el("dlgBackup").close(); };
+el("btContaNuvem").onclick=function(){ usarContaNuvem(); };
+el("fecharNuvem").onclick=function(){ el("dlgNuvem").close(); };
+el("btEntrarNuvem").onclick=function(){ enviarContaNuvem(false); };
+el("btCriarContaNuvem").onclick=function(){ enviarContaNuvem(true); };
 el("btBaixarBackup").onclick=function(){ baixarBackup(); };
 el("btEscolherPasta").onclick=async function(){
   try{ await window.__mesaArmazenamento.escolherPastaBackup(); atualizarPastaBackup(); el("integridadeBackup").textContent="Pasta escolhida. O site pedirá autorização antes de gravar cada nova versão."; aviso("Pasta de backup escolhida. Nenhum backup foi criado ainda."); }
