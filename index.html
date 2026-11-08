@@ -792,9 +792,13 @@ body.ed-aberto{overflow:hidden}
     <p>Guarde suas obras, capítulos, páginas, painéis, roteiros, notas e imagens em um arquivo. Use <strong>Importar backup</strong> para restaurar tudo neste ou em outro aparelho.</p>
     <p>As imagens das notas e os desenhos são guardados no aparelho e entram no backup quando disponíveis. O espaço real depende do armazenamento livre.</p>
     <p class="nota-meta" id="estadoBackup" aria-live="polite">Último backup: ainda não registrado neste aparelho.</p>
+    <p class="nota-meta" id="integridadeBackup" aria-live="polite">Os novos backups serão verificados antes de serem salvos.</p>
+    <p class="nota-meta" id="pastaBackup" aria-live="polite">Pasta de backup: não escolhida. A escolha é opcional e depende do suporte do navegador.</p>
   </div>
   <div class="dlg-pe">
     <button class="bt" id="btBaixarBackup">Baixar backup</button>
+    <button class="bt" id="btEscolherPasta">Escolher pasta</button>
+    <button class="bt" id="btSalvarNaPasta" disabled>Salvar versão na pasta</button>
     <button class="bt forte" id="btImportarBackup">Importar backup</button>
     <input id="arquivoBackup" type="file" accept="application/json,.json" hidden>
   </div>
@@ -877,7 +881,7 @@ var dbLocal={
   }
 };
 
-var baixadorLocal={
+  var baixadorLocal={
   save:async function(o){
     var b=new Blob([o.data],{type:"text/plain;charset=utf-8"});
     var a=document.createElement("a");
@@ -887,7 +891,43 @@ var baixadorLocal={
   }
 };
 
-window.__mesaArmazenamento={db:dbLocal, baixador:baixadorLocal, temLocalStorage:!!ls};
+  /* A pasta escolhida pelo usuário fica separada dos dados do projeto. O navegador
+     pode revogar essa autorização; por isso ela nunca substitui o backup baixado. */
+  var pastaDB=null, pastaDBP=null;
+  function abrirPastaDB(){
+    if(pastaDBP) return pastaDBP;
+    pastaDBP=new Promise(function(res){
+      try{
+        var r=indexedDB.open("mesa-configuracao",1);
+        r.onupgradeneeded=function(){ if(!r.result.objectStoreNames.contains("config")) r.result.createObjectStore("config"); };
+        r.onsuccess=function(){ pastaDB=r.result; res(pastaDB); };
+        r.onerror=function(){ res(null); };
+      }catch(e){ res(null); }
+    });
+    return pastaDBP;
+  }
+  function configPasta(acao,valor){ return abrirPastaDB().then(function(db){ return new Promise(function(res){
+    if(!db){res(null);return;} try{var tx=db.transaction("config",acao==="ler"?"readonly":"readwrite"), st=tx.objectStore("config"); var r=acao==="ler"?st.get("pasta-backups"):st.put(valor,"pasta-backups"); r.onsuccess=function(){res(acao==="ler"?r.result:true);}; r.onerror=function(){res(null);};}catch(e){res(null);}
+  }); }); }
+  function nomeVersao(prefixo){ var d=new Date(), z=function(n){return String(n).padStart(2,"0");}; return prefixo+"-"+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+"-"+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds())+"-"+String(d.getMilliseconds()).padStart(3,"0")+".json"; }
+  async function escolherPastaBackup(){
+    if(!window.showDirectoryPicker) throw new Error("pasta_indisponivel");
+    var h=await window.showDirectoryPicker({mode:"readwrite"});
+    if(!await configPasta("gravar",h)) throw new Error("pasta_nao_guardada");
+    return h;
+  }
+  async function salvarEmPasta(filename,data,verificar){
+    var h=await configPasta("ler"); if(!h) throw new Error("pasta_ausente");
+    var p=await h.queryPermission({mode:"readwrite"}); if(p!=="granted") p=await h.requestPermission({mode:"readwrite"});
+    if(p!=="granted") throw new Error("permissao_negada");
+    var f=await h.getFileHandle(filename,{create:true}), w=await f.createWritable();
+    await w.write(data); await w.close();
+    /* Confere o arquivo que acabou de ser gravado, antes de informar sucesso. */
+    var texto=await (await f.getFile()).text(); if(texto!==data || !(await verificar(texto))) throw new Error("verificacao_falhou");
+    return {nome:h.name||"pasta escolhida",arquivo:filename};
+  }
+  async function nomePastaBackup(){ var h=await configPasta("ler"); return h?(h.name||"pasta escolhida"):null; }
+  window.__mesaArmazenamento={db:dbLocal, baixador:baixadorLocal, temLocalStorage:!!ls, escolherPastaBackup:escolherPastaBackup, salvarEmPasta:salvarEmPasta, nomePastaBackup:nomePastaBackup, nomeVersao:nomeVersao, suportaPasta:!!window.showDirectoryPicker};
 })();
 </script>
 <!-- O site é local por escolha: não usa Google, Firebase ou Supabase. -->
@@ -997,9 +1037,9 @@ function bdAbrir(){
       var rq=indexedDB.open("mesa-desenhos",1);
       rq.onupgradeneeded=function(){ rq.result.createObjectStore("d"); };
       rq.onsuccess=function(){ BD.db=rq.result; res(BD.db); };
-      rq.onerror=function(){ res(null); };
-      rq.onblocked=function(){ res(null); };
-    }catch(e){ res(null); }
+      rq.onerror=function(){ window.__mesaFalhaIndexedDB=true; res(null); };
+      rq.onblocked=function(){ window.__mesaFalhaIndexedDB=true; res(null); };
+    }catch(e){ window.__mesaFalhaIndexedDB=true; res(null); }
   });
   return BD.p;
 }
@@ -1017,13 +1057,13 @@ function bdLer(id){
 }
 function bdGravar(id,rec){
   return bdAbrir().then(function(db){
-    if(!db){ BD.mem[id]=rec; return false; }
+    if(!db){ window.__mesaFalhaIndexedDB=true; BD.mem[id]=rec; return false; }
     return new Promise(function(res){
       try{
         var tx=db.transaction("d","readwrite"); tx.objectStore("d").put(rec,id);
         tx.oncomplete=function(){ res(true); };
-        tx.onerror=tx.onabort=function(){ res(false); };
-      }catch(e){ res(false); }
+        tx.onerror=tx.onabort=function(){ window.__mesaFalhaIndexedDB=true; res(false); };
+      }catch(e){ window.__mesaFalhaIndexedDB=true; res(false); }
     });
   });
 }
@@ -4552,7 +4592,7 @@ function atualizarEstadoBackup(){
   alvo.textContent=meta&&meta.em?"Último backup deste aparelho: "+dataNota(meta.em,true)+" · "+(meta.itens||0)+" item(ns).":"Último backup: ainda não registrado neste aparelho.";
   /* Este modo não usa nuvem; o arquivo de backup é a forma de transportar os dados. */
 }
-function registrarBackup(pacote){ var itens=(pacote.obras||[]).length+(pacote.capitulos||[]).length+(pacote.notas||[]).length; gravarMetaLocal("backup-meta",{em:Date.now(),itens:itens}); atualizarEstadoBackup(); }
+function registrarBackup(pacote,destino){ var itens=(pacote.obras||[]).length+(pacote.capitulos||[]).length+(pacote.notas||[]).length; gravarMetaLocal("backup-meta",{em:Date.now(),itens:itens,destino:destino||"download",versao:pacote.versao||"antiga"}); atualizarEstadoBackup(); }
 function registrarSincronizacao(){ if(!nuvemAtiva) return; gravarMetaLocal("sync-meta",{em:Date.now()}); atualizarContaNuvem(); atualizarEstadoBackup(); }
 
 var tAviso;
@@ -4605,16 +4645,48 @@ async function iniciarArmazenamento(){
   if(!window.__mesaArmazenamento.temLocalStorage){
     aviso("Este navegador bloqueou o armazenamento local — as mudanças não vão persistir ao recarregar.");
   }
+  if(window.__mesaFalhaIndexedDB){
+    aviso("O armazenamento de imagens/desenhos falhou e está apenas temporário nesta sessão. Faça um backup e não feche a página antes de resolver.");
+  }
 }
 
 function colObras(){ return db.collection(base+"/obras"); }
 function colCaps(){ return db.collection(base+"/capitulos"); }
 function colNotas(){ return db.collection(base+"/notas"); }
 
-/* Backup portátil: dados do roteiro viajam entre o arquivo local e a versão publicada.
-   Os pixels das camadas continuam no IndexedDB do aparelho de origem. */
+/* Backup portátil completo. A versão 3 acrescenta preferências locais e uma soma
+   SHA-256 do conteúdo; as versões antigas continuam aceitas na importação. */
+function preferenciasBackup(){
+  var out=[], prefixos=["mesa:","mesa.ed."];
+  try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(prefixos.some(function(p){return k.indexOf(p)===0;})) out.push({chave:k,valor:localStorage.getItem(k)}); } }catch(e){}
+  return out;
+}
+async function sha256Texto(texto){
+  if(!window.crypto||!crypto.subtle||!window.TextEncoder) return null;
+  var b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(texto));
+  return Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0");}).join("");
+}
+async function prepararBackup(pacote){
+  var texto=JSON.stringify(pacote), soma=await sha256Texto(texto);
+  pacote.integridade={algoritmo:soma?"SHA-256":"indisponivel",conteudo:soma,tamanho:texto.length};
+  return JSON.stringify(pacote,null,2);
+}
+async function verificarTextoBackup(texto){
+  var p=JSON.parse(texto), i=p.integridade;
+  if(!i||i.algoritmo!=="SHA-256"||!i.conteudo) return {ok:true,legado:true,pacote:p};
+  var copia={}; Object.keys(p).forEach(function(k){if(k!=="integridade") copia[k]=p[k];});
+  var soma=await sha256Texto(JSON.stringify(copia));
+  return {ok:!!soma&&soma===i.conteudo,legado:false,pacote:p};
+}
+function atualizarPastaBackup(){
+  var alvo=el("pastaBackup"), bt=el("btSalvarNaPasta"), ar=window.__mesaArmazenamento;
+  if(!alvo||!ar) return;
+  if(!ar.suportaPasta){ alvo.textContent="Pasta de backup: este navegador não oferece a escolha de pasta. Use “Baixar backup”."; if(bt) bt.disabled=true; return; }
+  ar.nomePastaBackup().then(function(n){ alvo.textContent=n?"Pasta de backup: "+n+". O navegador poderá pedir autorização novamente.":"Pasta de backup: não escolhida."; if(bt) bt.disabled=!n; });
+}
+/* Os pixels das camadas e as imagens das notas seguem juntos no arquivo. */
 async function criarBackup(){
-  var grupos=["obras","capitulos","notas"], pacote={versao:2,criadoEm:Date.now(),obras:[],capitulos:[],notas:[],desenhos:[],desenhosLivres:desenhosLivres};
+  var grupos=["obras","capitulos","notas"], pacote={versao:3,formato:"mesa-de-roteiro-backup",criadoEm:Date.now(),obras:[],capitulos:[],notas:[],desenhos:[],desenhosLivres:desenhosLivres,preferenciasLocal:preferenciasBackup()};
   if(sujo) await salvar();
   if(notaSuja) await salvarNota();
   for(var i=0;i<grupos.length;i++){
@@ -4637,24 +4709,33 @@ async function criarBackup(){
 async function baixarBackup(){
   if(!baixador){ aviso("Download indisponível neste navegador."); return; }
   try{
-    var pacote=await criarBackup();
-    await baixador.save({filename:"mesa-de-roteiro-backup-"+new Date().toISOString().slice(0,10)+".json",data:JSON.stringify(pacote,null,2)});
-    registrarBackup(pacote);
-    aviso("Backup baixado. Guarde esse arquivo em um local seguro.");
-  }catch(e){ aviso("Não foi possível criar o backup."); }
+    var pacote=await criarBackup(), texto=await prepararBackup(pacote), conf=await verificarTextoBackup(texto);
+    if(!conf.ok) throw new Error("verificacao_falhou");
+    await baixador.save({filename:window.__mesaArmazenamento.nomeVersao("mesa-de-roteiro-backup"),data:texto});
+    registrarBackup(pacote,"download");
+    el("integridadeBackup").textContent=conf.legado?"Backup baixado; este navegador não conseguiu calcular a verificação.":"Backup completo verificado (SHA-256) antes do download.";
+    aviso("Backup baixado e verificado. Guarde uma cópia fora do computador.");
+  }catch(e){ el("integridadeBackup").textContent="Falha ao criar/verificar o backup: "+(e&&e.message?e.message:"erro desconhecido")+"."; aviso("O backup não foi confirmado. Seus dados atuais não foram alterados."); }
+}
+async function salvarBackupNaPasta(){
+  try{
+    var pacote=await criarBackup(), texto=await prepararBackup(pacote), ar=window.__mesaArmazenamento, nome=ar.nomeVersao("mesa-de-roteiro-backup"), r=await ar.salvarEmPasta(nome,texto,async function(t){return (await verificarTextoBackup(t)).ok;});
+    registrarBackup(pacote,"pasta"); el("integridadeBackup").textContent="Versão "+r.arquivo+" gravada e relida com verificação SHA-256."; aviso("Backup completo salvo e verificado na pasta escolhida.");
+  }catch(e){ el("integridadeBackup").textContent="Falha ao salvar na pasta: "+(e&&e.message?e.message:"erro desconhecido")+". Nenhum dado existente foi removido."; aviso("A versão não foi confirmada; tente novamente ou use Baixar backup."); }
 }
 async function importarBackupArquivo(arquivo){
   if(!arquivo) return;
   try{
-    var pacote=JSON.parse(await arquivo.text()), grupos=["obras","capitulos","notas"], total=0;
-    if(pacote.desenhos&&window.EditorDesenho&&window.EditorDesenho.importarDados) await window.EditorDesenho.importarDados(pacote.desenhos);
-    if(Array.isArray(pacote.desenhosLivres)){ desenhosLivres=pacote.desenhosLivres.filter(function(x){return x&&x.id&&x.titulo;}); salvarDesenhosLivres(); }
+    var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote, grupos=["obras","capitulos","notas"], total=0;
+    if(!ver.ok) throw new Error("A verificação SHA-256 falhou; a importação foi cancelada.");
     for(var i=0;i<grupos.length;i++){
       if(!Array.isArray(pacote[grupos[i]])) throw new Error("formato");
       total+=pacote[grupos[i]].length;
     }
     if(!window.confirm("Importar "+total+" item(ns)? Itens com o mesmo nome serão atualizados. Nada será apagado.")) return;
     estado.textContent="importando backup…";
+    if(pacote.desenhos&&window.EditorDesenho&&window.EditorDesenho.importarDados) await window.EditorDesenho.importarDados(pacote.desenhos);
+    if(Array.isArray(pacote.desenhosLivres)){ desenhosLivres=pacote.desenhosLivres.filter(function(x){return x&&x.id&&x.titulo;}); salvarDesenhosLivres(); }
     for(var g=0;g<grupos.length;g++){
       var itens=pacote[grupos[g]];
       for(var j=0;j<itens.length;j++){
@@ -4676,8 +4757,9 @@ async function importarBackupArquivo(arquivo){
     registrarSincronizacao();
     await carregarListas();
     desenharLateral(); desenhar(); atualizarPersonagens();
+    el("integridadeBackup").textContent=ver.legado?"Backup antigo importado sem soma de verificação.":"Backup verificado por SHA-256 e importado.";
     aviso("Backup importado com sucesso.");
-  }catch(e){ aviso("Esse arquivo não é um backup válido da Mesa de Roteiro."); }
+  }catch(e){ aviso(e&&e.message&&e.message.indexOf("SHA-256")>=0?e.message:"Esse arquivo não é um backup válido da Mesa de Roteiro."); }
 }
 
 async function carregarListas(){
@@ -6768,9 +6850,14 @@ window.addEventListener("online",async function(){ atualizarConexao(); await pro
 window.addEventListener("offline",atualizarConexao);
 atualizarConexao();
 
-el("btBackup").onclick=function(){ atualizarEstadoBackup(); el("dlgBackup").showModal(); };
+el("btBackup").onclick=function(){ atualizarEstadoBackup(); atualizarPastaBackup(); el("dlgBackup").showModal(); };
 el("fecharBackup").onclick=function(){ el("dlgBackup").close(); };
 el("btBaixarBackup").onclick=function(){ baixarBackup(); };
+el("btEscolherPasta").onclick=async function(){
+  try{ await window.__mesaArmazenamento.escolherPastaBackup(); atualizarPastaBackup(); el("integridadeBackup").textContent="Pasta escolhida. O site pedirá autorização antes de gravar cada nova versão."; aviso("Pasta de backup escolhida. Nenhum backup foi criado ainda."); }
+  catch(e){ if(e&&e.name==="AbortError") return; el("integridadeBackup").textContent="Não foi possível escolher a pasta. Use “Baixar backup” como alternativa."; aviso("A pasta não foi autorizada; seus dados atuais permanecem intactos."); }
+};
+el("btSalvarNaPasta").onclick=function(){ salvarBackupNaPasta(); };
 el("btImportarBackup").onclick=function(){ el("arquivoBackup").click(); };
 el("arquivoBackup").onchange=async function(){
   var arquivo=this.files&&this.files[0]; this.value="";
