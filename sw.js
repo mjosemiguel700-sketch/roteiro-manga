@@ -1,4 +1,4 @@
-const CACHE = "mesa-de-roteiro-local-v4";
+const CACHE = "mesa-de-roteiro-local-v5";
 const APP_SHELL = [
   "./",
   "./index.html",

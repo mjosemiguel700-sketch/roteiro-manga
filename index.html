@@ -806,11 +806,13 @@ body.ed-aberto{overflow:hidden}
     <p class="nota-meta" id="estadoBackup" aria-live="polite">Último backup: ainda não registrado neste aparelho.</p>
     <p class="nota-meta" id="integridadeBackup" aria-live="polite">Os novos backups serão verificados antes de serem salvos.</p>
     <p class="nota-meta" id="pastaBackup" aria-live="polite">Pasta de backup: não escolhida. A escolha é opcional e depende do suporte do navegador.</p>
+    <p class="nota-meta">A cópia na nuvem só é restaurada quando você pedir. A importação confirma antes de alterar qualquer item local.</p>
   </div>
   <div class="dlg-pe">
     <button class="bt" id="btBaixarBackup">Baixar backup</button>
     <button class="bt" id="btEscolherPasta">Escolher pasta</button>
     <button class="bt" id="btSalvarNaPasta" disabled>Salvar versão na pasta</button>
+    <button class="bt" id="btRestaurarNuvem">Restaurar da nuvem</button>
     <button class="bt forte" id="btImportarBackup">Importar backup</button>
     <input id="arquivoBackup" type="file" accept="application/json,.json" hidden>
   </div>
@@ -4708,9 +4710,28 @@ async function enviarBackupNuvemAutomatico(){
     gravarMetaLocal("backup-nuvem-meta",{em:Date.now(),tamanho:texto.length,caminho:caminho});
     if(alvo) alvo.textContent="Nuvem atualizada · "+horaCurta(Date.now());
   }catch(e){
-    if(alvo) alvo.textContent="Cópia na nuvem pendente";
-    aviso("A cópia na nuvem não foi confirmada. Seus dados locais continuam seguros; uma nova tentativa será feita depois.");
+    var detalhe=String((e&&e.message)||"erro desconhecido").replace(/\s+/g," ").slice(0,150);
+    if(alvo) alvo.textContent="Cópia pendente: "+detalhe;
+    aviso("A cópia na nuvem não foi confirmada. Seus dados locais continuam seguros; veja o motivo ao lado de Conectar nuvem.");
   }finally{ backupNuvemEmCurso=false; }
+}
+async function restaurarBackupDaNuvem(){
+  var cfg=window.MesaNuvem, alvo=el("integridadeBackup");
+  if(!cfg||!cfg.client){ aviso("A conexão com a nuvem não foi carregada."); return; }
+  var sessao=await cfg.client.auth.getSession(), usuario=sessao&&sessao.data&&sessao.data.session&&sessao.data.session.user;
+  if(!usuario){ await usarContaNuvem(); return; }
+  try{
+    alvo.textContent="Baixando a cópia protegida da nuvem…";
+    var caminho=usuario.id+"/sincronizacao/atual.json", r=await cfg.client.storage.from("mesa-arquivos").download(caminho);
+    if(r.error) throw r.error;
+    var texto=await r.data.text(), ver=await verificarTextoBackup(texto);
+    if(!ver.ok) throw new Error("A verificação SHA-256 da cópia na nuvem falhou.");
+    alvo.textContent="Cópia da nuvem verificada. Confirme a importação na próxima mensagem.";
+    await importarBackupArquivo(new File([texto],"mesa-de-roteiro-copia-nuvem.json",{type:"application/json"}));
+  }catch(e){
+    alvo.textContent="Não foi possível recuperar a cópia na nuvem: "+(e&&e.message?e.message:"erro desconhecido")+".";
+    aviso("A recuperação não alterou seus dados locais.");
+  }
 }
 async function iniciarArmazenamento(){
   dbLocal=window.__mesaArmazenamento.db;
