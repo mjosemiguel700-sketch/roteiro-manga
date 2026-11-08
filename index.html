@@ -1079,7 +1079,7 @@ function bdGravar(id,rec){
     return new Promise(function(res){
       try{
         var tx=db.transaction("d","readwrite"); tx.objectStore("d").put(rec,id);
-        tx.oncomplete=function(){ res(true); };
+        tx.oncomplete=function(){ try{ if(window.agendarBackupNuvem) window.agendarBackupNuvem(); }catch(e){} res(true); };
         tx.onerror=tx.onabort=function(){ window.__mesaFalhaIndexedDB=true; res(false); };
       }catch(e){ window.__mesaFalhaIndexedDB=true; res(false); }
     });
@@ -4658,8 +4658,10 @@ async function atualizarContaNuvem(){
   var alvo=el("estadoNuvem"), botao=el("btContaNuvem"), cfg=window.MesaNuvem;
   if(!cfg||!cfg.client){ if(alvo) alvo.textContent="Nuvem indisponível"; return null; }
   var r=await cfg.client.auth.getSession(), usuario=r&&r.data&&r.data.session&&r.data.session.user;
-  nuvemAtiva=!!usuario; contaNuvemPronta=!!usuario;
-  if(alvo) alvo.textContent=usuario?"Conta conectada · sem envio automático":"Salvo neste aparelho";
+  /* O modo antigo de nuvem permanece desligado; o backup Supabase abaixo é
+     independente e nunca muda a fonte local dos dados. */
+  nuvemAtiva=false; contaNuvemPronta=!!usuario;
+  if(alvo) alvo.textContent=usuario?"Conta conectada · cópia automática ativa":"Salvo neste aparelho";
   if(botao) botao.textContent=usuario?"Conta conectada":"Conectar nuvem";
   return usuario||null;
 }
@@ -4667,7 +4669,7 @@ async function iniciarContaNuvem(){
   var cfg=window.MesaNuvem;
   if(!cfg||!window.supabase||!window.supabase.createClient) return;
   cfg.client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});
-  await atualizarContaNuvem();
+  await atualizarContaNuvem(); agendarBackupNuvem();
 }
 async function usarContaNuvem(){
   var usuario=await atualizarContaNuvem();
@@ -4682,7 +4684,33 @@ async function enviarContaNuvem(criar){
   var r=criar?await cfg.client.auth.signUp({email:email,password:senha}):await cfg.client.auth.signInWithPassword({email:email,password:senha});
   if(r.error){ alvo.textContent="Não foi possível continuar: "+r.error.message; return; }
   if(criar&&!r.data.session){ alvo.textContent="Conta criada. Verifique seu e-mail para confirmar o acesso e depois entre."; return; }
-  await atualizarContaNuvem(); el("dlgNuvem").close(); el("senhaNuvem").value=""; aviso("Conta conectada. Nenhum dado local foi enviado automaticamente.");
+  await atualizarContaNuvem(); agendarBackupNuvem(); el("dlgNuvem").close(); el("senhaNuvem").value=""; aviso("Conta conectada. A primeira cópia será enviada após 2 minutos sem alterações.");
+}
+var temporizadorBackupNuvem=null, backupNuvemEmCurso=false;
+function agendarBackupNuvem(){
+  if(!contaNuvemPronta) return;
+  clearTimeout(temporizadorBackupNuvem);
+  temporizadorBackupNuvem=setTimeout(enviarBackupNuvemAutomatico,120000);
+}
+async function enviarBackupNuvemAutomatico(){
+  if(backupNuvemEmCurso||!navigator.onLine||!contaNuvemPronta) return;
+  var cfg=window.MesaNuvem, alvo=el("estadoNuvem"); if(!cfg||!cfg.client) return;
+  backupNuvemEmCurso=true;
+  try{
+    var sessao=await cfg.client.auth.getSession(), usuario=sessao&&sessao.data&&sessao.data.session&&sessao.data.session.user;
+    if(!usuario) return;
+    if(alvo) alvo.textContent="Criando cópia na nuvem…";
+    var pacote=await criarBackup(), texto=await prepararBackup(pacote);
+    var arquivo=new Blob([texto],{type:"application/json"});
+    var caminho=usuario.id+"/sincronizacao/atual.json";
+    var r=await cfg.client.storage.from("mesa-arquivos").upload(caminho,arquivo,{upsert:true,contentType:"application/json"});
+    if(r.error) throw r.error;
+    gravarMetaLocal("backup-nuvem-meta",{em:Date.now(),tamanho:texto.length,caminho:caminho});
+    if(alvo) alvo.textContent="Nuvem atualizada · "+horaCurta(Date.now());
+  }catch(e){
+    if(alvo) alvo.textContent="Cópia na nuvem pendente";
+    aviso("A cópia na nuvem não foi confirmada. Seus dados locais continuam seguros; uma nova tentativa será feita depois.");
+  }finally{ backupNuvemEmCurso=false; }
 }
 async function iniciarArmazenamento(){
   dbLocal=window.__mesaArmazenamento.db;
@@ -4870,6 +4898,7 @@ async function salvar(){
     if(c){ c.titulo=doc.titulo; c.numero=doc.numero; c.nPaineis=contarPaineis(doc.paginas); c.paginas=(doc.paginas||[]).length; c.status=statusCapitulo(doc.status); c.progresso=progressoCapitulo(doc.progresso); c.atualizadoEm=doc.atualizadoEm; }
     registrarSincronizacao();
     desenharLateral();
+    agendarBackupNuvem();
   }catch(e){
     try{ await dbLocal.collection(baseLocal+"/capitulos").doc(doc.id).set(corpo); }catch(localErr){}
     enfileirarNuvem("capitulos",doc.id,corpo); salvarCacheOffline();
@@ -5034,6 +5063,7 @@ async function salvarNota(){
     notaSuja=false; estado.textContent="salvo"; registrarSincronizacao();
     notas.sort(function(a,b){ return (b.atualizadoEm||0)-(a.atualizadoEm||0); });
     desenharNotasLateral();
+    agendarBackupNuvem();
   }catch(e){
     var somenteImagens=notaSomenteImagens(n), dadosNota={titulo:n.titulo||"",texto:somenteImagens?"":(n.texto||""),tags:somenteImagens?["imagens"]:tagsNota(n.tags),tipo:somenteImagens?"imagens":"texto",imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm||Date.now()};
     try{ await dbLocal.collection(baseLocal+"/notas").doc(n.id).set(dadosNota); }catch(localErr){}
@@ -6893,7 +6923,7 @@ el("btInstalar").onclick=async function(){
   if(!conviteInstalacao){ aviso("Use o menu do navegador e escolha 'Instalar app' ou 'Adicionar à tela inicial'."); return; }
   conviteInstalacao.prompt(); try{ await conviteInstalacao.userChoice; }catch(e){} conviteInstalacao=null; el("btInstalar").classList.remove("visivel");
 };
-window.addEventListener("online",async function(){ atualizarConexao(); await processarFilaNuvem(); try{ await carregarListas(); await sincronizarImagensNuvem(); desenharLateral(); }catch(e){} });
+window.addEventListener("online",async function(){ atualizarConexao(); agendarBackupNuvem(); await processarFilaNuvem(); try{ await carregarListas(); await sincronizarImagensNuvem(); desenharLateral(); }catch(e){} });
 window.addEventListener("offline",atualizarConexao);
 atualizarConexao();
 
