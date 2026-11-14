@@ -111,6 +111,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .notas-filtro{width:calc(100% - 16px);margin:0 8px 7px;padding:6px 8px;font-size:12px;background:var(--papel);border:1px solid var(--calha);border-radius:3px}
 .nota-anexos{border-top:1px solid var(--calha);margin-top:16px;padding-top:14px}.nota-anexos-cab{display:flex;align-items:center;gap:8px;margin-bottom:9px}.nota-anexos-cab strong{font-size:13px}.nota-anexos-cab span{font-size:11px;color:var(--fraco);flex:1}.nota-anexos input[type=file]{display:none}.nota-imagens-soltar{margin:0 0 10px;padding:9px 10px;border:1px dashed var(--calha);border-radius:4px;color:var(--fraco);font-size:11px;text-align:center;transition:background .15s,border-color .15s}.nota-imagens-soltar.arrastando{border-color:var(--tinta);background:var(--papel-2);color:var(--tinta)}.nota-imagens-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.nota-imagem-item{position:relative;min-width:0;border:1px solid var(--calha);background:var(--papel-2);padding:5px}.nota-imagem-item img{display:block;width:100%;height:170px;object-fit:contain;background:#fff;cursor:zoom-in}.nota-imagem-nome{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fraco);font-size:11px;padding:5px 2px 1px}.nota-imagem-remover{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.94);border-color:#aaa}.nota-imagens-vazio{color:var(--fraco);font-size:12px;border:1px dashed var(--calha);padding:12px;text-align:center}.nota-imagem-lightbox{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,.88)}.nota-imagem-lightbox.oculto{display:none}.nota-imagem-lightbox img{display:block;max-width:96vw;max-height:92vh;width:auto;height:auto;object-fit:contain;box-shadow:0 0 0 1px rgba(255,255,255,.35)}.nota-imagem-lightbox .bt{position:absolute;top:14px;right:14px;background:#fff;color:#111;border-color:#fff}.nota-imagem-lightbox .bt:hover{background:#eee}.estado-conexao{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fraco);white-space:nowrap}.estado-conexao::before{content:"";width:7px;height:7px;border-radius:50%;background:#4e9b5b}.estado-conexao.offline{color:#8b4f22}.estado-conexao.offline::before{background:#d4862f}.estado-conexao.pendente{color:#775000}.estado-conexao.pendente::before{background:#d6a21d}.bt-instalar{display:none}.bt-instalar.visivel{display:inline-flex}
 .nota-etiquetas{margin:4px 0 11px}.nota-etiquetas label{display:block;margin-bottom:4px;font-size:12px;color:var(--fraco)}.nota-etiquetas input{font-family:var(--gotico);font-size:13px;font-weight:400;margin:0}.nota-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}.nota-tag{display:inline-block;padding:1px 6px;border:1px solid var(--calha);border-radius:999px;color:var(--fraco);font-size:11px;line-height:1.5}
+.nota-etiqueta-confirmacao{display:flex;align-items:stretch;gap:8px}.nota-etiqueta-confirmacao input{flex:1;min-width:0}.nota-etiqueta-confirmacao .bt{flex:none;white-space:nowrap;touch-action:manipulation}
+@media(max-width:700px){.nota-tags button.nota-tag{min-height:44px;min-width:44px;padding:8px 12px;font-size:14px;touch-action:manipulation}.nota-etiqueta-confirmacao input{font-size:16px;min-height:44px}.nota-etiqueta-confirmacao .bt,.nota-grifos-acoes .bt{min-height:44px}.nota-etiqueta-confirmacao{flex-wrap:wrap}.nota-etiqueta-confirmacao input{flex-basis:170px}.nota-grifos .nota-grifos-cab{top:var(--nota-cab-altura,0px);z-index:3}.nota-grifos .nota-grifos-conteudo mark{scroll-margin-top:calc(var(--nota-cab-altura,0px) + 140px)}}
 .cap-resumo{display:flex;align-items:center;gap:6px;padding:3px 8px 6px 18px;color:var(--fraco);font-size:11px}.cap-selo{display:inline-flex;align-items:center;border:1px solid var(--calha);border-radius:999px;padding:0 5px;line-height:1.55;font-size:10px;white-space:nowrap}.cap-selo.status-finalizado{background:#e8f5ea;border-color:#7cb887;color:#205c31}.cap-selo.status-desenhando{background:#fff5d9;border-color:#caa045;color:#775000}.cap-selo.status-rascunho{background:#edf3ff;border-color:#8aa8d2;color:#255184}
 .cap-controles{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding:10px 12px;border:1px solid var(--calha);background:var(--papel-2)}.cap-controles label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}.cap-controles select{max-width:150px;background:var(--papel);border:1px solid var(--calha);border-radius:3px;padding:3px 5px;color:var(--tinta)}.cap-controles input[type=range]{width:120px;accent-color:var(--tinta)}.cap-progresso-num{min-width:32px;font-variant-numeric:tabular-nums}.barra-progresso{width:92px;height:5px;background:var(--calha);overflow:hidden}.barra-progresso i{display:block;height:100%;background:var(--tinta)}
 .ir-pagina-select{max-width:156px;background:var(--papel);border:1px solid var(--calha);border-radius:3px;padding:3px 6px;color:var(--tinta);font-size:12px}
@@ -6158,21 +6160,51 @@ function atualizarBuscaNotaEditor(){
   box.classList.toggle("oculto",!mostrar);textarea.classList.toggle("oculto",mostrar);
   if(mostrar){MARCA_NOTA.faixas=faixasEtiquetaNota(n.texto||"",MARCA_NOTA.termo);box.innerHTML='<div class="nota-grifos-cab"><span data-nota-marca-status role="status"></span><div class="nota-grifos-acoes"><button class="bt mini" type="button" data-nota-acao="marca-anterior">Anterior</button><button class="bt mini" type="button" data-nota-acao="marca-proxima">Próxima</button><button class="bt mini" type="button" data-nota-acao="limpar-grifos">Limpar grifos</button><button class="bt mini" type="button" data-nota-acao="editar-texto">Voltar a escrever</button></div></div><div class="nota-grifos-conteudo" tabindex="0" aria-label="Conteúdo da nota com etiquetas grifadas">'+htmlTextoEtiquetaNota(n.texto||"",MARCA_NOTA.faixas)+'</div>';atualizarEstadoMarcaNota(false);}
 }
+function atualizarChipsEtiquetaNota(n){
+  var host=el('notaTagsChips');if(!host||!n)return;
+  var tags=tagsNota(n.tags),lista=host.querySelector('.nota-tags');
+  if(!tags.length){host.textContent='';return;}
+  if(!lista){lista=document.createElement('div');lista.className='nota-tags';lista.setAttribute('aria-label','Etiquetas');host.appendChild(lista);}
+  var anteriores=Array.prototype.slice.call(lista.children),mantidos=[];
+  tags.forEach(function(tag,i){
+    var b=anteriores.find(function(item){return item.getAttribute('data-nota-tag')===tag&&item.getAttribute('data-nota-tag-id')===n.id;});
+    if(!b){b=document.createElement('button');b.type='button';b.className='nota-tag';b.setAttribute('data-nota-tag',tag);b.setAttribute('data-nota-tag-id',n.id);b.title='Grifar e ir até esta etiqueta no texto da nota';b.textContent='#'+tag;}
+    b.disabled=notaSomenteImagens(n);b.setAttribute('aria-pressed',String(MARCA_NOTA.notaId===n.id&&normalizarBuscaNota(tag)===normalizarBuscaNota(MARCA_NOTA.termo)));
+    mantidos.push(b);if(lista.children[i]!==b)lista.insertBefore(b,lista.children[i]||null);
+  });
+  anteriores.forEach(function(b){if(mantidos.indexOf(b)===-1)b.remove();});
+}
+function levarMarcaNotaAoTrecho(aguardarTeclado){
+  var marca=MARCA_NOTA,indice=marca.indice,vv=window.visualViewport,timer,limite;
+  function rolar(){if(MARCA_NOTA!==marca||marca.indice!==indice)return;var cab=tela.querySelector('.notas-cabeca');if(cab)tela.style.setProperty('--nota-cab-altura',cab.getBoundingClientRect().height+'px');atualizarEstadoMarcaNota(true);}
+  if(!aguardarTeclado){requestAnimationFrame(rolar);return;}
+  function pronto(){clearTimeout(timer);clearTimeout(limite);if(vv)vv.removeEventListener('resize',redimensionou);requestAnimationFrame(rolar);}
+  function redimensionou(){clearTimeout(timer);timer=setTimeout(pronto,140);}
+  if(vv)vv.addEventListener('resize',redimensionou);
+  timer=setTimeout(pronto,300);limite=setTimeout(pronto,800);
+}
+function confirmarEtiquetaNota(){
+  var campo=el('notaTags');if(!campo)return;
+  campo.blur();var tags=tagsNota(campo.value);
+  if(!tags.length){aviso('Digite uma palavra ou trecho em Etiquetas.');campo.focus();return;}
+  return ativarEtiquetaNota(tags[tags.length-1],notaAtual,true);
+}
 function reiniciarMarcaNota(){MARCA_NOTA={notaId:null,termo:"",faixas:[],indice:0,cursor:null};}
 function limparMarcaNota(focar){
   var cursor=MARCA_NOTA.cursor,textarea=el('notaTexto');reiniciarMarcaNota();atualizarBuscaNotaEditor();
-  var n=notaObj(notaAtual),chips=el('notaTagsChips');if(n&&chips)chips.innerHTML=htmlTags(n.tags,n.id);desenharNotasLateral();
+  atualizarChipsEtiquetaNota(notaObj(notaAtual));desenharNotasLateral();
   if(focar&&textarea){if(cursor){textarea.setSelectionRange(cursor.inicio,cursor.fim,cursor.direcao||'none');textarea.scrollTop=cursor.scroll||0;}textarea.focus({preventScroll:true});var rc=textarea.getBoundingClientRect();if(rc.bottom<0||rc.top>window.innerHeight)textarea.scrollIntoView({block:'center'});}
 }
-async function ativarEtiquetaNota(termo,idNota){
+async function ativarEtiquetaNota(termo,idNota,aguardarTeclado){
   var alvo=idNota||notaAtual;if(!alvo||!notaObj(alvo))return;
   if(alvo!==notaAtual||!modoNotas)await abrirNota(alvo);
   var n=notaObj(alvo),textarea=el('notaTexto');if(notaAtual!==alvo||!modoNotas||!n||notaSomenteImagens(n)||!textarea)return;
   termo=String(termo||'').trim().replace(/^#+/,'');if(!termo)return;
   var cursor=MARCA_NOTA.notaId===alvo?MARCA_NOTA.cursor:{inicio:textarea.selectionStart,fim:textarea.selectionEnd,direcao:textarea.selectionDirection,scroll:textarea.scrollTop};
+  var foco=document.activeElement;if(foco&&foco.matches&&foco.matches('#notaTags,#notaTexto,#notaTitulo')){aguardarTeclado=true;foco.blur();}
   MARCA_NOTA={notaId:alvo,termo:termo,faixas:[],indice:0,cursor:cursor};atualizarBuscaNotaEditor();
-  var chips=el('notaTagsChips');if(chips)chips.innerHTML=htmlTags(n.tags,n.id);desenharNotasLateral();
-  requestAnimationFrame(function(){if(MARCA_NOTA.notaId===alvo&&MARCA_NOTA.termo===termo)atualizarEstadoMarcaNota(true);});
+  atualizarChipsEtiquetaNota(n);desenharNotasLateral();
+  levarMarcaNotaAoTrecho(aguardarTeclado);
 }
 function navegarMarcaNota(passo){MARCA_NOTA.indice+=passo;atualizarEstadoMarcaNota(true);}
 function htmlListaNavegadorNotas(){
@@ -6199,7 +6231,7 @@ function desenharNotas(){
   }
   var somenteImagens=notaSomenteImagens(n), camposNota=somenteImagens
     ? '<p class="nota-referencia-aviso">Biblioteca de imagens e referências. Esta nota não possui campo de texto; adicione imagens e consulte-as no editor de obras ou desenho livre.</p>'
-    : '<div class="nota-etiquetas"><label for="notaTags">Etiquetas</label><input id="notaTags" type="text" data-nota-campo="tags" value="'+esc(textoTags(n.tags))+'" placeholder="Ex.: Cap 12, personagem, ideia" aria-label="Etiquetas separadas por vírgula"><p class="nota-etiqueta-ajuda">Toque em uma etiqueta para grifar e ir até ela no texto desta nota. Enter confirma a última etiqueta digitada. “Cap 12” também encontra “Capítulo 12”.</p><div id="notaTagsChips">'+htmlTags(n.tags,n.id)+'</div></div><div class="nota-grifos oculto" id="notaBuscaGrifos"></div><textarea id="notaTexto" data-nota-campo="texto" placeholder="Escreva o que quiser…" aria-label="Conteúdo da nota">'+esc(n.texto)+'</textarea>';
+    : '<div class="nota-etiquetas"><label for="notaTags">Etiquetas</label><div class="nota-etiqueta-confirmacao"><input id="notaTags" type="text" enterkeyhint="search" data-nota-campo="tags" value="'+esc(textoTags(n.tags))+'" placeholder="Palavra ou trecho" aria-label="Etiquetas separadas por vírgula" aria-describedby="notaEtiquetaAjuda"><button type="button" class="bt" data-nota-acao="buscar-etiqueta">Ir ao trecho</button></div><p class="nota-etiqueta-ajuda" id="notaEtiquetaAjuda">Digite e toque em Ir ao trecho. O botão busca a última etiqueta; para escolher outra, toque nela abaixo.</p><div id="notaTagsChips">'+htmlTags(n.tags,n.id)+'</div></div><div class="nota-grifos oculto" id="notaBuscaGrifos"></div><textarea id="notaTexto" data-nota-campo="texto" placeholder="Escreva o que quiser…" aria-label="Conteúdo da nota">'+esc(n.texto)+'</textarea>';
   tela.innerHTML='<div class="folha notas-tela">'+
     '<div class="notas-cabeca"><button type="button" class="bt" data-nota-acao="entrada">← Entrada</button><h2>Notas</h2><button type="button" class="bt forte" data-nota-acao="nova">+ Nova nota</button><button type="button" class="bt" data-nota-acao="nova-imagens">+ Nota de imagens</button><button type="button" class="bt risco" data-nota-acao="apagar" data-nota-id="'+esc(n.id)+'">Apagar</button></div>'+
     htmlNotasNavegador()+
@@ -7450,7 +7482,7 @@ el("voltarEntrada").onclick=voltarEntrada;
 el("abrirNotas").onclick=abrirNotas;
 el("novaNota").onclick=criarNota;
 document.addEventListener("click",function(ev){var tag=ev.target.closest&&ev.target.closest("[data-nota-tag]");if(tag&&!tag.disabled){ev.preventDefault();ativarEtiquetaNota(tag.getAttribute("data-nota-tag"),tag.getAttribute("data-nota-tag-id"));}});
-document.addEventListener("keydown",function(ev){if(ev.key!=="Enter"||ev.isComposing||ev.keyCode===229||!ev.target.matches||!ev.target.matches('#notaTags'))return;ev.preventDefault();var tags=tagsNota(ev.target.value);if(tags.length){ativarEtiquetaNota(tags[tags.length-1],notaAtual);ev.target.blur();}});
+document.addEventListener("keydown",function(ev){if(ev.key!=="Enter"||ev.isComposing||ev.keyCode===229||!ev.target.matches||!ev.target.matches('#notaTags'))return;ev.preventDefault();confirmarEtiquetaNota();});
 el("cancelarObra").onclick=fecharFormObra;
 el("formObra").addEventListener("submit",function(ev){
   ev.preventDefault();
@@ -7714,6 +7746,7 @@ function aoClicarNotas(ev){
   if(acao==="entrada"){ voltarEntrada(); return; }
   if(acao==="nova"){ criarNota(); return; }
   if(acao==="nova-imagens"){ criarNota({titulo:"Imagens",tipo:"imagens"}); return; }
+  if(acao==="buscar-etiqueta"){confirmarEtiquetaNota();return;}
   if(acao==="limpar-grifos"){limparMarcaNota(false);return;}
   if(acao==="editar-texto"){limparMarcaNota(true);return;}
   if(acao==="marca-anterior"){navegarMarcaNota(-1);return;}
@@ -7730,7 +7763,7 @@ function aoEditarNotas(ev){
   var n=notaObj(notaAtual); if(!n) return;
   n[campo]=campo==="tags"?tagsNota(ev.target.value):ev.target.value;
   marcarNotaSuja();
-  if(campo==="tags"){if(MARCA_NOTA.notaId===n.id&&!n.tags.some(function(tag){return normalizarBuscaNota(tag)===normalizarBuscaNota(MARCA_NOTA.termo);}))limparMarcaNota(false);desenharNotasLateral();atualizarNavegadorNotas();var chips=el("notaTagsChips");if(chips)chips.innerHTML=htmlTags(n.tags,n.id);}
+  if(campo==="tags"){if(MARCA_NOTA.notaId===n.id&&!n.tags.some(function(tag){return normalizarBuscaNota(tag)===normalizarBuscaNota(MARCA_NOTA.termo);}))limparMarcaNota(false);desenharNotasLateral();atualizarNavegadorNotas();atualizarChipsEtiquetaNota(n);}
 }
 tela.addEventListener("click",aoClicarNotas);
 tela.addEventListener("input",aoEditarNotas);
