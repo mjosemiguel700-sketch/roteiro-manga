@@ -1,15 +1,7 @@
-const CACHE = "mesa-de-roteiro-local-v12-cofre-backup";
+const CACHE = "mesa-de-roteiro-local-v11-etiquetas-celular";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css",
-  "./js/01-armazenamento.js",
-  "./js/02-config-nuvem.js",
-  "./js/vendor/supabase-js-2.118.0.umd.js",
-  "./js/05-cofre-backup.js",
-  "./js/03-app.js",
-  "./js/04-app-nuvem-e-tela.js",
-  "./js/06-registro-sw.js",
   "./manifest.webmanifest",
   "./icon-192-192-1.png",
   "./icon-512.png"
