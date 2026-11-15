@@ -1161,7 +1161,7 @@ async function importarDesenhos(lista){
   if(!Array.isArray(lista)) return;
   for(var i=0;i<lista.length;i++){
     var item=lista[i], rec=item&&item.rec; if(!item||!item.id||!rec) continue;
-    rec.camadas=(rec.camadas||[]).map(function(c){var nc={}; Object.keys(c).forEach(function(k){nc[k]=c[k];}); nc.blob=dataParaBlob(nc.blob); nc.originalBlob=dataParaBlob(nc.originalBlob); return nc;});
+    rec.camadas=(rec.camadas||[]).map(function(c){var nc=Object.create(null); Object.keys(c).forEach(function(k){nc[k]=c[k];}); nc.blob=dataParaBlob(nc.blob); nc.originalBlob=dataParaBlob(nc.originalBlob); return nc;});
     await bdGravar(item.id,rec);
   }
 }
@@ -1298,8 +1298,9 @@ var HTML_ATALHOS_DETALHADOS=IDS_ATALHOS_DETALHADOS.map(function(id,i){
 }).join("");
 
 var AMOSTRAS=["#000000","#ffffff","#555555","#aaaaaa","#d63a3a","#e8892b","#f2d13b","#3fa34d","#2a6fdb","#7a45c9","#e46ab0","#7a4a2b"];
-var CFG={ferr:"caneta",cor:"#000000",tomDesenho:"#1d1d1d",imgFerr:"lapis",pressao:true,tol:24,ref:true,preencher:false,formaTraco:"solido",formaRot:0,linhaAngulo:15,sim:"",simN:6,balTipo:"fala",ajust:{},perfilTraco:"livre",curvaPressao:"normal",favoritos:[],guia:{grade:false,persp:false,tipo:"1",op:35,h:.42,v1:.18,v2:.82,v3:.5,v3y:.08,passo:96,div:12,edit:false},manequim:{pose:"neutro",angulo:0,escala:1,opacidade:.55}};
+var CFG={ferr:"caneta",cor:"#000000",tomDesenho:"#1d1d1d",imgFerr:"lapis",pressao:true,respostaRapida:true,tol:24,ref:true,preencher:false,formaTraco:"solido",formaRot:0,linhaAngulo:15,sim:"",simN:6,balTipo:"fala",ajust:{},perfilTraco:"livre",curvaPressao:"normal",favoritos:[],guia:{grade:false,persp:false,tipo:"1",op:35,h:.42,v1:.18,v2:.82,v3:.5,v3y:.08,passo:96,div:12,edit:false},manequim:{pose:"neutro",angulo:0,escala:1,opacidade:.55}};
 try{
+  CFG.respostaRapida=localStorage.getItem("mesa.ed.respostaRapida")!=="false";
   var tomDesenhoGuardado=localStorage.getItem("mesa.ed.tomDesenho");
   if(/^#[0-9a-f]{6}$/i.test(tomDesenhoGuardado||"")) CFG.tomDesenho=tomDesenhoGuardado.toLowerCase();
 }catch(e){}
@@ -2005,9 +2006,9 @@ function rodaPonteiro(e,modo){
 
 /* navegador: miniatura com o retângulo da área visível */
 var navT=0;
-function pedirNav(){ if(navT) return; navT=setTimeout(function(){ navT=0; desenharNav(); },120); }
+function pedirNav(){ if(!S||S.vivo||navT) return; navT=setTimeout(function(){ navT=0; desenharNav(); },120); }
 function desenharNav(){
-  if(!S||!E.nav||S.carregando) return;
+  if(!S||S.vivo||!E.nav||S.carregando) return;
   var cv=E.nav, W=cv.clientWidth, H=cv.clientHeight; if(!W||!H) return;
   var d=window.devicePixelRatio||1;
   if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){ cv.width=Math.round(W*d); cv.height=Math.round(H*d); }
@@ -2125,6 +2126,7 @@ function montarDOM(){
       '<label class="ed-lin" data-g="tam">Tamanho <input type="range" data-r="pTam" min="1" max="200"><output data-r="pTamV"></output></label>'+
       '<label class="ed-lin" data-g="op">Opacidade <input type="range" data-r="pOp" min="5" max="100"><output data-r="pOpV"></output></label>'+
       '<label class="ed-lin" data-g="estab">Estabilização <input type="range" data-r="pEstab" min="0" max="10"><output data-r="pEstabV"></output></label>'+
+      '<label class="ed-lin ed-chk" data-g="estab" title="Reduz a distância entre a ponta e o traço. Desmarque para usar a estabilização tradicional."><input type="checkbox" data-r="pRapida"> Resposta rápida da caneta</label>'+
       '<label class="ed-lin ed-chk" data-g="pres"><input type="checkbox" data-r="pPres"> Sensível à pressão</label>'+
       '<div class="ed-ajustes-extra" data-g="pincelExtra">'+
         '<label class="ed-lin" data-g="fluxo">Fluxo <input type="range" data-r="pFluxo" min="1" max="100"><output data-r="pFluxoV"></output></label>'+
@@ -2348,7 +2350,7 @@ function montarDOM(){
       '<div class="ed-palco" data-r="palco"><canvas data-r="view"></canvas><canvas data-r="over"></canvas>'+
         '<div class="ed-carregando" data-r="carregando">Abrindo o desenho…</div></div>'+
       '<div class="ed-status"><span class="ed-zoom" data-r="zoom">100%</span><span class="ed-dim" data-r="dimTxt"></span>'+
-        '<span id="coord" data-r="coord"></span><span class="ed-esp"></span><span class="estado" data-r="estado"></span></div>'+
+        '<span id="coord" data-r="coord"></span><span class="ed-esp"></span><span class="estado" data-r="estado" role="status"></span><button type="button" class="bt mini oculto" data-ed="salvar" data-r="tentarSalvar">Tentar salvar</button></div>'+
     '</div>'+
     '<div class="ed-lat" data-r="lat">'+
       '<div class="ed-dock ed-dockL"><div class="ed-dock-cab"><strong>Ferramentas</strong><button type="button" class="bt mini" data-ed="lateral-e" aria-label="Recolher ferramentas laterais">‹ Recolher</button></div>'+paletasEsq+'</div>'+
@@ -2379,7 +2381,7 @@ function abrir(opts){
     z:1,tx:0,ty:0,rot:0,pw:0,ph:0,dpr:window.devicePixelRatio||1,ajustado:true,
     ptrs:{},nptr:0,vivo:null,flut:null,sel:null,selOp:null,selForma:"retangulo",selPath:null,baloes:[],balSel:null,balOp:null,balIni:null,balSnap:null,balValId:null,
     tmp:novoCanvas(dim.w,dim.h),live:novoCanvas(dim.w,dim.h),
-    sujoView:true,sujoOver:true,carregando:true,tocou:false,sujo:false,
+    sujoView:true,sujoOver:true,carregando:true,tocou:false,sujo:false,revisao:0,
     espaco:false,tSalvar:null,cursor:null,pan:null,gesto:null,raf:0,
     ferr:CFG.ferr,ferrAnt:"caneta",propIni:null,
     cortando:false,vSel:null,vDrag:null,vUlt:null
@@ -2404,7 +2406,7 @@ function abrir(opts){
   atualizarForma(); if(E.guiaGrade)E.guiaGrade.checked=!!CFG.guia.grade;if(E.guiaPersp)E.guiaPersp.checked=!!CFG.guia.persp;if(E.guiaTipo)E.guiaTipo.value=CFG.guia.tipo;if(E.guiaOp){E.guiaOp.value=CFG.guia.op;E.guiaOpV.textContent=CFG.guia.op+"%";} if(E.guiaGrade) E.guiaGrade.checked=!!CFG.guia.grade; if(E.guiaPersp) E.guiaPersp.checked=!!CFG.guia.persp; if(E.guiaTipo) E.guiaTipo.value=CFG.guia.tipo; if(E.guiaOp){E.guiaOp.value=CFG.guia.op;E.guiaOpV.textContent=CFG.guia.op+"%";}
   qa("[data-ed=ant]").forEach(function(b){ b.disabled=!opts.ant; }); qa("[data-ed=prox]").forEach(function(b){ b.disabled=!opts.prox; });
   fecharMenus(); E.ajuda.classList.add("oculto"); E.ajuda.setAttribute("aria-hidden","true");
-  E.estado.textContent="";
+  atualizarEstadoSalvarDesenho(s,"");
   E.lat.classList.remove("aberta");
   ajustarCanvasPalco();
   atualizarFerr(); atualizarBotoesHist();
@@ -2501,47 +2503,108 @@ function bordaAtual(){
   return typeof b==="number"?b:BORDA_PADRAO;
 }
 
-function sair(depois){
-  if(!S) return Promise.resolve();
-  var s=S; fecharManequim3D(); fecharSfx(); alternarModoFoco(false); commitFlut();
-  return salvarAgora().then(function(){
+function sair(depois,daEdicaoPagina){
+  if(!S) return Promise.resolve(true);
+  var s=S;if(s.fechando)return s.fechando;
+  if(s.editandoPagina&&!daEdicaoPagina){aviso("Aguarde a operação da página terminar.");return Promise.resolve(false);}
+  s.fechando=Promise.resolve().then(function(){
+    if(S!==s)return false;
+    fecharSfx();fecharEdicaoBal();commitFlut();return salvarAgora();
+  }).then(function(ok){
+    if(!ok||S!==s||s.sujo||interacaoDesenho(s))return false;
+    fecharManequim3D();alternarModoFoco(false);
     document.removeEventListener("keydown",onKey,true);
     document.removeEventListener("keyup",onKeyUp,true);
     cancelAnimationFrame(s.raf);
     $ed.classList.add("oculto"); document.body.classList.remove("ed-aberto");
     S=null;
-    if(s.opts.aoFechar) s.opts.aoFechar(s.painel);
-    if(depois) depois();
+    try{if(s.opts.aoFechar)s.opts.aoFechar(s.painel);if(depois)depois();}
+    catch(e){try{if(s.opts.aviso)s.opts.aviso("O desenho foi salvo, mas a tela seguinte não pôde ser atualizada. Tente abri-la novamente.");}catch(ignorar){}}
+    return true;
+  }).catch(function(){falhaSalvarDesenho(s);return false;}).finally(function(){
+    s.fechando=null;if(S===s){s.trocandoPagina=false;atualizarEstadoSalvarDesenho(s);}
   });
+  return s.fechando;
 }
 
 /* ---------- salvar ---------- */
+function interacaoDesenho(s){return !!(s&&(s.vivo||s.pan||s.gesto||s.flut||s.selOp||s.balOp||s.vDrag||s.propIni));}
+function temAlteracoesDesenho(){return !!(S&&(S.sujo||S.salvando||S.editandoPagina||interacaoDesenho(S)));}
+function atualizarEstadoSalvarDesenho(s,texto){
+  if(S!==s)return;if(typeof texto==="string")E.estado.textContent=texto;
+  if(E.tentarSalvar){E.tentarSalvar.classList.toggle("oculto",!s.erroSalvar);E.tentarSalvar.disabled=!!s.salvando;}
+}
+function falhaSalvarDesenho(s){
+  s.sujo=true;s.erroSalvar=true;atualizarEstadoSalvarDesenho(s,"não salvo · falha ao salvar");
+  try{if(S===s&&s.opts.aviso)s.opts.aviso("Não foi possível confirmar o salvamento. O desenho continua aberto; use Tentar salvar ou exporte um PNG antes de fechar.");}catch(ignorar){}
+}
 function agendarSalvar(){
   if(!S) return;
-  S.sujo=true; E.estado.textContent="não salvo";
-  clearTimeout(S.tSalvar); S.tSalvar=setTimeout(salvarAgora,800);
+  S.sujo=true;S.revisao=(S.revisao||0)+1;atualizarEstadoSalvarDesenho(S,S.erroSalvar?"não salvo · falha anterior":"não salvo");
+  var s=S;clearTimeout(s.tSalvar);s.tSalvar=setTimeout(function(){salvarQuandoParar(s);},800);
+}
+function salvarQuandoParar(s){
+  if(S!==s||!s.sujo)return;
+  if(s.flut)return;
+  if(interacaoDesenho(s)||s.carregando){s.tSalvar=setTimeout(function(){salvarQuandoParar(s);},250);return;}
+  salvarAgora();
 }
 function salvarAgora(){
-  var s=S; if(!s) return Promise.resolve();
-  if(s.salvando) return s.salvando.then(function(){return S===s?salvarAgora():undefined;});
+  var s=S;if(!s)return Promise.resolve(true);
+  if(s.salvando)return s.salvando.then(function(ok){return ok&&S===s?salvarAgora():false;});
   clearTimeout(s.tSalvar);
-  if(!s.sujo) return Promise.resolve();
-  s.sujo=false; E.estado.textContent="salvando…";
-  s.salvando=Promise.all(s.camadas.map(function(L){
-    if(L.blob&&!L.sujo) return Promise.resolve();
-    L.sujo=false;
-    return new Promise(function(res){ L.cv.toBlob(function(b){ L.blob=b; res(); },"image/png"); });
-  })).then(function(){
-    var rec={v:1,w:s.dim.w,h:s.dim.h,ativa:s.ativa,baloes:s.baloes.map(cloneBal),camadas:s.camadas.map(function(L){
-      return {id:L.id,nome:L.nome,tipo:L.tipo||null,sobreImagemId:L.sobreImagemId||null,manequim3d:dadosBaseManequim(L.manequim3d),vis:L.vis,bloqueada:!!L.bloqueada,op:L.op,modo:L.modo,blob:L.blob,originalBlob:L.originalBlob||null};
-    })};
-    return bdGravar(s.painel.id,rec);
+  if(interacaoDesenho(s)||s.carregando){atualizarEstadoSalvarDesenho(s,"conclua a operação para salvar");return Promise.resolve(false);}
+  if(!s.sujo)return Promise.resolve(true);
+  var revisao,camadas,rec;
+  atualizarEstadoSalvarDesenho(s,"salvando…");
+  var gravacao=Promise.resolve().then(function(){
+    revisao=s.revisao||0;camadas=s.camadas.slice();
+    rec={v:1,w:s.dim.w,h:s.dim.h,ativa:s.ativa,baloes:s.baloes.map(cloneBal),camadas:[]};
+    return Promise.all(camadas.map(function(L){
+      var c={id:L.id,nome:L.nome,tipo:L.tipo||null,sobreImagemId:L.sobreImagemId||null,manequim3d:dadosBaseManequim(L.manequim3d),vis:L.vis,bloqueada:!!L.bloqueada,op:L.op,modo:L.modo,blob:L.blob,originalBlob:L.originalBlob||null};
+      if(L.blob&&!L.sujo)return Promise.resolve(c);
+      return new Promise(function(res,rejeitar){
+        try{L.cv.toBlob(function(b){if(!b||!b.size){rejeitar(new Error("Falha ao preparar a imagem da camada."));return;}c.blob=b;res(c);},"image/png");}catch(e){rejeitar(e);}
+      });
+    }));
+  }).then(function(registros){
+    if(S!==s)return false;rec.camadas=registros;return bdGravar(s.painel.id,rec);
   }).then(function(ok){
-    if(s.tocou){ s.painel.miniatura=miniatura(s); s.painel.temDesenho=true; }
-    if(s.opts.aoMudar) s.opts.aoMudar();
-    if(S===s) E.estado.textContent=ok?"salvo":"salvo só até fechar a aba";
-  }).finally(function(){s.salvando=null;});
-  return s.salvando;
+    if(ok!==true)throw new Error("Gravação do desenho não confirmada.");
+    if(S!==s)return false;
+    if((s.revisao||0)!==revisao||interacaoDesenho(s)){s.sujo=true;atualizarEstadoSalvarDesenho(s,"não salvo");return true;}
+    var previa=s.tocou?miniatura(s):null;
+    camadas.forEach(function(L,i){L.blob=rec.camadas[i].blob;L.sujo=false;});
+    if(s.tocou){s.painel.miniatura=previa;s.painel.temDesenho=true;}
+    if(s.opts.aoMudar)s.opts.aoMudar();
+    // O callback pode iniciar outra edição: só a revisão confirmada fica limpa.
+    s.sujo=(s.revisao||0)!==revisao;if(!s.sujo)s.erroSalvar=false;
+    atualizarEstadoSalvarDesenho(s,s.sujo?"não salvo":"salvo");return true;
+  }).catch(function(){falhaSalvarDesenho(s);return false;}).finally(function(){
+    if(s.salvando===gravacao)s.salvando=null;atualizarEstadoSalvarDesenho(s);
+  });
+  s.salvando=gravacao;atualizarEstadoSalvarDesenho(s);
+  return gravacao.then(function(ok){if(!ok||S!==s)return false;return s.sujo?salvarAgora():true;});
+}
+function tentarSalvarDesenho(){
+  var s=S;return Promise.resolve().then(function(){
+    if(!s)return true;if(S!==s)return false;
+    fecharEdicaoBal();commitFlut();return salvarAgora();
+  }).catch(function(){if(s)falhaSalvarDesenho(s);return false;});
+}
+function aoSairDaPagina(e){
+  if(!temAlteracoesDesenho())return;
+  if(S&&!S.salvando&&!interacaoDesenho(S))salvarAgora();
+  e.preventDefault();e.returnValue="";
+}
+function aoMudarVisibilidadeDesenho(){
+  if(S&&S.sujo&&!S.salvando&&!interacaoDesenho(S))salvarAgora();
+}
+function exportarDadosEditor(){
+  return tentarSalvarDesenho().then(function(ok){
+    if(!ok||temAlteracoesDesenho())throw new Error("O desenho aberto ainda não foi salvo. Mantenha o editor aberto e tente salvar novamente antes de criar o backup.");
+    return exportarDesenhos();
+  });
 }
 function miniatura(s){
   var k=320/Math.max(s.dim.w,s.dim.h);
@@ -2872,8 +2935,11 @@ function pedir(view){
 }
 function quadro(){
   var s=S; if(!s) return; s.raf=0;
+  var seguirTraco=aproximarTracoParado(performance.now());
+  if(s.coordPendente!=null){if(E.coord.textContent!==s.coordPendente)E.coord.textContent=s.coordPendente;s.coordPendente=null;}
   if(s.sujoView){ s.sujoView=false; renderView(); pedirNav(); }
   if(s.sujoOver){ s.sujoOver=false; renderOver(); }
+  if(seguirTraco&&!s.raf)s.raf=requestAnimationFrame(quadro);
 }
 function renderView(){
   var v=E.view, c=v.getContext("2d"), d=S.dpr, z=S.z;
@@ -3135,19 +3201,37 @@ function segmento(vv,x1,y1,p1,x2,y2,p2){
   }
   vv.falta=pos-d;
 }
-function kEstab(vv){ return 1/(1+vv.estab*0.9); }
+function kEstab(vv,dt,velocidade){
+  if(!vv.estab)return 1;
+  if(!vv.rapido)return 1/(1+vv.estab*0.9);
+  var ms=clamp(dt==null?1000/120:dt,1,64),tau=vv.estab*6/(1+Math.max(0,velocidade||0)*.7);
+  return 1-Math.exp(-ms/Math.max(1,tau));
+}
 function seguir(vv,k){
   var u=vv.ult, a=vv.alvo;
   var nx=u.x+(a.x-u.x)*k, ny=u.y+(a.y-u.y)*k, np=u.p+(a.p-u.p)*k;
   segmento(vv,u.x,u.y,u.p,nx,ny,np);
   vv.ult={x:nx,y:ny,p:np};
 }
-function addPonto(vv,x,y,p){
+function addPonto(vv,x,y,p,tempo){
+  var anterior=vv.alvo,dt=typeof tempo==="number"&&isFinite(tempo)&&typeof vv.tempoEntrada==="number"?tempo-vv.tempoEntrada:1000/120;
+  if(typeof tempo==="number"&&isFinite(tempo))vv.tempoEntrada=tempo;
+  dt=clamp(dt>0?dt:1000/120,1,64);
+  var velocidade=anterior?Math.hypot(x-anterior.x,y-anterior.y)/dt:0;
   vv.alvo={x:x,y:y,p:p};
+  if(vv.rapido)vv.seguiuEm=performance.now();
   if(!vv.ult){
     carimbo(vv,x,y,p); vv.ult={x:x,y:y,p:p}; vv.falta=passo(vv,p); return;
   }
-  seguir(vv,kEstab(vv));
+  seguir(vv,kEstab(vv,dt,velocidade));
+}
+function aproximarTracoParado(agora){
+  var vv=S&&S.vivo;if(!vv||vv.forma||!vv.rapido||!vv.estab||!vv.ult||!vv.alvo)return false;
+  var falta=Math.hypot(vv.alvo.x-vv.ult.x,vv.alvo.y-vv.ult.y),pressaoFalta=Math.abs(vv.alvo.p-vv.ult.p);
+  if(falta<=.25&&pressaoFalta<=.003)return false;
+  var dt=agora-vv.seguiuEm;
+  if(dt>=8){seguir(vv,kEstab(vv,dt,0));vv.seguiuEm=agora;S.sujoView=true;}
+  return true;
 }
 function iniciarTraco(e,w){
   commitFlut();
@@ -3157,12 +3241,12 @@ function iniciarTraco(e,w){
   if(!L.vis){ aviso("A camada está oculta. Mostre-a para desenhar."); return; } if(L.bloqueada){ aviso("Desbloqueie a camada antes de desenhar."); return; } if(L.bloqueada){ aviso("Desbloqueie a camada antes de desenhar."); return; }
   var B=PINCEIS[S.ferr], aj=CFG.ajust[S.ferr];
   var vv={B:B,aj:Object.assign({},aj),L:L,cv:S.live,cx:S.live.getContext("2d"),borracha:!!B.borracha,op:aj.op/100,
-    cor:B.borracha?"#000000":CFG.cor,tam:aj.tam,estab:aj.estab,ult:null,alvo:null,falta:0,
+    cor:B.borracha?"#000000":CFG.cor,tam:aj.tam,estab:aj.estab,rapido:CFG.respostaRapida!==false,ult:null,alvo:null,falta:0,
     bb:{x0:1e9,y0:1e9,x1:-1e9,y1:-1e9},id:e.pointerId};
   if(B.tipo==="esfumar"){ vv.fb=novoCanvas(S.dim.w,S.dim.h); vv.fb.getContext("2d").drawImage(L.cv,0,0); }
   vv.cx.clearRect(0,0,S.dim.w,S.dim.h);
   S.vivo=vv;
-  addPonto(vv,w.x,w.y,pressao(e));
+  addPonto(vv,w.x,w.y,pressao(e),e.timeStamp);
   pedir(true);
 }
 function cancelarTraco(){
@@ -3860,8 +3944,8 @@ function selUp(){
 }
 
 /* ---------- ponteiro: desenhar, mover a tela, zoom ---------- */
-function ptoPalco(e){
-  var rc=E.palco.getBoundingClientRect();
+function ptoPalco(e,rc){
+  rc=rc||E.palco.getBoundingClientRect();
   return {x:e.clientX-rc.left,y:e.clientY-rc.top};
 }
 function rotacionarPonto(x,y,ang,cx,cy){ var dx=x-cx,dy=y-cy,co=Math.cos(ang),si=Math.sin(ang); return {x:cx+dx*co-dy*si,y:cy+dx*si+dy*co}; }
@@ -3880,7 +3964,7 @@ function deslocarFolha(dx,dy){
 }
 function girarFolha(graus){ if(!S) return; S.rot=(S.rot+(graus||90)*Math.PI/180)%TAU; if(S.rot<0) S.rot+=TAU; S.ajustado=false; limitarNavegacao(); pedir(true); aviso("Folha girada "+Math.round(S.rot*180/Math.PI)%360+"°. O zoom atual foi preservado."); }
 function onDown(e){
-  if(!S||S.carregando) return;
+  if(!S||S.carregando||S.fechando||S.editandoPagina) return;
   var p=ptoPalco(e);
   var q=telaSemRotacao(p.x,p.y), gh=guiaHit(q.x,q.y);
   if(gh){E.over.setPointerCapture(e.pointerId);S.guiaDrag={id:gh,pid:e.pointerId};return;}
@@ -3903,11 +3987,11 @@ function onDown(e){
 }
 function onMove(e){
   if(!S) return;
-  var p=ptoPalco(e);
+  var rc=E.palco.getBoundingClientRect(),p=ptoPalco(e,rc);
   if(S.guiaDrag&&S.guiaDrag.pid===e.pointerId){var gw=paraObra(p.x,p.y),gg=CFG.guia;if(S.guiaDrag.id==="v3"){gg.v3=clamp(gw.x/S.dim.w,.02,.98);gg.v3y=clamp(gw.y/S.dim.h,.02,.98);}else{gg.h=clamp(gw.y/S.dim.h,.05,.95);if(S.guiaDrag.id==="v1")gg.v1=clamp(gw.x/S.dim.w,.02,.98);if(S.guiaDrag.id==="v2")gg.v2=clamp(gw.x/S.dim.w,.02,.98);}salvarEstudo();pedir(false);return;}
   var q=telaSemRotacao(p.x,p.y), ow=paraObra(p.x,p.y);
   S.cursor=q;
-  E.coord.textContent=Math.round(ow.x)+", "+Math.round(ow.y)+" px";
+  S.coordPendente=Math.round(ow.x)+", "+Math.round(ow.y)+" px";
   if(S.ptrs[e.pointerId]){ S.ptrs[e.pointerId]={x:p.x,y:p.y}; }
   if(S.gesto){ atualizarGesto(); return; }
   if(S.pan){
@@ -3920,8 +4004,8 @@ function onMove(e){
     var evs=e.getCoalescedEvents?e.getCoalescedEvents():[];
     if(!evs.length) evs=[e];
     for(var i=0;i<evs.length;i++){
-      var q=ptoPalco(evs[i]), w=paraObra(q.x,q.y);
-      addPonto(S.vivo,w.x,w.y,pressao(evs[i]));
+      var q=ptoPalco(evs[i],rc), w=paraObra(q.x,q.y);
+      addPonto(S.vivo,w.x,w.y,pressao(evs[i]),evs[i].timeStamp);
     }
     pedir(true); return;
   }
@@ -4005,6 +4089,7 @@ function atualizarFerr(){
     E.pTam.value=a.tam; E.pTamV.textContent=a.tam;
     E.pOp.value=a.op; E.pOpV.textContent=a.op+"%";
     E.pEstab.value=a.estab; E.pEstabV.textContent=a.estab;
+    if(E.pRapida)E.pRapida.checked=CFG.respostaRapida!==false;
     E.pPres.checked=CFG.pressao;
     if(B){
       [["Fluxo","fluxo","%"],["Dureza","dureza","%"],["Textura","textura","%"],["Dispersao","dispersao","%"],["Espacamento","espacamento","%"],["Angulo","angulo","°"]].forEach(function(k){ if(E["p"+k[0]]){E["p"+k[0]].value=a[k[1]];E["p"+k[0]+"V"].textContent=Math.round(a[k[1]])+k[2];} });
@@ -4384,7 +4469,7 @@ function abrirJanelaReferencias(){
   return true;
 }
 function irPaginaEditor(indice){
-  if(!S||!S.modoPagina||S.trocandoPagina) return false;
+  if(!S||!S.modoPagina||S.trocandoPagina||S.editandoPagina) return false;
   var pags=S.opts&&typeof S.opts.obterPaginas==="function"?S.opts.obterPaginas():(S.opts&&S.opts.paginas)||[], ir=S.opts&&S.opts.irPagina;
   if(!ir||!(indice>=0&&indice<pags.length)||pags[indice].ativa) return false;
   S.trocandoPagina=true;
@@ -4399,7 +4484,7 @@ function moverPaginaEditor(passo){
   return irPaginaEditor(Math.max(0,Math.min(pags.length-1,ativa+passo)));
 }
 function abrirPainelNoEditor(id){
-  if(!S||!S.modoPagina||S.trocandoPagina||!id) return false;
+  if(!S||!S.modoPagina||S.trocandoPagina||S.editandoPagina||!id) return false;
   var abrir=S.opts&&S.opts.abrirPainel;
   if(typeof abrir!=="function") return false;
   S.trocandoPagina=true;
@@ -4425,7 +4510,7 @@ function listaCamadas(){
   var h="", i;
   for(i=S.camadas.length-1;i>=0;i--){
     var L=S.camadas[i];
-    h+='<div class="ed-cam'+(L.id===S.ativa?" ativa":"")+'" data-id="'+L.id+'">'+
+    h+='<div class="ed-cam'+(L.id===S.ativa?" ativa":"")+'" data-id="'+esc(L.id)+'">'+
        '<input type="checkbox" data-cam="vis"'+(L.vis?" checked":"")+' aria-label="Mostrar camada">'+
        '<span class="ed-cam-nome">'+esc(L.nome)+'</span><button type="button" class="ed-cam-trava'+(L.bloqueada?" ativa":"")+'" data-cam="trava" title="'+(L.bloqueada?"Desbloquear camada":"Bloquear camada")+'" aria-label="'+(L.bloqueada?"Desbloquear camada":"Bloquear camada")+'">'+(L.bloqueada?"🔒":"🔓")+'</button></div>';
   }
@@ -4784,28 +4869,33 @@ function atualizarPaginaNoEditor(res,b,limpar,limparPainel){
   });
 }
 function executarEdicaoPagina(tipo,valor,b){
-  if(!S||!S.opts||!S.opts.editarPagina||S.trocandoPagina) return;
-  var editar=S.opts.editarPagina, ir=S.opts.irPagina, limpar=S.opts.limparPaginaRemovida, limparPainel=S.opts.limparPainelRemovido;
-  var res=editar(tipo,valor);
-  if(!res||typeof res.indice!=="number") return;
-  if(res.recarregar||res.atualizarUI){ atualizarPaginaNoEditor(res,b,limpar,limparPainel); return; }
-  S.trocandoPagina=true;
-  if(b){ b.disabled=true; b.textContent="Abrindo…"; }
-  sair(function(){
-    if(res.removida&&limpar) limpar(res.removida);
-    if(res.painelRemovido&&limparPainel) limparPainel(res.painelRemovido);
-    if(ir) ir(res.indice);
+  if(!S||!S.opts||!S.opts.editarPagina||S.trocandoPagina||S.editandoPagina)return Promise.resolve(false);
+  var s=S,editar=s.opts.editarPagina,ir=s.opts.irPagina,limpar=s.opts.limparPaginaRemovida,limparPainel=s.opts.limparPainelRemovido,textoBotao=b&&b.textContent,botaoDesabilitado=b&&b.disabled;
+  s.editandoPagina=true;if(b){b.disabled=true;b.textContent="Salvando…";}
+  return tentarSalvarDesenho().then(function(ok){
+    if(!ok||S!==s||s.sujo)return false;
+    var res=editar(tipo,valor);if(!res||typeof res.indice!=="number")return false;
+    if(res.recarregar||res.atualizarUI){atualizarPaginaNoEditor(res,b,limpar,limparPainel);return true;}
+    s.trocandoPagina=true;if(b)b.textContent="Abrindo…";
+    return sair(function(){
+      if(res.removida&&limpar)limpar(res.removida);
+      if(res.painelRemovido&&limparPainel)limparPainel(res.painelRemovido);
+      if(ir)ir(res.indice);
+    },true);
+  }).catch(function(){if(S===s)aviso("Não foi possível concluir a operação da página. O editor continua aberto.");return false;}).finally(function(){
+    s.editandoPagina=false;if(S===s)s.trocandoPagina=false;if(b){b.disabled=botaoDesabilitado;b.textContent=textoBotao;}
   });
 }function confirmarAcaoPagina(b,texto,tipo,valor){
   if(!b) return;
   if(b.getAttribute("data-armado")==="1"){
-    b.removeAttribute("data-armado"); executarEdicaoPagina(tipo,valor,b); return;
+    b.removeAttribute("data-armado");if(b.__mesaTextoConfirmacao!=null){b.textContent=b.__mesaTextoConfirmacao;delete b.__mesaTextoConfirmacao;}executarEdicaoPagina(tipo,valor,b);return;
   }
   var original=b.textContent;
+  b.__mesaTextoConfirmacao=original;
   b.setAttribute("data-armado","1"); b.textContent=texto;
   setTimeout(function(){
     if(b&&b.isConnected&&b.getAttribute("data-armado")==="1"){
-      b.removeAttribute("data-armado"); b.textContent=original;
+      b.removeAttribute("data-armado"); b.textContent=original;delete b.__mesaTextoConfirmacao;
     }
   },2600);
 }
@@ -4833,6 +4923,7 @@ function acao(n,b){
     case "sfx-novo": novoSfx(); break;
     case "sfx-editar": abrirSfx(); $ed.focus(); aviso("Arraste o texto para mover, os cantos para redimensionar e o ponto azul para girar."); break;
     case "voltar": fecharJanelaPagina(); sair(); break;
+    case "salvar": tentarSalvarDesenho(); break;
     case "pagina-gerenciar": abrirJanelaPagina("conjuntos"); break;
     case "pagina-opcoes": abrirJanelaPagina("editar"); break;
     case "pagina-modal-fechar": fecharJanelaPagina(); break;
@@ -5033,6 +5124,7 @@ function ligarEventos(){
     else if(r==="pTam"&&CFG.ajust[S.ferr]){ n=+t.value; CFG.ajust[S.ferr].tam=n; E.pTamV.textContent=n; pedir(false); }
     else if(r==="pOp"&&CFG.ajust[S.ferr]){ n=+t.value; CFG.ajust[S.ferr].op=n; E.pOpV.textContent=n+"%"; }
     else if(r==="pEstab"&&CFG.ajust[S.ferr]){ n=+t.value; CFG.ajust[S.ferr].estab=n; E.pEstabV.textContent=n; }
+    else if(r==="pRapida"){CFG.respostaRapida=!!t.checked;try{localStorage.setItem("mesa.ed.respostaRapida",String(CFG.respostaRapida));}catch(e){}}
     else if(PINCEIS[S.ferr]&&["pFluxo","pDureza","pTextura","pDispersao","pEspacamento","pAngulo"].indexOf(r)>-1){
       var campo={pFluxo:"fluxo",pDureza:"dureza",pTextura:"textura",pDispersao:"dispersao",pEspacamento:"espacamento",pAngulo:"angulo"}[r], lim=LIMITES_PINCEL[campo];
       CFG.ajust[S.ferr][campo]=clamp(+t.value,lim[0],lim[1]); E[r+"V"].textContent=Math.round(CFG.ajust[S.ferr][campo])+(campo==="angulo"?"°":"%");
@@ -5138,7 +5230,7 @@ function ligarEventos(){
   E.over.addEventListener("pointermove",onMove);
   E.over.addEventListener("pointerup",onUp);
   E.over.addEventListener("pointercancel",onUp);
-  E.over.addEventListener("pointerleave",function(){ if(S){ S.cursor=null; E.coord.textContent=""; pedir(false); } });
+  E.over.addEventListener("pointerleave",function(){ if(S){ S.cursor=null; S.coordPendente=null; E.coord.textContent=""; pedir(false); } });
   E.over.addEventListener("wheel",onWheel,{passive:false});
   E.over.addEventListener("contextmenu",function(ev){ ev.preventDefault(); });
   if(window.ResizeObserver){
@@ -5149,8 +5241,8 @@ function ligarEventos(){
       else{ limitarNavegacao(); pedir(true); }
     }).observe(E.palco);
   }
-  window.addEventListener("beforeunload",function(){ if(S&&S.sujo) salvarAgora(); });
-  document.addEventListener("visibilitychange",function(){ if(document.hidden&&S&&S.sujo) salvarAgora(); });
+  window.addEventListener("beforeunload",aoSairDaPagina);
+  document.addEventListener("visibilitychange",aoMudarVisibilidadeDesenho);
   document.addEventListener("fullscreenchange",function(){ if($ed&&$ed.classList.contains("modo-foco")&&!document.fullscreenElement) alternarModoFoco(false,false); });
 }
 
@@ -5294,6 +5386,8 @@ window.EditorDesenho={
   abrir:abrir,
   fechar:function(){ fecharJanelaReferencias(); fecharEstudoReferencia(); return sair(); },
   estaAberto:function(){ return !!S; },
+  salvar:tentarSalvarDesenho,
+  temAlteracoes:temAlteracoesDesenho,
   abrirReferencias:abrirJanelaReferencias,
   fecharReferencias:fecharJanelaReferencias,
   inserirImagemDados:inserirImagemDados,
@@ -5303,7 +5397,7 @@ window.EditorDesenho={
   },
   previa:previa,
   compor:compor,
-  exportarDados:function(){if(S){commitFlut();fecharEdicaoBal();}return salvarAgora().then(exportarDesenhos);},
+  exportarDados:exportarDadosEditor,
   importarDados:importarDesenhos,
   bdLer:bdLer,
   bdGravar:bdGravar,
@@ -5399,7 +5493,7 @@ var FICHA_ABAS=[["geral","Geral"],["vistas","Vistas"],["expressoes","Expressões
 function normalizarFichaPersonagem(v){
   if(!v||typeof v!=="object"||!v.id)return null;
   var notasFicha={},notasBrutas=v.notas||{};FICHA_ABAS.forEach(function(a){notasFicha[a[0]]=String(notasBrutas[a[0]]||"").slice(0,20000);});
-  var vistos={},imagens=(Array.isArray(v.imagens)?v.imagens:[]).filter(function(im){if(!im||!im.id||vistos[im.id])return false;vistos[im.id]=true;return true;}).map(function(im){return{id:String(im.id),nome:String(im.nome||"Referência").slice(0,160),aba:FICHA_ABAS.some(function(a){return a[0]===im.aba;})?im.aba:"vistas",vista:String(im.vista||"Livre").slice(0,30),retirada:!!im.retirada};});
+  var vistos=Object.create(null),imagens=(Array.isArray(v.imagens)?v.imagens:[]).filter(function(im){if(!im||!im.id||vistos[im.id])return false;vistos[im.id]=true;return true;}).map(function(im){return{id:String(im.id),nome:String(im.nome||"Referência").slice(0,160),aba:FICHA_ABAS.some(function(a){return a[0]===im.aba;})?im.aba:"vistas",vista:String(im.vista||"Livre").slice(0,30),retirada:!!im.retirada};});
   return{id:String(v.id),nome:String(v.nome||"Sem nome").trim().slice(0,80)||"Sem nome",obraId:v.obraId?String(v.obraId):null,notas:notasFicha,imagens:imagens,arquivada:!!v.arquivada,atualizadoEm:+v.atualizadoEm||Date.now()};
 }
 function fichasLer(){
@@ -5666,7 +5760,7 @@ async function enviarBackupNuvemAutomatico(){
   }catch(e){
     var detalhe=String((e&&e.message)||"erro desconhecido").replace(/\s+/g," ").slice(0,150);
     if(alvo) alvo.textContent="Cópia pendente: "+detalhe;
-    aviso("A cópia na nuvem não foi confirmada. Seus dados locais continuam seguros; veja o motivo ao lado de Conectar nuvem.");
+    aviso("A cópia na nuvem não foi confirmada. Veja o motivo ao lado de Conectar nuvem e mantenha abertos os trabalhos ainda não salvos.");
   }finally{ backupNuvemEmCurso=false; }
 }
 async function restaurarBackupDaNuvem(){
@@ -5774,36 +5868,136 @@ async function salvarBackupNaPasta(){
     registrarBackup(pacote,"pasta"); el("integridadeBackup").textContent="Versão "+r.arquivo+" gravada e relida com verificação SHA-256."; aviso("Backup completo salvo e verificado na pasta escolhida.");
   }catch(e){ el("integridadeBackup").textContent="Falha ao salvar na pasta: "+(e&&e.message?e.message:"erro desconhecido")+". Nenhum dado existente foi removido."; aviso("A versão não foi confirmada; tente novamente ou use Baixar backup."); }
 }
+/* Pré-validação pura: não grava, não normaliza IDs e preserva campos desconhecidos. */
+function validarBackupParaImportacao(pacote){
+  var avisos=[], faltasNotas=0, faltasFichas=0, fichasLegadas=null;
+  function falha(campo,motivo){var e=new Error(campo+": "+motivo);e.code="backup_formato";throw e;}
+  function objeto(v,c){if(!v||typeof v!=="object"||Array.isArray(v))falha(c,"deve ser um objeto");}
+  function identificador(v,c){if(!((typeof v==="string"&&v.length)||(typeof v==="number"&&isFinite(v)&&v!==0)))falha(c,"identificador inválido");}
+  function texto(v,c){if(v!=null&&typeof v!=="string")falha(c,"deve ser texto");}
+  function numero(v,c){if(v!=null&&!((typeof v==="number"&&isFinite(v))||(typeof v==="string"&&v.trim()!==""&&isFinite(Number(v)))))falha(c,"deve ser um número finito");}
+  function data(v,c){if(v!=null&&!(typeof v==="string"||(typeof v==="number"&&isFinite(v))))falha(c,"data inválida");}
+  function escalar(v,c){if(v!=null&&!(typeof v==="string"||typeof v==="boolean"||(typeof v==="number"&&isFinite(v))))falha(c,"deve ser um valor simples");}
+  function campos(v,chaves,c,validar){chaves.forEach(function(k){if(Object.prototype.hasOwnProperty.call(v,k))validar(v[k],c+"."+k);});}
+  function lista(v,c,validar){if(v==null)return [];if(!Array.isArray(v))falha(c,"deve ser uma lista");v.forEach(function(x,i){validar(x,c+"["+(i+1)+"]");});return v;}
+  function registros(v,c,validar,exigirId){
+    var vistos=new Set();return lista(v,c,function(x,p){objeto(x,p);if(exigirId||x.id!=null){identificador(x.id,p+".id");var chave=String(x.id);if(vistos.has(chave))falha(p+".id","identificador repetido na mesma lista");vistos.add(chave);}validar(x,p);});
+  }
+  function textos(v,c){lista(v,c,function(x,p){texto(x,p);});}
+  function imagem(v,c){
+    if(typeof v!=="string")falha(c,"a imagem deve estar embutida como texto data:image");
+    var separador=v.indexOf(",");
+    if(separador<0||!/^data:image\/[a-z0-9.+-]+(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64$/i.test(v.slice(0,separador)))falha(c,"formato de imagem embutida inválido");
+    var dados=v.slice(separador+1).replace(/\s/g,"");
+    if(!dados||!/^[A-Za-z0-9+/]*={0,2}$/.test(dados)||dados.length%4===1||(dados.indexOf("=")>=0&&dados.length%4!==0))falha(c,"conteúdo Base64 inválido");
+  }
+  function metaImagem(m,c){objeto(m,c);identificador(m.id,c+".id");campos(m,["nome","tipo"],c,texto);campos(m,["tamanho"],c,numero);campos(m,["criadoEm"],c,data);}
+  function anexos(d,c){
+    var referencias=registros(d.imagens,c+".imagens",metaImagem,true), recebidas=new Set();
+    registros(d.imagensDados,c+".imagensDados",function(im,p){metaImagem(im.meta,p+".meta");imagem(im.src,p+".src");var chave=String(im.meta.id);if(recebidas.has(chave))falha(p+".meta.id","imagem repetida");recebidas.add(chave);},false);
+    referencias.forEach(function(im){if(!recebidas.has(String(im.id)))faltasNotas++;});
+  }
+  function tracos(v,c){lista(v,c,function(t,p){objeto(t,p);campos(t,["t","c"],p,texto);campos(t,["w"],p,numero);lista(t.p,p+".p",function(pt,pp){if(!Array.isArray(pt)||pt.length<2)falha(pp,"ponto inválido");pt.forEach(function(n,i){numero(n,pp+"["+(i+1)+"]");});});});}
+  function visual(v,c){
+    if(v==null)return;objeto(v,c);campos(v,["ativo"],c,texto);if(v.dados==null)return;objeto(v.dados,c+".dados");
+    Object.keys(v.dados).forEach(function(k){var d=v.dados[k],p=c+".dados[layout]";objeto(d,p);lista(d.r,p+".r",numero);if(d.s!=null){objeto(d.s,p+".s");Object.keys(d.s).forEach(function(n){tracos(d.s[n],p+".s[quadro]");});}tracos(d.o,p+".o");});
+  }
+  function painel(p,c){
+    campos(p,["enquadramento","tipoPainel","enq","distancia","plano","angulo","tamanho","acao","sfx","nota","miniatura"],c,texto);
+    textos(p.personagens,c+".personagens");registros(p.falas,c+".falas",function(f,ff){campos(f,["quem","tipo","texto"],ff,texto);},false);
+    lista(p.forma,c+".forma",numero);
+  }
+  function pagina(pg,c){
+    campos(pg,["layoutPag"],c,texto);registros(pg.paineis,c+".paineis",painel,false);visual(pg.visual,c+".visual");
+    if(pg.composicaoLivre!=null){objeto(pg.composicaoLivre,c+".composicaoLivre");Object.keys(pg.composicaoLivre).forEach(function(k){var q=pg.composicaoLivre[k],p=c+".composicaoLivre[quadro]";objeto(q,p);campos(q,["x","y","w","h","z"],p,numero);});}
+  }
+  function documento(d,c,grupo){
+    campos(d,["titulo"],c,texto);campos(d,["criadoEm","atualizadoEm"],c,data);
+    if(grupo==="obras")textos(d.personagens,c+".personagens");
+    if(grupo==="capitulos"){
+      campos(d,["status"],c,texto);campos(d,["numero","progresso","nPaineis","nPaginas"],c,numero);
+      registros(d.paginas,c+".paginas",pagina,false);
+      if(d.paginasSeparadas&&(!Array.isArray(d.paginas)||!d.paginas.length))falha(c+".paginas","as páginas externas não estão incluídas no arquivo");
+    }
+    if(grupo==="notas"){campos(d,["texto","tipo"],c,texto);if(typeof d.tags!=="string")textos(d.tags,c+".tags");}
+    anexos(d,c);
+  }
+  function desenhos(v,c){
+    registros(v,c,function(item,p){
+      if(/^(nota-imagem|ficha-imagem)\//.test(String(item.id)))falha(p+".id","esta chave é reservada às imagens de notas e fichas");
+      objeto(item.rec,p+".rec");var r=item.rec;campos(r,["w","h"],p+".rec",numero);
+      registros(r.camadas,p+".rec.camadas",function(l,lc){
+        campos(l,["nome","tipo","modo"],lc,texto);campos(l,["op"],lc,numero);
+        ["blob","originalBlob"].forEach(function(k){if(l[k]!=null&&l[k]!=="")imagem(l[k],lc+"."+k);});
+        if(l.manequim3d!=null){objeto(l.manequim3d,lc+".manequim3d");["estado","local"].forEach(function(k){if(l.manequim3d[k]!=null)objeto(l.manequim3d[k],lc+".manequim3d."+k);});}
+      },false);
+      registros(r.baloes,p+".rec.baloes",function(b,bc){campos(b,["txt","tipo","fonte","cor","contorno"],bc,texto);campos(b,["x","y","w","h","px","py","fs","rot","esp"],bc,numero);},false);
+    },true);
+  }
+  function fichas(v,c){
+    objeto(v,c);if(!Array.isArray(v.fichas))falha(c+".fichas","deve ser uma lista");var esperadas=new Set(),recebidas=new Set();
+    registros(v.fichas,c+".fichas",function(f,p){
+      // Preserva as conversões simples que as fichas antigas já aceitavam.
+      campos(f,["nome","obraId","atualizadoEm"],p,escalar);
+      if(f.notas!=null){objeto(f.notas,p+".notas");campos(f.notas,["geral","vistas","expressoes","roupas","detalhes"],p+".notas",escalar);}
+      registros(f.imagens,p+".imagens",function(im,ip){campos(im,["nome","vista"],ip,escalar);var chave="ficha-imagem/"+f.id+"/"+im.id;if(esperadas.has(chave))falha(ip+".id","duas referências usam o mesmo destino de imagem");esperadas.add(chave);},true);
+    },true);
+    lista(v.imagens,c+".imagens",function(im,p){objeto(im,p);if(typeof im.chave!=="string"||!esperadas.has(im.chave))falha(p+".chave","imagem sem referência correspondente na ficha");if(recebidas.has(im.chave))falha(p+".chave","imagem repetida");recebidas.add(im.chave);campos(im,["nome"],p,escalar);imagem(im.src,p+".src");});
+    esperadas.forEach(function(chave){if(!recebidas.has(chave))faltasFichas++;});
+  }
+  objeto(pacote,"backup");
+  if(pacote.formato!=null&&pacote.formato!=="mesa-de-roteiro-backup")falha("formato","este arquivo pertence a outro formato");
+  if(pacote.versao!=null&&!((typeof pacote.versao==="number"||typeof pacote.versao==="string")&&/^[123]$/.test(String(pacote.versao))))falha("versao","versão de backup não suportada");
+  if(pacote.integridade!=null){
+    var integ=pacote.integridade;objeto(integ,"integridade");
+    if(integ.algoritmo==="SHA-256"){if(typeof integ.conteudo!=="string"||!/^[a-f0-9]{64}$/i.test(integ.conteudo))falha("integridade.conteudo","soma SHA-256 ausente ou inválida");}
+    else if(integ.algoritmo!=="indisponivel")falha("integridade.algoritmo","algoritmo não suportado");
+  }
+  var total=0;["obras","capitulos","notas"].forEach(function(g){
+    if(!Array.isArray(pacote[g]))falha(g,"grupo obrigatório ausente ou inválido");
+    registros(pacote[g],g,function(item,p){if(String(item.id).indexOf("/")>=0)falha(p+".id","identificadores de documentos não podem conter barra");objeto(item.dados,p+".dados");documento(item.dados,p+".dados",g);},true);total+=pacote[g].length;
+  });
+  desenhos(pacote.desenhos,"desenhos");
+  registros(pacote.desenhosLivres,"desenhosLivres",function(d,c){if(typeof d.titulo!=="string"||!d.titulo)falha(c+".titulo","nome do desenho ausente ou inválido");campos(d,["criadoEm","atualizadoEm"],c,data);},true);
+  if(pacote.fichasPersonagem!=null)fichas(pacote.fichasPersonagem,"fichasPersonagem");
+  lista(pacote.preferenciasLocal,"preferenciasLocal",function(p,c){
+    objeto(p,c);if(typeof p.chave!=="string"||!p.chave)falha(c+".chave","chave de preferência inválida");texto(p.valor,c+".valor");
+    if(p.chave==="mesa:fichas-personagem-v1"&&pacote.fichasPersonagem==null&&fichasLegadas===null){
+      try{fichasLegadas=JSON.parse(p.valor||"[]");}catch(e){falha(c+".valor","JSON das fichas antigas inválido");}
+      fichas({fichas:fichasLegadas,imagens:[]},c+".fichasAntigas");
+    }
+  });
+  if(faltasNotas)avisos.push(faltasNotas+" referência(s) de nota sem imagem embutida");
+  if(faltasFichas)avisos.push(faltasFichas+" referência(s) de ficha sem imagem embutida");
+  return {total:total,fichasLegadas:fichasLegadas,avisos:avisos};
+}
 async function importarBackupArquivo(arquivo){
   if(!arquivo) return;
+  var importacaoIniciada=false;
   try{
-    var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote, grupos=["obras","capitulos","notas"], total=0;
+    var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote, grupos=["obras","capitulos","notas"];
     if(!ver.ok) throw new Error("A verificação SHA-256 falhou; a importação foi cancelada.");
-    for(var i=0;i<grupos.length;i++){
-      if(!Array.isArray(pacote[grupos[i]])) throw new Error("formato");
-      total+=pacote[grupos[i]].length;
-    }
-    if(!window.confirm("Importar "+total+" item(ns)? Itens com o mesmo nome serão atualizados. Nada será apagado.")) return;
+    var plano=validarBackupParaImportacao(pacote), mensagem="Importar "+plano.total+" item(ns)? Itens com o mesmo identificador serão substituídos.";
+    if(Array.isArray(pacote.desenhosLivres))mensagem+=" A lista de desenhos livres deste aparelho será substituída pela lista do arquivo.";
+    if(plano.avisos.length)mensagem+="\n\nAtenção: "+plano.avisos.join("; ")+". As referências serão preservadas, mas as imagens ausentes não podem ser recuperadas deste arquivo.";
+    if(!window.confirm(mensagem)) return false;
     estado.textContent="importando backup…";
+    importacaoIniciada=true;
     if(pacote.desenhos&&window.EditorDesenho&&window.EditorDesenho.importarDados) await window.EditorDesenho.importarDados(pacote.desenhos);
     if(pacote.fichasPersonagem) await importarFichasPersonagem(pacote.fichasPersonagem);
-    else if(Array.isArray(pacote.preferenciasLocal)){
-      var fichaLegada=pacote.preferenciasLocal.filter(function(p){return p&&p.chave==="mesa:fichas-personagem-v1";})[0];
-      if(fichaLegada){var fichaListaLegada=JSON.parse(fichaLegada.valor||"[]");if(Array.isArray(fichaListaLegada))await importarFichasPersonagem({fichas:fichaListaLegada,imagens:[]});}
-    }
+    else if(plano.fichasLegadas!==null)await importarFichasPersonagem({fichas:plano.fichasLegadas,imagens:[]});
     if(Array.isArray(pacote.desenhosLivres)){ desenhosLivres=pacote.desenhosLivres.filter(function(x){return x&&x.id&&x.titulo;}); salvarDesenhosLivres(); }
     for(var g=0;g<grupos.length;g++){
       var itens=pacote[grupos[g]];
       for(var j=0;j<itens.length;j++){
-        if(!itens[j]||!itens[j].id||!itens[j].dados) throw new Error("formato");
         var dadosItem=dadosProfundos(itens[j].dados);
         if(Array.isArray(dadosItem.imagensDados)){
-          dadosItem.imagens=[];
+          dadosItem.imagens=Array.isArray(dadosItem.imagens)?dadosItem.imagens.slice():[];
           for(var imj=0;imj<dadosItem.imagensDados.length;imj++){
             var imagemBackup=dadosItem.imagensDados[imj], metaImagem=imagemBackup.meta||{};
-            if(!metaImagem.id||!imagemBackup.src) continue;
             await bdGravar(notaImagemChave(itens[j].id,metaImagem.id),{src:imagemBackup.src,nome:metaImagem.nome||"Imagem",tipo:metaImagem.tipo||"image/*",tamanho:metaImagem.tamanho||0,criadoEm:metaImagem.criadoEm||Date.now()});
-            dadosItem.imagens.push(metaImagem);
+            var posImagem=dadosItem.imagens.findIndex(function(im){return String(im.id)===String(metaImagem.id);});
+            if(posImagem<0)dadosItem.imagens.push(metaImagem);else dadosItem.imagens[posImagem]=metaImagem;
           }
           delete dadosItem.imagensDados;
         }
@@ -5814,8 +6008,14 @@ async function importarBackupArquivo(arquivo){
     await carregarListas();
     desenharLateral(); desenhar(); atualizarPersonagens();
     el("integridadeBackup").textContent=ver.legado?"Backup antigo importado sem soma de verificação.":"Backup verificado por SHA-256 e importado.";
+    if(plano.avisos.length)el("integridadeBackup").textContent+=" Atenção: "+plano.avisos.join("; ")+". As referências foram preservadas.";
     aviso("Backup importado com sucesso.");
-  }catch(e){ aviso(e&&e.message&&e.message.indexOf("SHA-256")>=0?e.message:"Esse arquivo não é um backup válido da Mesa de Roteiro."); }
+    return true;
+  }catch(e){
+    var detalhe=e&&e.code==="backup_formato"?"Backup inválido em "+e.message:(e&&e.message&&e.message.indexOf("SHA-256")>=0?e.message:"Não foi possível ler ou importar esse arquivo.");
+    var texto=importacaoIniciada?"A importação não foi concluída. Alguns itens podem ter sido alterados; preserve seus backups antes de tentar novamente.":detalhe+" Nenhum item deste backup foi gravado.";
+    el("integridadeBackup").textContent=texto;if(importacaoIniciada)estado.textContent="importação incompleta";aviso(texto);return false;
+  }
 }
 
 async function carregarListas(){
@@ -5993,12 +6193,15 @@ function renderReferenciasEditor(host,opcoes){
     }).catch(function(){});
   });
 }
+async function abrirNotasDasReferencias(){
+  try{
+    var ok=window.EditorDesenho&&window.EditorDesenho.fechar?await window.EditorDesenho.fechar():true;
+    if(ok===false)return false;await abrirNotas();return true;
+  }catch(e){aviso("Não foi possível abrir as notas de referência. Confira o salvamento do desenho antes de tentar novamente.");return false;}
+}
 window.MesaReferencias={
   render:renderReferenciasEditor,
-  abrirNotas:function(){
-    var fechar=window.EditorDesenho&&window.EditorDesenho.fechar?window.EditorDesenho.fechar():Promise.resolve();
-    Promise.resolve(fechar).then(function(){ abrirNotas(); });
-  }
+  abrirNotas:abrirNotasDasReferencias
 };
 async function enviarImagemNota(){ return null; }
 async function apagarImagemNotaNuvem(){ return; }
@@ -6271,12 +6474,12 @@ function desenharLateral(){
     lo.innerHTML=obras.map(function(o){
       var n=caps.filter(function(c){return c.obraId===o.id;}).length;
       return '<div class="obra-item-wrap">'+
-        '<button class="item" data-obra="'+o.id+'" aria-current="'+(obraAtual===o.id)+'">'+
+        '<button class="item" data-obra="'+esc(o.id)+'" aria-current="'+(obraAtual===o.id)+'">'+
           '<span class="rotulo">'+esc(o.titulo||"Sem título")+'</span>'+
           '<span class="contagem">'+n+' cap.</span>'+
         '</button>'+
-        '<button type="button" class="bt-texto acao-obra" data-acao="rename-obra" data-obra-id="'+o.id+'" title="Renomear obra" aria-label="Renomear obra">renomear</button>'+
-        '<button type="button" class="bt-texto risco acao-obra" data-acao="del-obra" data-obra-id="'+o.id+'" title="Apagar obra" aria-label="Apagar obra">apagar</button>'+
+        '<button type="button" class="bt-texto acao-obra" data-acao="rename-obra" data-obra-id="'+esc(o.id)+'" title="Renomear obra" aria-label="Renomear obra">renomear</button>'+
+        '<button type="button" class="bt-texto risco acao-obra" data-acao="del-obra" data-obra-id="'+esc(o.id)+'" title="Apagar obra" aria-label="Apagar obra">apagar</button>'+
       '</div>';
     }).join("");
   }
@@ -6289,9 +6492,9 @@ function desenharLateral(){
     var nomeObra=obraObjAtual();
     lc.innerHTML = (nomeObra?'<p class="lateral-contexto">Da obra <b>'+esc(nomeObra.titulo||"Sem título")+'</b></p>':'')+(meus.length ? '<div class="cap-resumo"><span>Andamento da obra</span><strong>'+media+'%</strong></div>'+meus.map(function(c){
       var st=statusCapitulo(c.status), pr=progressoCapitulo(c.progresso);
-      return '<button class="item cap" data-cap="'+c.id+'" aria-current="'+(capAtual===c.id)+'">'+
+      return '<button class="item cap" data-cap="'+esc(c.id)+'" aria-current="'+(capAtual===c.id)+'">'+
         '<span class="rotulo">'+esc((c.numero?("#"+c.numero+" "):"")+(c.titulo||"Sem título"))+'</span>'+
-        '<span class="contagem">'+pr+'%</span></button><div class="cap-resumo">'+seloCapitulo(st)+'<span>'+c.nPaineis+' painel(is) · '+(c.paginas||1)+' pág.</span></div>';
+        '<span class="contagem">'+pr+'%</span></button><div class="cap-resumo">'+seloCapitulo(st)+'<span>'+esc(c.nPaineis)+' painel(is) · '+esc(c.paginas||1)+' pág.</span></div>';
     }).join("") : '<p class="vazio-lateral">Sem capítulos nesta obra.</p>');
   }
   var blocoP=el("blocoPersonagens"), lp=el("listaPersonagens");
@@ -6737,18 +6940,18 @@ function desenhar(){
   if(pgAtual>=doc.paginas.length) pgAtual=doc.paginas.length-1;
   if(pgAtual<0) pgAtual=0;
   var ip=pgAtual, pg=doc.paginas[ip], np=(pg.paineis||[]).length, status=statusCapitulo(doc.status), progresso=progressoCapitulo(doc.progresso);
-  var html='<div class="folha pag"><section class="pagina" data-pg="'+pg.id+'">'+
+  var html='<div class="folha pag"><section class="pagina" data-pg="'+esc(pg.id)+'">'+
     '<div class="cabeca-pagina">'+
       '<h2>Painéis</h2>'+
       '<span class="troca-pagina" aria-label="Trocar página"><button type="button" class="bt mini" data-acao="pagina-anterior" title="Página anterior (Alt + Page Up)"'+(ip===0?" disabled":"")+'>‹</button><span class="rotulo">Página '+(ip+1)+'/'+doc.paginas.length+'</span><button type="button" class="bt mini" data-acao="pagina-proxima" title="Próxima página (Alt + Page Down)"'+(ip===doc.paginas.length-1?" disabled":"")+'>›</button></span>'+
       '<select class="ir-pagina-select" data-ir-pagina aria-label="Ir para uma página">'+doc.paginas.map(function(_pagina,i){return '<option value="'+i+'"'+(i===ip?' selected':'')+'>Página '+(i+1)+' · '+((_pagina.paineis||[]).length)+' painel(is)</option>';}).join("")+'</select>'+
       '<button class="bt mini" data-acao="abrir-leitura" title="Ler o capítulo sem ferramentas">Ler capítulo</button>'+
       '<button class="bt mini forte" data-acao="abrir-editor-capitulo" title="Abrir a página composta no editor completo">Abrir no editor</button>'+
-      '<button class="bt mini forte" data-acao="add-painel" data-pg="'+pg.id+'" aria-label="Adicionar painel" title="Adicionar painel">+</button>'+
+      '<button class="bt mini forte" data-acao="add-painel" data-pg="'+esc(pg.id)+'" aria-label="Adicionar painel" title="Adicionar painel">+</button>'+
       '<span class="info">Página '+(ip+1)+' · '+np+(np===1?" painel":" painéis")+'</span>'+
-      '<select class="sel-layout" data-layout-pag="'+pg.id+'" aria-label="Layout da página">'+opcoesLayoutPag(pg,np)+'</select>'+
-      (np>0?'<button class="bt-texto" data-acao="duplicar-pagina" data-pg="'+pg.id+'">duplicar página</button>':'')+
-      (doc.paginas.length>1?'<button class="bt-texto" data-acao="del-pagina" data-pg="'+pg.id+'">apagar página</button>':'')+
+      '<select class="sel-layout" data-layout-pag="'+esc(pg.id)+'" aria-label="Layout da página">'+opcoesLayoutPag(pg,np)+'</select>'+
+      (np>0?'<button class="bt-texto" data-acao="duplicar-pagina" data-pg="'+esc(pg.id)+'">duplicar página</button>':'')+
+      (doc.paginas.length>1?'<button class="bt-texto" data-acao="del-pagina" data-pg="'+esc(pg.id)+'">apagar página</button>':'')+
     '</div>'+
     '<div class="cap-controles" aria-label="Andamento do capítulo">'+
       '<label>Etapa <select data-cap-campo="status" aria-label="Etapa do capítulo">'+opcoesStatusCap(status)+'</select></label>'+
@@ -6759,7 +6962,7 @@ function desenhar(){
   celulasPagina(pg,np).forEach(function(c,k){
     var pn=(pg.paineis||[])[k];
     html+='<div class="cel" style="left:'+c.x+'%;top:'+c.y+'%;width:'+c.w+'%;height:'+c.h+'%;z-index:'+(c.z||k+1)+'">'+
-      (pn?htmlPainel(pn,k,ip,np):'<button type="button" class="quadro vazio-cel" data-acao="add-um" data-pg="'+pg.id+'" aria-label="Adicionar o painel '+(k+1)+'" title="Adicionar painel">+</button>')+
+      (pn?htmlPainel(pn,k,ip,np):'<button type="button" class="quadro vazio-cel" data-acao="add-um" data-pg="'+esc(pg.id)+'" aria-label="Adicionar o painel '+(k+1)+'" title="Adicionar painel">+</button>')+
       '</div>';
   });
   html+='</div></div>'+ 
@@ -6834,9 +7037,9 @@ function htmlPainel(pn,i,ip,np){
       '<defs><clipPath id="'+cid+'"><polygon points="'+pts+'"/></clipPath></defs>'+
       '<polygon points="'+pts+'" clip-path="url(#'+cid+')"/></svg>';
   }
-  return '<article class="painel quadro'+(fm?" forma":"")+(semBorda?" sem-borda":"")+(pn.sobreposto?" sobreposto":"")+(pn.id===selPainel?" sel":"")+'" data-pn="'+pn.id+'" data-pg-idx="'+ip+'" style="--r:'+(tm.w/tm.h)+'">'+
+  return '<article class="painel quadro'+(fm?" forma":"")+(semBorda?" sem-borda":"")+(pn.sobreposto?" sobreposto":"")+(pn.id===selPainel?" sel":"")+'" data-pn="'+esc(pn.id)+'" data-pg-idx="'+ip+'" style="--r:'+(tm.w/tm.h)+'">'+
     '<button type="button" class="palco-painel'+(pn.miniatura?"":" vazio")+'"'+(fm?' style="clip-path:'+formaCss(fm)+'"':'')+' data-acao="desenhar-painel" aria-label="Abrir o editor de desenho do painel '+(i+1)+'">'+
-      (pn.miniatura?'<img src="'+esc(pn.miniatura)+'" data-prev="'+pn.id+'" alt="Desenho do painel '+(i+1)+'">':(fm?'<span title="Sem desenho. Clique para desenhar.">✎</span>':'<span>Sem desenho.<br>Clique para desenhar.</span>'))+
+      (pn.miniatura?'<img src="'+esc(pn.miniatura)+'" data-prev="'+esc(pn.id)+'" alt="Desenho do painel '+(i+1)+'">':(fm?'<span title="Sem desenho. Clique para desenhar.">✎</span>':'<span>Sem desenho.<br>Clique para desenhar.</span>'))+
     '</button>'+
     svg+
     '<div class="quadro-topo">'+
@@ -6844,7 +7047,7 @@ function htmlPainel(pn,i,ip,np){
       '<div class="acoes">'+
         '<button class="bt mini" data-acao="subir" '+(i===0?"disabled":"")+' aria-label="Mover para trás" title="Mover para trás">←</button>'+
         '<button class="bt mini" data-acao="descer" '+(i===np-1?"disabled":"")+' aria-label="Mover para frente" title="Mover para frente">→</button>'+
-        '<button type="button" class="bt mini mover-painel" data-mover-painel="'+pn.id+'" aria-label="Arraste para mover este painel na página" title="Arraste para mover na página">mover</button>'+
+        '<button type="button" class="bt mini mover-painel" data-mover-painel="'+esc(pn.id)+'" aria-label="Arraste para mover este painel na página" title="Arraste para mover na página">mover</button>'+
         '<button class="bt mini" data-acao="duplicar-painel" aria-label="Duplicar este painel" title="Duplicar">⧉</button>'+
         '<button class="bt mini risco" data-acao="del-painel" aria-label="Apagar painel">✕</button>'+
       '</div>'+
@@ -6854,7 +7057,7 @@ function htmlPainel(pn,i,ip,np){
 function htmlInfo(pn,i,ip){
   var obraChars=(obraObjAtual()&&obraObjAtual().personagens)||[];
   var semBorda=typeof pn.borda==="number"&&pn.borda<=0, formaAtual=formaRapidaAtual(pn);
-  var h='<div class="painel info-lat" data-pn="'+pn.id+'" data-pg-idx="'+ip+'">'+
+  var h='<div class="painel info-lat" data-pn="'+esc(pn.id)+'" data-pg-idx="'+ip+'">'+
     '<div class="info-painel">'+
       '<div class="frase-resumo" data-frase>'+esc(fraseResumoPainel(pn))+'</div>'+
       '<div class="campos-painel">'+
@@ -6923,6 +7126,12 @@ function htmlFala(f,j){
 }
 
 /* ========== localizar dados a partir do DOM ========== */
+/* Compara o valor original do atributo: IDs de backups não viram seletores CSS. */
+function painelNoDOM(raiz,idPainel){
+  var itens=raiz.querySelectorAll("[data-pn]"), valor=String(idPainel);
+  for(var i=0;i<itens.length;i++) if(itens[i].getAttribute("data-pn")===valor) return itens[i];
+  return null;
+}
 function acharPainel(node){
   var art=node.closest(".painel"); if(!art||!doc) return null;
   var pid=art.getAttribute("data-pn");
@@ -6958,14 +7167,14 @@ function listaDuplicaveis(limite){
 /* atualiza só a linha de resumo de um painel, sem redesenhar tudo (evita perder o foco ao digitar) */
 /* ao trocar o tamanho, o quadro de prévia acompanha a nova proporção na hora */
 function atualizarTamanhoPainel(pn){
-  var art=tela.querySelector('[data-pn="'+pn.id+'"]'), tm=TAMANHOS[pn.tamanho]||TAMANHOS.horizontal;
+  var art=painelNoDOM(tela,pn.id), tm=TAMANHOS[pn.tamanho]||TAMANHOS.horizontal;
   if(art) art.style.setProperty("--r",tm.w/tm.h);
   ajustarQuadros();
   if(pn.temDesenho){ soltarPrevia(pn.id); carregarPrevias(); }
 }
 function atualizarFraseResumo(loc){
   if(!loc) return;
-  var art=el("infoPainel").querySelector('[data-pn="'+loc.painel.id+'"]');
+  var art=painelNoDOM(el("infoPainel"),loc.painel.id);
   if(!art) return;
   var fr=art.querySelector('[data-frase]');
   if(fr) fr.textContent=fraseResumoPainel(loc.painel);
@@ -7007,7 +7216,7 @@ function montarPopQtd(opts){
   if(opts.duplicaveis && opts.duplicaveis.length){
     html+='<div class="pop-qtd-titulo pop-qtd-sep">Duplicar painel já escrito</div>'+
       opts.duplicaveis.map(function(d){
-        return '<button type="button" class="pop-qtd-item" data-dup="'+d.id+'">'+esc(d.rotulo)+'</button>';
+        return '<button type="button" class="pop-qtd-item" data-dup="'+esc(d.id)+'">'+esc(d.rotulo)+'</button>';
       }).join("");
   }
   popQtd.innerHTML=html;
@@ -7675,7 +7884,7 @@ function aoClicarTela(ev){
     loc.painel.falas=loc.painel.falas||[];
     loc.painel.falas.push({quem:"",tipo:"fala",texto:""});
     marcarSujo(); desenhar();
-    var art=el("infoPainel").querySelector('[data-pn="'+loc.painel.id+'"]');
+    var art=painelNoDOM(el("infoPainel"),loc.painel.id);
     var ta=art&&art.querySelectorAll('.fala textarea');
     if(ta&&ta.length) ta[ta.length-1].focus();
   }else if(acao==="del-fala"){
@@ -8049,7 +8258,7 @@ el("btBaixar").onclick=async function(){
 };
 
 window.addEventListener("beforeunload",function(e){
-  if(sujo||notaSuja){ e.preventDefault(); e.returnValue=""; }
+  if(sujo||notaSuja||(window.EditorDesenho&&window.EditorDesenho.temAlteracoes&&window.EditorDesenho.temAlteracoes())){ e.preventDefault(); e.returnValue=""; }
 });
 
 /* ========== arranque ========== */
