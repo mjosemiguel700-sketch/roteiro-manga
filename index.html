@@ -792,7 +792,8 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
       <button type="button" class="bt mini bt-instalar" id="btInstalar" title="Instalar a Mesa de Roteiro neste aparelho">Instalar app</button>
       <span class="estado-conexao" id="estadoConexao" aria-live="polite">Salvo neste aparelho</span>
       <span class="estado-nuvem" id="estadoNuvem" aria-live="polite">Salvo neste aparelho</span>
-      <span class="estado" id="estado"></span>
+      <span class="estado" id="estado" aria-live="polite"></span>
+      <button type="button" class="bt mini oculto" id="btTentarSalvarTexto">Tentar salvar</button>
     </div>
     <div class="tela" id="tela"></div>
   </main>
@@ -816,7 +817,7 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
 <dialog id="dlgNuvem">
   <div class="dlg-topo"><h3>Conectar à nuvem</h3><button class="bt mini" id="fecharNuvem">Fechar</button></div>
   <div class="dlg-corpo" style="max-width:480px">
-    <p>Entre com um e-mail para proteger seus dados no Supabase. A conexão <strong>não envia nenhum trabalho automaticamente</strong>.</p>
+    <p>Ao entrar, os trabalhos deste navegador podem ser copiados para esta conta após 2 minutos sem alterações. Cada envio cria uma nova versão no Supabase. As cópias ocupam espaço adicional e podem ser consultadas em Backup.</p>
     <label style="display:block;margin:10px 0 4px;font-weight:700">E-mail</label><input id="emailNuvem" type="email" autocomplete="email" placeholder="voce@exemplo.com" style="width:100%;box-sizing:border-box">
     <label style="display:block;margin:10px 0 4px;font-weight:700">Senha</label><input id="senhaNuvem" type="password" autocomplete="current-password" minlength="8" placeholder="Mínimo de 8 caracteres" style="width:100%;box-sizing:border-box">
     <p class="nota-meta" id="estadoContaNuvem" aria-live="polite">Use uma senha nova e forte. Nunca use a senha do banco de dados aqui.</p>
@@ -835,13 +836,20 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
     <p class="nota-meta" id="estadoBackup" aria-live="polite">Último backup: ainda não registrado neste aparelho.</p>
     <p class="nota-meta" id="integridadeBackup" aria-live="polite">Os novos backups serão verificados antes de serem salvos.</p>
     <p class="nota-meta" id="pastaBackup" aria-live="polite">Pasta de backup: não escolhida. A escolha é opcional e depende do suporte do navegador.</p>
-    <p class="nota-meta">A cópia na nuvem só é restaurada quando você pedir. A importação confirma antes de alterar qualquer item local.</p>
+    <p class="nota-meta">A nuvem guarda versões separadas, sem apagar as anteriores. Isso ocupa espaço adicional. Para recuperar: baixe uma cópia, preserve um backup local e use Importar backup quando decidir.</p>
+    <section aria-label="Cópias na nuvem">
+      <p class="nota-meta" id="estadoCopiasNuvem" aria-live="polite">Use Cópias na nuvem para consultar o histórico da conta conectada.</p>
+      <div id="listaCopiasNuvem"></div>
+      <button type="button" class="bt mini oculto" id="btMaisCopiasNuvem">Ver versões anteriores</button>
+      <p class="nota-meta">A lista indica datas dos arquivos; uma versão mais recente pode conter menos trabalhos. Confira o conteúdo antes de importar. Nenhuma cópia é importada automaticamente.</p>
+    </section>
   </div>
   <div class="dlg-pe">
     <button class="bt" id="btBaixarBackup">Baixar backup</button>
     <button class="bt" id="btEscolherPasta">Escolher pasta</button>
     <button class="bt" id="btSalvarNaPasta" disabled>Salvar versão na pasta</button>
-    <button class="bt" id="btRestaurarNuvem">Restaurar da nuvem</button>
+    <button class="bt" id="btRestaurarNuvem">Cópias na nuvem</button>
+    <button class="bt" id="btEnviarCopiaNuvem">Enviar cópia agora</button>
     <button class="bt forte" id="btImportarBackup">Importar backup</button>
     <input id="arquivoBackup" type="file" accept="application/json,.json" hidden>
   </div>
@@ -867,8 +875,9 @@ function ler(k){ return ls ? ls.getItem(P+k) : (k in mem ? mem[k] : null); }
 function gravar(k,v){
   try{ if(ls) ls.setItem(P+k,v); else mem[k]=v; }
   catch(e){ var er=new Error("Armazenamento cheio"); er.code="quota_exceeded"; throw er; }
+  try{if(/^roteiros\/local\//.test(k)&&window.agendarBackupNuvem)window.agendarBackupNuvem();}catch(e){}
 }
-function apagar(k){ if(ls) ls.removeItem(P+k); else delete mem[k]; }
+function apagar(k){ if(ls) ls.removeItem(P+k); else delete mem[k];try{if(/^roteiros\/local\//.test(k)&&window.agendarBackupNuvem)window.agendarBackupNuvem();}catch(e){} }
 function chaves(){
   var out=[],i,k;
   if(ls){ for(i=0;i<ls.length;i++){ k=ls.key(i); if(k.indexOf(P)===0) out.push(k.slice(P.length)); } }
@@ -1077,30 +1086,51 @@ function trilhaForma(c,f,W,H){
   c.closePath();
 }
 
-/* ---------- armazenamento: IndexedDB, com plano B na memória ---------- */
-var BD={db:null,p:null,mem:{}};
+/* ---------- armazenamento: uma falha de leitura não confirma ausência ---------- */
+var BD={db:null,p:null,mem:{}},COPIAS_DESENHO=[];
+function erroLeituraImagem(mensagem,codigo){var e=new Error(mensagem||"Não foi possível ler o armazenamento de imagens. Tente novamente sem apagar os dados do navegador.");e.code=codigo||"leitura_imagem";return e;}
 function bdAbrir(){
+  if(BD.db)return Promise.resolve(BD.db);
   if(BD.p) return BD.p;
-  BD.p=new Promise(function(res){
+  var abertura=new Promise(function(res){
+    var concluida=false;
+    function terminar(db){
+      if(concluida){if(db)try{db.close();}catch(e){}return;}
+      concluida=true;
+      if(db){
+        BD.db=db;
+        db.onversionchange=db.onclose=function(){if(BD.db===db){BD.db=null;BD.p=null;}try{db.close();}catch(e){}};
+      }else window.__mesaFalhaIndexedDB=true;
+      res(db);
+    }
     try{
       var rq=indexedDB.open("mesa-desenhos",1);
       rq.onupgradeneeded=function(){ rq.result.createObjectStore("d"); };
-      rq.onsuccess=function(){ BD.db=rq.result; res(BD.db); };
-      rq.onerror=function(){ window.__mesaFalhaIndexedDB=true; res(null); };
-      rq.onblocked=function(){ window.__mesaFalhaIndexedDB=true; res(null); };
-    }catch(e){ window.__mesaFalhaIndexedDB=true; res(null); }
+      rq.onsuccess=function(){terminar(rq.result);};
+      rq.onerror=rq.onblocked=function(){terminar(null);};
+    }catch(e){terminar(null);}
   });
-  return BD.p;
+  BD.p=abertura;
+  abertura.then(function(db){if(!db&&BD.p===abertura)BD.p=null;});
+  return abertura;
 }
 function bdLer(id){
   return bdAbrir().then(function(db){
-    if(!db) return BD.mem[id]||null;
-    return new Promise(function(res){
+    if(!db)throw erroLeituraImagem();
+    return new Promise(function(res,rejeitar){
+      var terminou=false,resultado;
+      function falhou(){window.__mesaFalhaIndexedDB=true;rejeitar(erroLeituraImagem());}
       try{
-        var rq=db.transaction("d").objectStore("d").get(id);
-        rq.onsuccess=function(){ res(rq.result||null); };
-        rq.onerror=function(){ res(null); };
-      }catch(e){ res(null); }
+        var tx=db.transaction("d"),rq=tx.objectStore("d").get(id);
+        rq.onsuccess=function(){terminou=true;resultado=rq.result;};
+        rq.onerror=tx.onerror=tx.onabort=falhou;
+        tx.oncomplete=function(){
+          if(!terminou){falhou();return;}
+          if(resultado===undefined){res(null);return;}
+          if(!resultado||typeof resultado!=="object"||Array.isArray(resultado)){rejeitar(erroLeituraImagem("O registro da imagem não pôde ser interpretado.","registro_imagem"));return;}
+          res(resultado);
+        };
+      }catch(e){falhou();}
     });
   });
 }
@@ -1118,28 +1148,39 @@ function bdGravar(id,rec){
 }
 function bdApagar(id){
   return bdAbrir().then(function(db){
-    if(!db){ delete BD.mem[id]; return; }
+    if(!db){ delete BD.mem[id]; return false; }
     return new Promise(function(res){
       try{
         var tx=db.transaction("d","readwrite"); tx.objectStore("d").delete(id);
-        tx.oncomplete=tx.onerror=tx.onabort=function(){ res(); };
-      }catch(e){ res(); }
+        tx.oncomplete=function(){ res(true); };
+        tx.onerror=tx.onabort=function(){ res(false); };
+      }catch(e){ res(false); }
     });
   });
 }
 function bdListar(){
   return bdAbrir().then(function(db){
-    if(!db) return Object.keys(BD.mem).map(function(k){return {id:k,rec:BD.mem[k]};});
-    return new Promise(function(res){
-      var out=[], rq=db.transaction("d").objectStore("d").openCursor();
-      rq.onsuccess=function(){ var c=rq.result; if(c){out.push({id:c.key,rec:c.value});c.continue();} else res(out); };
-      rq.onerror=function(){res(out);};
+    if(!db)throw erroLeituraImagem();
+    return new Promise(function(res,rejeitar){
+      var out=[],terminou=false;
+      function falhou(){window.__mesaFalhaIndexedDB=true;rejeitar(erroLeituraImagem("Não foi possível concluir a leitura das imagens. O backup foi interrompido."));}
+      try{
+        var tx=db.transaction("d"),rq=tx.objectStore("d").openCursor();
+        rq.onsuccess=function(){try{var c=rq.result;if(c){out.push({id:c.key,rec:c.value});c.continue();}else terminou=true;}catch(e){falhou();}};
+        rq.onerror=tx.onerror=tx.onabort=falhou;
+        tx.oncomplete=function(){if(!terminou){falhou();return;}res(out);};
+      }catch(e){falhou();}
     });
   });
 }
 function blobParaData(blob){
-  if(!blob) return Promise.resolve(null); if(typeof blob==="string") return Promise.resolve(blob);
-  return new Promise(function(resolve){ var fr=new FileReader(); fr.onload=function(){resolve(String(fr.result||""));}; fr.onerror=function(){resolve(null);}; fr.readAsDataURL(blob); });
+  if(blob==null)return Promise.resolve(null);
+  function valido(v){return typeof v==="string"&&/^data:[^,]*,[\s\S]+$/.test(v);}
+  if(typeof blob==="string")return valido(blob)?Promise.resolve(blob):Promise.reject(erroLeituraImagem("Uma imagem do backup contém dados inválidos.","registro_imagem"));
+  return new Promise(function(resolve,rejeitar){
+    function falhou(){rejeitar(erroLeituraImagem("Não foi possível incluir uma imagem no backup. O arquivo não foi confirmado."));}
+    try{var fr=new FileReader();fr.onload=function(){if(!valido(fr.result)){falhou();return;}resolve(fr.result);};fr.onerror=fr.onabort=falhou;fr.readAsDataURL(blob);}catch(e){falhou();}
+  });
 }
 function dataParaBlob(data){
   if(typeof data!=="string"||data.indexOf("data:")!==0) return data;
@@ -1149,9 +1190,12 @@ async function exportarDesenhos(){
   var todos=await bdListar(), saida=[];
   for(var i=0;i<todos.length;i++){
     if(/^(nota-imagem|ficha-imagem)\//.test(String(todos[i].id))) continue;
-    var rec=todos[i].rec||{}, copia={v:rec.v,w:rec.w,h:rec.h,ativa:rec.ativa,baloes:rec.baloes||[],camadas:[]};
+    var rec=todos[i].rec;
+    if(!rec||!Array.isArray(rec.camadas))throw erroLeituraImagem("Um desenho armazenado contém dados inválidos. Preserve os backups anteriores.","registro_imagem");
+    var copia={v:rec.v,w:rec.w,h:rec.h,ativa:rec.ativa,baloes:rec.baloes||[],camadas:[]};
     for(var j=0;j<(rec.camadas||[]).length;j++){
-      var c=rec.camadas[j], nc={id:c.id,nome:c.nome,tipo:c.tipo,sobreImagemId:c.sobreImagemId,manequim3d:dadosBaseManequim(c.manequim3d),vis:c.vis,bloqueada:c.bloqueada,op:c.op,modo:c.modo,blob:await blobParaData(c.blob),originalBlob:await blobParaData(c.originalBlob)}; copia.camadas.push(nc);
+      var c=rec.camadas[j];if(!c||!c.blob)throw erroLeituraImagem("Uma camada do desenho está sem imagem. O backup foi interrompido.","registro_imagem");
+      var nc={id:c.id,nome:c.nome,tipo:c.tipo,sobreImagemId:c.sobreImagemId,manequim3d:dadosBaseManequim(c.manequim3d),vis:c.vis,bloqueada:c.bloqueada,op:c.op,modo:c.modo,blob:await blobParaData(c.blob),originalBlob:await blobParaData(c.originalBlob)}; copia.camadas.push(nc);
     }
     saida.push({id:todos[i].id,rec:copia});
   }
@@ -2365,10 +2409,21 @@ function montarDOM(){
   renderMiniaturasPinceis();
   atualizarReticula();
   ligarEventos();
+  ["click","input","change","pointerdown","paste","drop"].forEach(function(tipo){$ed.addEventListener(tipo,bloquearDuranteLeituraDesenho,true);});
   aplicarInterfaceEditor();
 }
 
 /* ---------- abrir / fechar ---------- */
+function bloquearDuranteLeituraDesenho(e){if(S&&S.carregando){e.preventDefault();e.stopImmediatePropagation();}}
+function falhaAbrirDesenho(s){
+  if(S!==s)return;
+  clearTimeout(s.tSalvar);cancelAnimationFrame(s.raf);
+  document.removeEventListener("keydown",onKey,true);document.removeEventListener("keyup",onKeyUp,true);
+  $ed.classList.add("oculto");$ed.removeAttribute("aria-busy");document.body.classList.remove("ed-aberto");
+  S=null;
+  var estadoPrincipal=document.getElementById("estado");if(estadoPrincipal)estadoPrincipal.textContent="falha ao ler o desenho · tente abri-lo novamente";
+  try{if(s.opts.aviso)s.opts.aviso("Não foi possível abrir o desenho com segurança. Tente abri-lo novamente sem apagar os dados do navegador.");}catch(e){}
+}
 function abrir(opts){
   montarDOM();
   if(S) return;
@@ -2387,6 +2442,7 @@ function abrir(opts){
     cortando:false,vSel:null,vDrag:null,vUlt:null
   };
   $ed.classList.remove("oculto");
+  $ed.setAttribute("aria-busy","true");
   $ed.classList.toggle("modo-livre",!!opts.modoLivre);
   $ed.classList.toggle("modo-pagina",!!opts.modoPagina);
   document.body.classList.add("ed-aberto");
@@ -2416,44 +2472,53 @@ function abrir(opts){
 
   bdLer(painel.id).then(function(rec){
     if(S!==s) return;
-    if(!rec||!rec.camadas||!rec.camadas.length){
+    if(rec===null||(rec&&Array.isArray(rec.camadas)&&!rec.camadas.length&&!painel.temDesenho)){
+      if(painel.temDesenho)throw erroLeituraImagem("O desenho referenciado não foi encontrado. Nenhuma tela em branco será salva por cima dele.","desenho_ausente");
       var L=criarCamada("Camada 1"); s.camadas=[L]; s.ativa=L.id; return pronto();
     }
-    s.tocou=true;
+    if(!rec||!Array.isArray(rec.camadas)||!rec.camadas.length)throw erroLeituraImagem("O desenho armazenado está incompleto.","registro_imagem");
     var ox=Math.round((dim.w-(rec.w||dim.w))/2), oy=Math.round((dim.h-(rec.h||dim.h))/2);
-    s.baloes=(rec.baloes||[]).map(function(b){
+    var baloes=(rec.baloes||[]).map(function(b){
       var c=cloneBal(b); c.x+=ox; c.y+=oy; c.px+=ox; c.py+=oy; return c;
     });
-    var pend=rec.camadas.map(function(c){
+    var camadas=[],pend=rec.camadas.map(function(c,indice){return Promise.resolve().then(function(){
+      if(S!==s)return;
+      if(!c||!c.blob)throw erroLeituraImagem("Uma camada do desenho não está disponível.","registro_imagem");
       var L=criarCamada(c.nome||"Camada",c.id);
       L.vis=c.vis!==false; L.bloqueada=!!c.bloqueada; L.op=c.op==null?100:c.op; L.modo=c.modo||"normal"; L.tipo=c.tipo||(/^Imagem:/i.test(L.nome)?"imagem":null); L.sobreImagemId=c.sobreImagemId||null; L.manequim3d=dadosBaseManequim(c.manequim3d); L.blob=c.blob||null; L.originalBlob=c.originalBlob||null; L.sujo=false;
-      s.camadas.push(L);
+      camadas[indice]=L;
       return decodificar(c.blob).then(function(img){
+        if(!img)throw erroLeituraImagem("Uma imagem do desenho não pôde ser aberta.","registro_imagem");
         if(img){ L.cx.drawImage(img,ox,oy); if(ox||oy) L.sujo=true; }
       });
-    });
+    });});
     return Promise.all(pend).then(function(){
+      if(S!==s)return;
+      s.camadas=camadas;s.baloes=baloes;s.tocou=true;
       var ok=s.camadas.some(function(L){ return L.id===rec.ativa; });
       s.ativa=ok?rec.ativa:s.camadas[s.camadas.length-1].id;
       pronto();
     });
-  });
+  }).catch(function(){falhaAbrirDesenho(s);});
   function pronto(){
     if(S!==s) return;
-    s.carregando=false; E.carregando.classList.add("oculto");
+    s.carregando=false;$ed.removeAttribute("aria-busy"); E.carregando.classList.add("oculto");
     ajustar(); listaPaginasEditor(); listaCamadas(); pedir(true); atualizarBal();
   }
 }
 
 function decodificar(blob){
-  if(!blob) return Promise.resolve(null);
-  if(window.createImageBitmap) return createImageBitmap(blob).catch(function(){ return null; });
-  return new Promise(function(res){
-    var u=URL.createObjectURL(blob), im=new Image();
-    im.onload=function(){ URL.revokeObjectURL(u); res(im); };
-    im.onerror=function(){ res(null); };
-    im.src=u;
-  });
+  if(blob==null)return Promise.resolve(null);
+  if(typeof blob==="string"){blob=dataParaBlob(blob);if(typeof blob==="string")return Promise.reject(erroLeituraImagem("A imagem armazenada não pôde ser decodificada.","registro_imagem"));}
+  if(!blob||blob.size===0)return Promise.reject(erroLeituraImagem("A imagem armazenada está vazia.","registro_imagem"));
+  function peloElemento(){return new Promise(function(res,rejeitar){
+    var u=null;
+    function limpar(){if(u){try{URL.revokeObjectURL(u);}catch(e){}u=null;}}
+    function falhou(){limpar();rejeitar(erroLeituraImagem("Não foi possível decodificar a imagem armazenada.","registro_imagem"));}
+    try{u=URL.createObjectURL(blob);var im=new Image();im.onload=function(){if(!im.width||!im.height){falhou();return;}limpar();res(im);};im.onerror=falhou;im.src=u;}catch(e){falhou();}
+  });}
+  if(window.createImageBitmap)return Promise.resolve().then(function(){return createImageBitmap(blob);}).then(function(img){if(!img||!img.width||!img.height)throw erroLeituraImagem();return img;}).catch(peloElemento);
+  return peloElemento();
 }
 
 function criarCamada(nome,id){
@@ -2483,8 +2548,9 @@ function criarCamadaDesenhoSobreImagem(L){
 }
 function separarDesenhoMisturado(L){
   if(!S||!L||!L.originalBlob||S.camadas.some(function(C){return C.sobreImagemId===L.id;})) return Promise.resolve();
+  var s=S;
   return decodificar(L.originalBlob).then(function(img){
-    if(!img||!S||!porId(L.id)) return;
+    if(!img||S!==s||porId(L.id)!==L)throw erroLeituraImagem();
     var base=novoCanvas(S.dim.w,S.dim.h), bx=base.getContext("2d");
     bx.drawImage(img,0,0,S.dim.w,S.dim.h);
     var atual=L.cx.getImageData(0,0,S.dim.w,S.dim.h), original=bx.getImageData(0,0,S.dim.w,S.dim.h), saida=bx.createImageData(S.dim.w,S.dim.h), tem=false;
@@ -2494,7 +2560,7 @@ function separarDesenhoMisturado(L){
     }
     var desenho=criarCamada("Desenho separado: "+String(L.nome||"Imagem").replace(/^Imagem:\s*/i,"").slice(0,24)); desenho.tipo="desenho"; desenho.sobreImagemId=L.id; if(tem) desenho.cx.putImageData(saida,0,0);
     var idx=S.camadas.indexOf(L); S.camadas.splice(idx+1,0,desenho); S.ativa=desenho.id; desenho.sujo=true; listaCamadas(); agendarSalvar();
-  }).catch(function(){});
+  });
 }
 function qa(sel){ return Array.prototype.slice.call($ed.querySelectorAll(sel)); }
 function aviso(t){ if(S&&S.opts.aviso) S.opts.aviso(t); }
@@ -2601,7 +2667,7 @@ function aoMudarVisibilidadeDesenho(){
   if(S&&S.sujo&&!S.salvando&&!interacaoDesenho(S))salvarAgora();
 }
 function exportarDadosEditor(){
-  return tentarSalvarDesenho().then(function(ok){
+  return Promise.all(COPIAS_DESENHO.slice()).then(function(){return tentarSalvarDesenho();}).then(function(ok){
     if(!ok||temAlteracoesDesenho())throw new Error("O desenho aberto ainda não foi salvo. Mantenha o editor aberto e tente salvar novamente antes de criar o backup.");
     return exportarDesenhos();
   });
@@ -4185,7 +4251,7 @@ function carregarMiniaturasPaginas(){
       if(!src) return;
       img.src=src; img.classList.remove("oculto");
       var papel=img.parentNode; if(papel) papel.classList.remove("vazia");
-    }).catch(function(){});
+    }).catch(function(){if(img.isConnected){img.alt="Falha ao ler a prévia da página";if(img.parentNode)img.parentNode.title="Não foi possível ler a página. Tente novamente; os desenhos armazenados não foram alterados.";}});
   });
 }function conjuntosPaginas(pags){
   var html="", inicio=0, conjunto=1;
@@ -4658,22 +4724,23 @@ function retirarImagemAtiva(){
     empurrar({t:"estrutura",antes:antes,depois:estadoEstrutura()});
     S.sel=null; listaCamadas(); pedir(true); aviso("Camada da imagem retirada. O desenho foi mantido separado. Use Ctrl+Z para desfazer.");
   };
-  separarDesenhoMisturado(L).then(remover);
+  var s=S;
+  separarDesenhoMisturado(L).then(function(){if(S===s&&porId(L.id)===L)remover();}).catch(function(){if(S===s)aviso("A imagem não foi retirada porque o original não pôde ser lido. Tente novamente.");});
 }
 function restaurarImagemOriginal(){
   if(!S) return;
   commitFlut();
   var L=camadaImagemAlvo(); if(!L){ aviso("Selecione uma camada de imagem para restaurar."); return; }
   if(!L.originalBlob){ aviso("Esta imagem foi importada antes da função de restauração. Importe-a novamente para poder restaurar o original."); return; }
-  var antes=recortar(L.cv,0,0,S.dim.w,S.dim.h), original=L.originalBlob;
+  var s=S,antes=recortar(L.cv,0,0,S.dim.w,S.dim.h), original=L.originalBlob;
   decodificar(original).then(function(img){
-    if(!img||!S||!porId(L.id)) { aviso("Não foi possível restaurar a imagem original."); return; }
+    if(!img||S!==s||porId(L.id)!==L) return;
     L.cx.clearRect(0,0,S.dim.w,S.dim.h); L.cx.drawImage(img,0,0,S.dim.w,S.dim.h); L.sujo=true;
     L._baseEfeitos=L.cx.getImageData(0,0,S.dim.w,S.dim.h);
     var depois=recortar(L.cv,0,0,S.dim.w,S.dim.h);
     empurrar({t:"px",layer:L.id,x:0,y:0,antes:antes,depois:depois}); pedir(true);
     aviso("Imagem restaurada ao estado original. Use Ctrl+Z para desfazer a restauração.");
-  });
+  }).catch(function(){if(S===s)aviso("Não foi possível ler a imagem original. A camada atual foi preservada.");});
 }
 function baseOriginalEfeitos(L){
   /* Todos os efeitos partem de ImageData da mesma base, não do resultado do
@@ -5248,6 +5315,7 @@ function ligarEventos(){
 
 /* ---------- teclado ---------- */
 function onKey(e){
+  if(S&&S.carregando){e.preventDefault();e.stopImmediatePropagation();return;}
   if(!S) return;
   if(e.target&&e.target.closest&&e.target.closest('.fichas-janela')) return;
   var key=e.key||"", code=e.code||"", lower=key.toLowerCase();
@@ -5333,6 +5401,7 @@ function onKeyUp(e){
 function compor(id,painel,maxLado,comBorda){
   /* A prévia da página usa as camadas ainda abertas no editor, inclusive antes de salvar. */
   if(S&&S.painel&&S.painel.id===id){
+    if(S.carregando)return Promise.reject(erroLeituraImagem("O desenho ainda está sendo lido."));
     var dimAtual=dimensoes(TAMANHOS[painel&&painel.tamanho]?painel.tamanho:PADRAO_TAM);
     var fatorAtual=Math.min(1,maxLado/Math.max(dimAtual.w,dimAtual.h));
     var atual=novoCanvas(Math.max(1,Math.round(dimAtual.w*fatorAtual)),Math.max(1,Math.round(dimAtual.h*fatorAtual))), xa=atual.getContext("2d");
@@ -5346,11 +5415,14 @@ function compor(id,painel,maxLado,comBorda){
     return Promise.resolve(atual);
   }
   return bdLer(id).then(function(rec){
-    if(!rec||!rec.camadas||!rec.camadas.length) return null;
+    if(rec===null||(rec&&Array.isArray(rec.camadas)&&!rec.camadas.length&&!(painel&&painel.temDesenho))){
+      if(painel&&painel.temDesenho)throw erroLeituraImagem("O desenho referenciado não foi encontrado.","desenho_ausente");return null;
+    }
+    if(!rec||!Array.isArray(rec.camadas)||!rec.camadas.length)throw erroLeituraImagem("O desenho armazenado está incompleto.","registro_imagem");
     var chave=TAMANHOS[painel&&painel.tamanho]?painel.tamanho:PADRAO_TAM, dim=dimensoes(chave);
     var k=Math.min(1,maxLado/Math.max(dim.w,dim.h));
     var ox=Math.round((dim.w-(rec.w||dim.w))/2), oy=Math.round((dim.h-(rec.h||dim.h))/2);
-    return Promise.all(rec.camadas.map(function(c){ return decodificar(c.blob); })).then(function(imgs){
+    return Promise.all(rec.camadas.map(function(c){return Promise.resolve().then(function(){if(!c||!c.blob)throw erroLeituraImagem("Uma camada do desenho está sem imagem.","registro_imagem");return decodificar(c.blob).then(function(img){if(!img)throw erroLeituraImagem();return img;});});})).then(function(imgs){
       var cv=novoCanvas(Math.max(1,Math.round(dim.w*k)),Math.max(1,Math.round(dim.h*k))), x=cv.getContext("2d");
       if(!(painel&&painel.sobreposto)){ x.fillStyle="#fff"; x.fillRect(0,0,cv.width,cv.height); }
       x.save(); x.scale(k,k); x.imageSmoothingQuality="high";
@@ -5368,7 +5440,7 @@ function compor(id,painel,maxLado,comBorda){
       x.restore();
       return cv;
     });
-  }).catch(function(){ return null; });
+  });
 }
 /* prévia em boa resolução (usada na lista de painéis do roteiro) */
 function previa(id,painel){
@@ -5382,6 +5454,12 @@ if(document.fonts&&document.fonts.load){
     qa("[data-baltipo]").length&&miniaturasBaloes();
   }).catch(function(){});
 }
+function copiarDesenho(de,para){
+  var copia=bdLer(de).then(function(rec){if(!rec)throw erroLeituraImagem("O desenho original da cópia não foi encontrado.","desenho_ausente");return bdGravar(para,rec);}).then(function(ok){if(ok!==true)throw erroLeituraImagem("A cópia do desenho não foi confirmada.");return true;});
+  COPIAS_DESENHO.push(copia);
+  function terminou(){var i=COPIAS_DESENHO.indexOf(copia);if(i>=0)COPIAS_DESENHO.splice(i,1);}
+  copia.then(terminou,terminou);return copia;
+}
 window.EditorDesenho={
   abrir:abrir,
   fechar:function(){ fecharJanelaReferencias(); fecharEstudoReferencia(); return sair(); },
@@ -5392,9 +5470,7 @@ window.EditorDesenho={
   fecharReferencias:fecharJanelaReferencias,
   inserirImagemDados:inserirImagemDados,
   apagar:function(id){ return bdApagar(id); },
-  copiar:function(de,para){
-    return bdLer(de).then(function(rec){ if(rec) return bdGravar(para,rec); });
-  },
+  copiar:copiarDesenho,
   previa:previa,
   compor:compor,
   exportarDados:exportarDadosEditor,
@@ -5451,11 +5527,12 @@ function opcoesTamanho(valor){
 /* ========== estado ========== */
 var db=null, dbLocal=null, baixador=null, base="roteiros/local", baseLocal="roteiros/local", contaNuvemPronta=false, nuvemAtiva=false;
 var obras=[], caps=[], obraAtual=null, capAtual=null, doc=null;
-var pendente=null, salvando=false, sujo=false;
+var pendente=null, salvando=false, sujo=false, revisaoCapitulo=0;
 var notas=[], notaAtual=null, modoNotas=false;
 var MARCA_NOTA={notaId:null,termo:"",faixas:[],indice:0,cursor:null};
 var desenhosLivres=[];
-var pendenteNota=null, salvandoNota=false, notaSuja=false;
+var pendenteNota=null, salvandoNota=false, notaSuja=false, revisaoNota=0;
+var acaoTextoAtiva=false, textosVolateis=false;
 var modoLeitura=false;
 var LEITURA={zoom:100,base:420};
 
@@ -5486,7 +5563,7 @@ function carregarDesenhosLivres(){
   desenhosLivres=(Array.isArray(lista)?lista:[]).filter(function(x){return x&&x.id&&x.titulo;}).map(function(x){return {id:String(x.id),titulo:String(x.titulo),criadoEm:x.criadoEm||Date.now(),atualizadoEm:x.atualizadoEm||x.criadoEm||Date.now()};});
   desenhosLivres.sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});
 }
-function salvarDesenhosLivres(){ gravarMetaLocal("desenhos-livres",desenhosLivres); }
+function salvarDesenhosLivres(){ gravarMetaLocal("desenhos-livres",desenhosLivres);agendarBackupNuvem(); }
 /* ========== fichas visuais de personagens ========== */
 var FICHAS={lista:null,atual:null,escopo:null,aba:"vistas",janela:null,zoom:null,importando:false};
 var FICHA_ABAS=[["geral","Geral"],["vistas","Vistas"],["expressoes","Expressões"],["roupas","Roupas"],["detalhes","Detalhes"]];
@@ -5540,7 +5617,14 @@ function renderFichasPersonagem(){
 async function hidratarFichaImagens(f){
   var host=FICHAS.janela.querySelector("[data-ficha-grade]"),aba=FICHAS.aba,lista=f.imagens.filter(function(im){return!im.retirada&&im.aba===aba;});if(!host)return;
   host.innerHTML=lista.length?lista.map(function(im){return '<figure class="fichas-imagem" data-ficha-imagem="'+esc(im.id)+'"><button type="button" class="fichas-visualizar" data-ficha-ampliar="'+esc(im.id)+'" aria-label="Ampliar '+esc(im.nome)+'">Carregando…</button><label>'+esc(im.vista)+'<input type="text" data-ficha-legenda="'+esc(im.id)+'" aria-label="Legenda da referência" maxlength="160" value="'+esc(im.nome)+'"></label><button type="button" class="bt mini" data-ficha-retirar-imagem="'+esc(im.id)+'">Retirar da ficha</button></figure>';}).join(""):'<p class="fichas-dica" style="grid-column:1/-1">Nenhuma referência nesta seção.</p>';
-  for(var i=0;i<lista.length;i++){var rec=await bdLer(fichaImagemChave(f.id,lista[i].id));if(fichaAtual()!==f||FICHAS.aba!==aba||!host.isConnected)return;var btn=host.querySelectorAll("[data-ficha-ampliar]")[i];if(!btn)continue;if(rec&&/^data:image\//i.test(rec.src||"")){var img=document.createElement("img");img.src=rec.src;img.alt=lista[i].nome;btn.textContent="";btn.appendChild(img);}else{btn.textContent="Imagem indisponível neste aparelho";}}
+  for(var i=0;i<lista.length;i++){
+    var rec=null,falhou=false;try{rec=await bdLer(fichaImagemChave(f.id,lista[i].id));}catch(e){falhou=true;}
+    if(fichaAtual()!==f||FICHAS.aba!==aba||!host.isConnected)return;
+    var btn=host.querySelectorAll("[data-ficha-ampliar]")[i];if(!btn)continue;
+    if(falhou){btn.textContent="Falha ao ler. Reabra a ficha para tentar novamente.";continue;}
+    if(rec&&/^data:image\//i.test(rec.src||"")){var img=document.createElement("img");img.alt=lista[i].nome;img.onerror=function(){if(this.isConnected)this.replaceWith(document.createTextNode("Não foi possível abrir esta imagem."));};img.src=rec.src;btn.textContent="";btn.appendChild(img);}
+    else btn.textContent="Imagem referenciada não encontrada";
+  }
 }
 function abrirFichasPersonagem(nome){
   montarFichasPersonagem();var jaAberta=!FICHAS.janela.classList.contains("oculto");if(!jaAberta)FICHAS.escopo=obraAtual||"";
@@ -5564,7 +5648,12 @@ async function fichaClique(e){
   if(!f)return;
   if(b.hasAttribute("data-ficha-aba")){FICHAS.aba=b.getAttribute("data-ficha-aba");renderFichasPersonagem();}
   else if(b.hasAttribute("data-ficha-adicionar"))FICHAS.janela.querySelector("[data-ficha-arquivos]").click();
-  else if(b.hasAttribute("data-ficha-ampliar")){var rec=await bdLer(fichaImagemChave(f.id,b.getAttribute("data-ficha-ampliar")));if(rec&&/^data:image\//i.test(rec.src||"")){FICHAS.zoom.querySelector("img").src=rec.src;FICHAS.zoom.querySelector("img").alt=b.getAttribute("aria-label")||"Referência do personagem";FICHAS.zoom.classList.remove("oculto");FICHAS.zoom.querySelector("button").focus();}}
+  else if(b.hasAttribute("data-ficha-ampliar")){
+    try{var rec=await bdLer(fichaImagemChave(f.id,b.getAttribute("data-ficha-ampliar")));if(fichaAtual()!==f||!b.isConnected)return;
+      if(!rec||!/^data:image\//i.test(rec.src||""))throw new Error("Imagem indisponível");
+      var ampliada=FICHAS.zoom.querySelector("img");ampliada.onerror=function(){if(fichaAtual()===f&&this.isConnected){FICHAS.zoom.classList.add("oculto");fichaStatus("Não foi possível abrir esta referência. Os dados armazenados foram preservados.",true);}};ampliada.src=rec.src;ampliada.alt=b.getAttribute("aria-label")||"Referência do personagem";FICHAS.zoom.classList.remove("oculto");FICHAS.zoom.querySelector("button").focus();
+    }catch(e){fichaStatus("Não foi possível ler esta referência. Reabra a ficha para tentar novamente.",true);}
+  }
   else if(b.hasAttribute("data-ficha-retirar-imagem")||b.hasAttribute("data-ficha-restaurar-imagem")){var retirar=b.hasAttribute("data-ficha-retirar-imagem"),iid=b.getAttribute(retirar?"data-ficha-retirar-imagem":"data-ficha-restaurar-imagem"),im=f.imagens.filter(function(x){return x.id===iid;})[0];if(im){im.retirada=retirar;f.atualizadoEm=Date.now();fichasGravar();renderFichasPersonagem();}}
   else if(b.hasAttribute("data-ficha-arquivar")){f.arquivada=true;FICHAS.atual=null;fichasGravar();renderFichasPersonagem();}
 }
@@ -5575,7 +5664,13 @@ async function adicionarFichaImagens(arquivos){
   FICHAS.importando=false;if(FICHAS.janela&&!FICHAS.janela.classList.contains("oculto"))renderFichasPersonagem();fichaStatus(ok+" referência(s) guardada(s)."+(falhas?" "+falhas+" não foram guardadas; verifique o formato e o espaço do aparelho.":""),!!falhas);
 }
 async function exportarFichasPersonagem(){
-  var fichas=dadosProfundos(fichasLer()),imagens=[];for(var i=0;i<fichas.length;i++)for(var j=0;j<fichas[i].imagens.length;j++){var im=fichas[i].imagens[j],chave=fichaImagemChave(fichas[i].id,im.id),rec=await bdLer(chave);if(rec&&/^data:image\//i.test(rec.src||""))imagens.push({chave:chave,src:rec.src,nome:im.nome});}return{fichas:fichas,imagens:imagens};
+  var fichas=dadosProfundos(fichasLer()),imagens=[];
+  for(var i=0;i<fichas.length;i++)for(var j=0;j<fichas[i].imagens.length;j++){
+    var im=fichas[i].imagens[j],chave=fichaImagemChave(fichas[i].id,im.id),rec=await bdLer(chave);
+    if(!rec||!/^data:image\//i.test(rec.src||"")){var erro=new Error("Uma imagem de ficha não está disponível. O backup completo foi interrompido.");erro.code="backup_incompleto";throw erro;}
+    imagens.push({chave:chave,src:rec.src,nome:im.nome});
+  }
+  return{fichas:fichas,imagens:imagens};
 }
 async function importarFichasPersonagem(pacote){
   if(!pacote||!Array.isArray(pacote.fichas))return;var fichas=pacote.fichas.map(normalizarFichaPersonagem).filter(Boolean),permitidas={};fichas.forEach(function(f){f.imagens.forEach(function(im){permitidas[fichaImagemChave(f.id,im.id)]=true;});});
@@ -5631,7 +5726,7 @@ function htmlEntradaBiblioteca(){
     '</div></section>';
 }
 function ligarEntradaBiblioteca(){
-  Array.prototype.forEach.call(tela.querySelectorAll("[data-entrada-obra]"),function(b){ b.onclick=function(){ var idObra=b.getAttribute("data-entrada-obra"), lista=caps.filter(function(c){return c.obraId===idObra;}); modoNotas=false; obraAtual=idObra; alternarLateral(false); if(lista.length) abrirCapitulo(lista[0].id); else{doc=null;desenhar();} }; });
+  Array.prototype.forEach.call(tela.querySelectorAll("[data-entrada-obra]"),function(b){ b.onclick=function(){ return abrirObra(b.getAttribute("data-entrada-obra")); }; });
   Array.prototype.forEach.call(tela.querySelectorAll("[data-entrada-nota]"),function(b){ b.onclick=function(){ abrirNota(b.getAttribute("data-entrada-nota")); }; });
   Array.prototype.forEach.call(tela.querySelectorAll("[data-entrada-livre]"),function(b){ b.onclick=function(){ abrirDesenhoLivre(desenhosLivres.filter(function(x){return x.id===b.getAttribute("data-entrada-livre");})[0]); }; });
   Array.prototype.forEach.call(tela.querySelectorAll("[data-entrada-livre-renomear]"),function(b){ b.onclick=function(ev){ev.stopPropagation();renomearDesenhoLivre(b.getAttribute("data-entrada-livre-renomear"));}; });
@@ -5671,7 +5766,9 @@ function aviso(txt){
 function atualizarConexao(){
   var a=el("estadoConexao"); if(!a) return;
   a.classList.remove("offline","pendente");
-  a.textContent="Salvo neste aparelho";
+  if(window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false)a.textContent="Temporário nesta aba · baixe um backup";
+  else if(sujo||notaSuja||salvando||salvandoNota){a.textContent="Salvamento local pendente";a.classList.add("pendente");}
+  else a.textContent="Salvo neste aparelho";
 }
 
 /* ========== armazenamento e sincronização ========== */
@@ -5711,7 +5808,7 @@ async function atualizarContaNuvem(){
   /* O modo antigo de nuvem permanece desligado; o backup Supabase abaixo é
      independente e nunca muda a fonte local dos dados. */
   nuvemAtiva=false; contaNuvemPronta=!!usuario;
-  if(alvo) alvo.textContent=usuario?"Conta conectada · cópia automática ativa":"Salvo neste aparelho";
+  if(alvo) alvo.textContent=usuario?"Conta conectada · cópias em versões":"Nuvem desconectada";
   if(botao) botao.textContent=usuario?"Conta conectada":"Conectar nuvem";
   return usuario||null;
 }
@@ -5723,7 +5820,7 @@ async function iniciarContaNuvem(){
 }
 async function usarContaNuvem(){
   var usuario=await atualizarContaNuvem();
-  if(usuario){ aviso("Sua conta já está conectada. A sincronização continuará manual até ser ativada por você."); return true; }
+  if(usuario){ aviso("Conta conectada. Cópias automáticas após 2 minutos sem alterações. Consulte as versões em Backup."); return true; }
   el("dlgNuvem").showModal(); return false;
 }
 async function enviarContaNuvem(criar){
@@ -5737,49 +5834,183 @@ async function enviarContaNuvem(criar){
   await atualizarContaNuvem(); agendarBackupNuvem(); el("dlgNuvem").close(); el("senhaNuvem").value=""; aviso("Conta conectada. A primeira cópia será enviada após 2 minutos sem alterações.");
 }
 var temporizadorBackupNuvem=null, backupNuvemEmCurso=false;
-function agendarBackupNuvem(){
-  if(!contaNuvemPronta) return;
-  clearTimeout(temporizadorBackupNuvem);
-  temporizadorBackupNuvem=setTimeout(enviarBackupNuvemAutomatico,120000);
+var COPIA_NUVEM={revisao:0,tentativas:0,pendente:null,ultima:null,lista:[],contextoLista:null,offset:0,consultando:false,baixando:false};
+function erroCopiaNuvem(codigo,mensagem){var e=new Error(mensagem);e.code=codigo;return e;}
+function esperarCopiaNuvem(promessa){
+  return new Promise(function(resolve,reject){
+    var t=setTimeout(function(){reject(erroCopiaNuvem("nuvem_tempo","A nuvem demorou a responder."));},60000);
+    Promise.resolve(promessa).then(function(v){clearTimeout(t);resolve(v);},function(e){clearTimeout(t);reject(e);});
+  });
 }
-async function enviarBackupNuvemAutomatico(){
-  if(backupNuvemEmCurso||!navigator.onLine||!contaNuvemPronta) return;
-  var cfg=window.MesaNuvem, alvo=el("estadoNuvem"); if(!cfg||!cfg.client) return;
+async function contextoCopiaNuvem(){
+  var cfg=window.MesaNuvem;if(!cfg||!cfg.client)throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
+  var r=await esperarCopiaNuvem(cfg.client.auth.getSession()),u=r&&r.data&&r.data.session&&r.data.session.user;
+  if(r&&r.error)throw r.error;
+  if(!u||typeof u.id!=="string"||! /^[a-zA-Z0-9_-]+$/.test(u.id))throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
+  return {cfg:cfg,client:cfg.client,uid:u.id};
+}
+async function confirmarContaCopia(c){
+  var atual=await contextoCopiaNuvem();
+  if(atual.cfg!==c.cfg||atual.client!==c.client||atual.uid!==c.uid)throw erroCopiaNuvem("nuvem_conta","A conta mudou. Atualize a lista e tente novamente.");
+}
+function caminhoVersaoCopia(caminho,uid){
+  var prefixo=uid+"/sincronizacao/versoes/";
+  return typeof caminho==="string"&&caminho.indexOf(prefixo)===0&&/^\d{17}-[a-f0-9]{32}\.json$/.test(caminho.slice(prefixo.length));
+}
+function nomeVersaoCopia(){
+  if(!window.crypto||!crypto.getRandomValues)throw erroCopiaNuvem("nuvem_integridade","A verificação segura não está disponível neste navegador.");
+  var bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+  return new Date().toISOString().replace(/\D/g,"")+"-"+Array.prototype.map.call(bytes,function(v){return v.toString(16).padStart(2,"0");}).join("")+".json";
+}
+function backupNuvemTemConteudo(p){
+  return [p.obras,p.capitulos,p.notas,p.desenhos,p.desenhosLivres,p.fichasPersonagem&&p.fichasPersonagem.fichas].some(function(a){return Array.isArray(a)&&a.length>0;});
+}
+async function resumoCopiaNuvem(p){
+  var copia=dadosProfundos(p);delete copia.criadoEm;delete copia.integridade;
+  copia.preferenciasLocal=(copia.preferenciasLocal||[]).filter(function(v){return v.chave!=="mesa:offline-cache"&&!/^mesa:(backup-|sync-meta)/.test(v.chave);}).sort(function(a,b){return a.chave<b.chave?-1:a.chave>b.chave?1:0;});
+  var resumo=await sha256Texto(JSON.stringify(copia));
+  if(!resumo)throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 não está disponível. Use um backup local e tente em uma página segura.");
+  return resumo;
+}
+async function validarTextoCopiaNuvem(texto,estrito){
+  var v=await verificarTextoBackup(texto);
+  if(!v.ok||(estrito&&v.legado))throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 da cópia falhou ou está ausente.");
+  var plano=validarBackupParaImportacao(v.pacote);
+  if(estrito&&plano.avisos.length)throw erroCopiaNuvem("nuvem_integridade","A cópia contém referências a imagens ausentes. Preserve seus backups e confira as imagens.");
+  v.plano=plano;return v;
+}
+async function lerTextoCopiaNuvem(c,caminho){
+  if(caminho!==c.uid+"/sincronizacao/atual.json"&&!caminhoVersaoCopia(caminho,c.uid))throw erroCopiaNuvem("nuvem_caminho","O caminho da cópia não pertence à conta atual.");
+  await confirmarContaCopia(c);
+  var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").download(caminho));if(r.error)throw r.error;
+  if(!r.data||typeof r.data.text!=="function")throw erroCopiaNuvem("nuvem_integridade","A nuvem não retornou o arquivo esperado.");
+  var texto=await esperarCopiaNuvem(r.data.text());await confirmarContaCopia(c);return texto;
+}
+function programarCopiaNuvem(atraso){
+  clearTimeout(temporizadorBackupNuvem);
+  temporizadorBackupNuvem=setTimeout(function(){temporizadorBackupNuvem=null;enviarBackupNuvemAutomatico();},atraso);
+}
+function agendarBackupNuvem(){
+  COPIA_NUVEM.revisao++;COPIA_NUVEM.tentativas=0;
+  if(!contaNuvemPronta) return;
+  programarCopiaNuvem(120000);
+}
+/* O editor usa este ponto de entrada depois de confirmar uma transação. */
+window.agendarBackupNuvem=agendarBackupNuvem;
+async function enviarBackupNuvemAutomatico(forcar){
+  if(backupNuvemEmCurso)return false;
+  var alvo=el("estadoNuvem");
+  if(!navigator.onLine){if(alvo)alvo.textContent="Sem internet · cópia pendente";return false;}
+  if(!contaNuvemPronta&&forcar!==true)return false;
+  clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
+  if(forcar===true){COPIA_NUVEM.tentativas=0;COPIA_NUVEM.pendente=null;}
   backupNuvemEmCurso=true;
+  var revisao=COPIA_NUVEM.revisao,adiar=false,falhou=false,confirmou=false;
   try{
-    var sessao=await cfg.client.auth.getSession(), usuario=sessao&&sessao.data&&sessao.data.session&&sessao.data.session.user;
-    if(!usuario) return;
-    if(alvo) alvo.textContent="Criando cópia na nuvem…";
-    var pacote=await criarBackup(), texto=await prepararBackup(pacote);
-    var arquivo=new Blob([texto],{type:"application/json"});
-    var caminho=usuario.id+"/sincronizacao/atual.json";
-    var r=await cfg.client.storage.from("mesa-arquivos").upload(caminho,arquivo,{upsert:true,contentType:"application/json"});
-    if(r.error) throw r.error;
-    gravarMetaLocal("backup-nuvem-meta",{em:Date.now(),tamanho:texto.length,caminho:caminho});
-    if(alvo) alvo.textContent="Nuvem atualizada · "+horaCurta(Date.now());
+    var c=await contextoCopiaNuvem(),p=COPIA_NUVEM.pendente;
+    if(p&&p.uid!==c.uid){COPIA_NUVEM.pendente=null;p=null;}
+    if(p)revisao=p.revisao;
+    if(!p){
+      if(alvo)alvo.textContent="Preparando versão da nuvem…";
+      var pacote=await criarBackup();
+      if(!backupNuvemTemConteudo(pacote)){if(alvo)alvo.textContent="Nenhum trabalho local · cópias anteriores preservadas";return false;}
+      var resumo=await resumoCopiaNuvem(pacote),anterior=COPIA_NUVEM.ultima||lerMetaLocal("backup-nuvem-versao-v1");
+      if(forcar!==true&&anterior&&anterior.uid===c.uid&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
+        var antiga=await validarTextoCopiaNuvem(await lerTextoCopiaNuvem(c,anterior.caminho),true);
+        if(await resumoCopiaNuvem(antiga.pacote)!==resumo)throw erroCopiaNuvem("nuvem_integridade","A cópia anterior não corresponde aos trabalhos locais. Use Enviar cópia agora para criar outra versão.");
+        COPIA_NUVEM.ultima=anterior;COPIA_NUVEM.tentativas=0;
+        confirmou=true;
+        if(alvo)alvo.textContent="Cópia anterior verificada · sem novas alterações";return true;
+      }
+      var texto=await prepararBackup(pacote);await validarTextoCopiaNuvem(texto,true);
+      p={uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false};
+      COPIA_NUVEM.pendente=p;
+    }
+    await confirmarContaCopia(c);
+    if(!p.enviada){
+      if(alvo)alvo.textContent="Enviando nova versão da nuvem…";
+      var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").upload(p.caminho,new Blob([p.texto],{type:"application/json"}),{upsert:false,cacheControl:"0",contentType:"application/json"}));
+      if(r.error){
+        /* Uma resposta perdida pode esconder um upload já concluído. Não troque o caminho. */
+        var existente=await lerTextoCopiaNuvem(c,p.caminho);
+        if(existente!==p.texto)throw erroCopiaNuvem("nuvem_integridade","O arquivo remoto não corresponde ao envio. Nenhuma cópia foi substituída.");
+      }
+      p.enviada=true;
+    }
+    if(alvo)alvo.textContent="Conferindo a versão enviada…";
+    var relido=await lerTextoCopiaNuvem(c,p.caminho);
+    if(relido!==p.texto)throw erroCopiaNuvem("nuvem_integridade","A releitura da nuvem divergiu do arquivo enviado. A cópia não foi confirmada.");
+    await validarTextoCopiaNuvem(relido,true);await confirmarContaCopia(c);
+    var meta={uid:c.uid,resumo:p.resumo,caminho:p.caminho,em:Date.now()};
+    COPIA_NUVEM.ultima=meta;COPIA_NUVEM.pendente=null;COPIA_NUVEM.tentativas=0;
+    gravarMetaLocal("backup-nuvem-versao-v1",meta);
+    confirmou=true;
+    if(alvo)alvo.textContent="Versão na nuvem verificada · "+horaCurta(meta.em);
+    return true;
   }catch(e){
-    var detalhe=String((e&&e.message)||"erro desconhecido").replace(/\s+/g," ").slice(0,150);
-    if(alvo) alvo.textContent="Cópia pendente: "+detalhe;
-    aviso("A cópia na nuvem não foi confirmada. Veja o motivo ao lado de Conectar nuvem e mantenha abertos os trabalhos ainda não salvos.");
-  }finally{ backupNuvemEmCurso=false; }
+    if(e&&e.code==="backup_ocupado"){adiar=true;if(alvo)alvo.textContent="Cópia adiada · operação local em andamento";return false;}
+    falhou=true;COPIA_NUVEM.tentativas++;
+    var leituraLocal=e&&/^(leitura_imagem|registro_imagem|desenho_ausente)$/.test(e.code||"");
+    var detalhe=e&&(leituraLocal||/^(nuvem_|backup_)/.test(e.code||""))?e.message:"Confira conexão, conta, espaço e permissões do bucket mesa-arquivos.";
+    if(alvo)alvo.textContent="Cópia não confirmada · "+(leituraLocal?"falha na leitura local: ":"")+detalhe;
+    aviso("A nova cópia na nuvem não foi confirmada. As versões anteriores permanecem preservadas. Use Backup para tentar novamente.");return false;
+  }finally{
+    backupNuvemEmCurso=false;
+    if(confirmou&&COPIA_NUVEM.revisao!==revisao&&alvo)alvo.textContent="Versão verificada · novas alterações aguardando cópia";
+    if(contaNuvemPronta&&adiar)programarCopiaNuvem(120000);
+    else if(contaNuvemPronta&&falhou&&COPIA_NUVEM.tentativas<5)programarCopiaNuvem(Math.min(120000*Math.pow(2,COPIA_NUVEM.tentativas-1),900000));
+    else if(falhou){clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;if(alvo)alvo.textContent+=" Tentativas automáticas pausadas; use Enviar cópia agora.";}
+    else if(contaNuvemPronta&&COPIA_NUVEM.revisao!==revisao)programarCopiaNuvem(120000);
+  }
 }
 async function restaurarBackupDaNuvem(){
-  var cfg=window.MesaNuvem, alvo=el("integridadeBackup");
-  if(!cfg||!cfg.client){ aviso("A conexão com a nuvem não foi carregada."); return; }
-  var sessao=await cfg.client.auth.getSession(), usuario=sessao&&sessao.data&&sessao.data.session&&sessao.data.session.user;
-  if(!usuario){ await usarContaNuvem(); return; }
+  return listarCopiasNuvem(false);
+}
+async function listarCopiasNuvem(mais){
+  if(COPIA_NUVEM.consultando||COPIA_NUVEM.baixando)return false;
+  COPIA_NUVEM.consultando=true;
+  var alvo=el("estadoCopiasNuvem"),botao=el("btMaisCopiasNuvem");
   try{
-    alvo.textContent="Baixando a cópia protegida da nuvem…";
-    var caminho=usuario.id+"/sincronizacao/atual.json", r=await cfg.client.storage.from("mesa-arquivos").download(caminho);
-    if(r.error) throw r.error;
-    var texto=await r.data.text(), ver=await verificarTextoBackup(texto);
-    if(!ver.ok) throw new Error("A verificação SHA-256 da cópia na nuvem falhou.");
-    alvo.textContent="Cópia da nuvem verificada. Confirme a importação na próxima mensagem.";
-    await importarBackupArquivo(new File([texto],"mesa-de-roteiro-copia-nuvem.json",{type:"application/json"}));
+    alvo.textContent="Consultando cópias da conta…";
+    var c=await contextoCopiaNuvem();
+    if(!mais||!COPIA_NUVEM.contextoLista||COPIA_NUVEM.contextoLista.uid!==c.uid||COPIA_NUVEM.contextoLista.client!==c.client||COPIA_NUVEM.contextoLista.cfg!==c.cfg){COPIA_NUVEM.lista=[];COPIA_NUVEM.offset=0;COPIA_NUVEM.contextoLista=c;}
+    var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").list(c.uid+"/sincronizacao/versoes",{limit:50,offset:COPIA_NUVEM.offset,sortBy:{column:"name",order:"desc"}}));if(r.error)throw r.error;
+    if(!Array.isArray(r.data))throw erroCopiaNuvem("nuvem_integridade","A listagem da nuvem está incompleta.");
+    await confirmarContaCopia(c);
+    r.data.forEach(function(v){var caminho=c.uid+"/sincronizacao/versoes/"+v.name;if(caminhoVersaoCopia(caminho,c.uid)&&!COPIA_NUVEM.lista.some(function(a){return a.caminho===caminho;}))COPIA_NUVEM.lista.push({caminho:caminho,nome:v.name,data:v.created_at||"",legado:false});});
+    COPIA_NUVEM.offset+=r.data.length;
+    botao.classList.toggle("oculto",r.data.length<50);
+    /* O arquivo usado pelas versões antigas permanece disponível, sem ser regravado. */
+    if(!COPIA_NUVEM.lista.some(function(v){return v.legado;}))COPIA_NUVEM.lista.push({caminho:c.uid+"/sincronizacao/atual.json",nome:"Cópia antiga (se disponível)",legado:true});
+    renderCopiasNuvem();alvo.textContent="Selecione uma cópia para baixar e verificar. O download não altera os trabalhos locais.";return true;
   }catch(e){
-    alvo.textContent="Não foi possível recuperar a cópia na nuvem: "+(e&&e.message?e.message:"erro desconhecido")+".";
-    aviso("A recuperação não alterou seus dados locais.");
-  }
+    COPIA_NUVEM.lista=[];COPIA_NUVEM.contextoLista=null;botao.classList.add("oculto");renderCopiasNuvem();
+    alvo.textContent="Não foi possível consultar as cópias. Confira sua conta, conexão e permissões; uma lista vazia não comprova ausência de backups.";return false;
+  }finally{COPIA_NUVEM.consultando=false;}
+}
+function renderCopiasNuvem(){
+  var lista=el("listaCopiasNuvem");lista.replaceChildren();
+  COPIA_NUVEM.lista.forEach(function(v,i){
+    var linha=document.createElement("p"),texto=document.createElement("span"),bt=document.createElement("button");
+    texto.textContent=v.legado?v.nome:("Versão "+(v.data?dataNota(v.data,true):v.nome));
+    bt.type="button";bt.className="bt mini";bt.textContent="Baixar e verificar";
+    bt.onclick=function(){return baixarCopiaNuvem(i);};linha.append(texto,document.createTextNode(" "),bt);lista.appendChild(linha);
+  });
+}
+async function baixarCopiaNuvem(indice){
+  if(COPIA_NUVEM.baixando||COPIA_NUVEM.consultando)return false;
+  var item=COPIA_NUVEM.lista[indice],c=COPIA_NUVEM.contextoLista,alvo=el("estadoCopiasNuvem");if(!item||!c)return false;
+  COPIA_NUVEM.baixando=true;
+  try{
+    if(!baixador)throw erroCopiaNuvem("nuvem_download","Download indisponível neste navegador.");
+    alvo.textContent="Baixando e verificando a cópia…";
+    var texto=await lerTextoCopiaNuvem(c,item.caminho),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);
+    var p=ver.pacote,resumo=(p.obras||[]).length+" obra(s), "+(p.capitulos||[]).length+" capítulo(s), "+(p.notas||[]).length+" nota(s), "+(p.desenhos||[]).length+" desenho(s).";
+    await baixador.save({filename:item.legado?"mesa-de-roteiro-copia-antiga.json":"mesa-de-roteiro-"+item.nome,data:texto});
+    alvo.textContent=(ver.legado?"Cópia antiga baixada sem SHA-256; confira o conteúdo.":"Arquivo verificado por SHA-256 e preparado para download.")+" "+resumo+(ver.plano.avisos.length?" Atenção: "+ver.plano.avisos.join("; ")+".":"")+" Preserve um backup local antes de usar Importar backup.";
+    return true;
+  }catch(e){alvo.textContent="O download não foi confirmado. A cópia pode estar ausente, inacessível ou inválida. Seus trabalhos locais permanecem intactos.";return false;}
+  finally{COPIA_NUVEM.baixando=false;}
 }
 async function iniciarArmazenamento(){
   dbLocal=window.__mesaArmazenamento.db;
@@ -5830,9 +6061,16 @@ function atualizarPastaBackup(){
 }
 /* Os pixels das camadas e as imagens das notas seguem juntos no arquivo. */
 async function criarBackup(){
-  var grupos=["obras","capitulos","notas"], pacote={versao:3,formato:"mesa-de-roteiro-backup",criadoEm:Date.now(),obras:[],capitulos:[],notas:[],desenhos:[],desenhosLivres:desenhosLivres,preferenciasLocal:preferenciasBackup()};
-  if(sujo) await salvar();
-  if(notaSuja) await salvarNota();
+  if(acaoTextoAtiva){var ocupado=new Error("Backup adiado: uma operação local ainda está em andamento.");ocupado.code="backup_ocupado";throw ocupado;}
+  var pacote=await executarAcaoTexto(criarBackupSalvo,true);
+  if(!pacote)throw new Error("Backup interrompido: aguarde a operação em andamento e confirme o salvamento das alterações antes de tentar novamente.");
+  return pacote;
+}
+async function criarBackupSalvo(){
+  /* Salvar o desenho pode atualizar os metadados do capítulo via aoMudar. */
+  var desenhos=window.EditorDesenho&&window.EditorDesenho.exportarDados?await window.EditorDesenho.exportarDados():[];
+  if(await salvarPendenciasTexto()!==true)throw new Error("Backup interrompido: não foi possível confirmar os metadados após salvar o desenho.");
+  var grupos=["obras","capitulos","notas"], pacote={versao:3,formato:"mesa-de-roteiro-backup",criadoEm:Date.now(),obras:[],capitulos:[],notas:[],desenhos:desenhos,desenhosLivres:desenhosLivres,preferenciasLocal:preferenciasBackup()};
   for(var i=0;i<grupos.length;i++){
     var grupo=grupos[i], lista=await db.collection(base+"/"+grupo).get();
     pacote[grupo]=lista.docs.map(function(item){ return {id:item.id,dados:dadosProfundos(item.data())}; });
@@ -5845,11 +6083,16 @@ async function criarBackup(){
   }
   for(var ni=0;ni<pacote.notas.length;ni++){
     var nd=pacote.notas[ni].dados, refs=Array.isArray(nd.imagens)?nd.imagens:[]; nd.imagensDados=[];
-    for(var nj=0;nj<refs.length;nj++){ var rec=await bdLer(notaImagemChave(pacote.notas[ni].id,refs[nj].id)); if(rec&&rec.src) nd.imagensDados.push({meta:refs[nj],src:rec.src}); }
+    for(var nj=0;nj<refs.length;nj++){var rec=await bdLer(notaImagemChave(pacote.notas[ni].id,refs[nj].id));if(!rec||!rec.src){var erro=new Error("Backup interrompido: uma imagem da nota não está disponível. Preserve os backups anteriores e verifique a nota antes de tentar novamente.");erro.code="backup_incompleto";throw erro;}nd.imagensDados.push({meta:refs[nj],src:rec.src});}
   }
-  if(window.EditorDesenho&&window.EditorDesenho.exportarDados) pacote.desenhos=await window.EditorDesenho.exportarDados();
+  conferirDesenhosReferenciados(pacote);
   pacote.fichasPersonagem=await exportarFichasPersonagem();
   return pacote;
+}
+function conferirDesenhosReferenciados(pacote){
+  var encontrados=Object.create(null);
+  (pacote.desenhos||[]).forEach(function(v){if(v&&v.rec&&Array.isArray(v.rec.camadas)&&v.rec.camadas.length&&v.rec.camadas.every(function(c){return c&&c.blob;}))encontrados[String(v.id)]=true;});
+  (pacote.capitulos||[]).forEach(function(c){((c.dados&&c.dados.paginas)||[]).forEach(function(pg){(pg.paineis||[]).forEach(function(pn){if(pn.temDesenho&&!encontrados[String(pn.id)]){var erro=new Error("Um painel referencia um desenho indisponível. O backup completo foi interrompido; preserve suas cópias anteriores.");erro.code="backup_incompleto";throw erro;}});});});
 }
 async function baixarBackup(){
   if(!baixador){ aviso("Download indisponível neste navegador."); return; }
@@ -5973,6 +6216,9 @@ function validarBackupParaImportacao(pacote){
 }
 async function importarBackupArquivo(arquivo){
   if(!arquivo) return;
+  return executarAcaoTexto(function(){return importarBackupSalvo(arquivo);});
+}
+async function importarBackupSalvo(arquivo){
   var importacaoIniciada=false;
   try{
     var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote, grupos=["obras","capitulos","notas"];
@@ -5995,7 +6241,7 @@ async function importarBackupArquivo(arquivo){
           dadosItem.imagens=Array.isArray(dadosItem.imagens)?dadosItem.imagens.slice():[];
           for(var imj=0;imj<dadosItem.imagensDados.length;imj++){
             var imagemBackup=dadosItem.imagensDados[imj], metaImagem=imagemBackup.meta||{};
-            await bdGravar(notaImagemChave(itens[j].id,metaImagem.id),{src:imagemBackup.src,nome:metaImagem.nome||"Imagem",tipo:metaImagem.tipo||"image/*",tamanho:metaImagem.tamanho||0,criadoEm:metaImagem.criadoEm||Date.now()});
+            if(await bdGravar(notaImagemChave(itens[j].id,metaImagem.id),{src:imagemBackup.src,nome:metaImagem.nome||"Imagem",tipo:metaImagem.tipo||"image/*",tamanho:metaImagem.tamanho||0,criadoEm:metaImagem.criadoEm||Date.now()})!==true)throw new Error("Falha ao gravar imagem do backup.");
             var posImagem=dadosItem.imagens.findIndex(function(im){return String(im.id)===String(metaImagem.id);});
             if(posImagem<0)dadosItem.imagens.push(metaImagem);else dadosItem.imagens[posImagem]=metaImagem;
           }
@@ -6006,6 +6252,8 @@ async function importarBackupArquivo(arquivo){
     }
     registrarSincronizacao();
     await carregarListas();
+    /* A tela antiga não pode sobrescrever os registros recém-importados. */
+    mostrarEntradaInicial();
     desenharLateral(); desenhar(); atualizarPersonagens();
     el("integridadeBackup").textContent=ver.legado?"Backup antigo importado sem soma de verificação.":"Backup verificado por SHA-256 e importado.";
     if(plano.avisos.length)el("integridadeBackup").textContent+=" Atenção: "+plano.avisos.join("; ")+". As referências foram preservadas.";
@@ -6057,39 +6305,106 @@ function obraObjAtual(){
   return obras.filter(function(o){return o.id===obraAtual;})[0]||null;
 }
 
+/* As revisões são apenas desta sessão. Cada set recebe uma cópia independente. */
+function rotuloSalvoTexto(){
+  return window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false
+    ? "temporário nesta aba · baixe um backup" : "salvo neste aparelho";
+}
+function mostrarEstadoTextoSalvo(){
+  estado.textContent=sujo||notaSuja?"alterações pendentes":rotuloSalvoTexto();
+}
+function atualizarTentativaTexto(){
+  if(typeof atualizarConexao==="function")atualizarConexao();
+  var bt=el("btTentarSalvarTexto"); if(!bt)return;
+  bt.classList.toggle("oculto",!(sujo||notaSuja));
+  bt.disabled=!!(salvando||salvandoNota||acaoTextoAtiva);
+}
+function falhaSalvarTexto(e,nota){
+  estado.textContent="erro ao salvar · alterações pendentes";
+  atualizarTentativaTexto();
+  aviso(e&&e.code==="quota_exceeded"
+    ? "O armazenamento está cheio. As alterações continuam nesta aba. Preserve um backup anterior e libere espaço antes de tentar salvar novamente."
+    : "Não foi possível salvar "+(nota?"a nota":"o capítulo")+". As alterações continuam nesta aba. Use Tentar salvar e não feche a página.");
+}
+async function gravarTexto(grupo,chave,corpo){
+  try{
+    if(grupo==="capitulos"&&nuvemAtiva)await salvarCapituloNuvem(chave,corpo);
+    else await db.collection(base+"/"+grupo).doc(chave).set(corpo);
+  }catch(e){
+    /* No modo local não repetimos a mesma escrita que acabou de falhar. */
+    if(db===dbLocal||!dbLocal)throw e;
+    await dbLocal.collection(baseLocal+"/"+grupo).doc(chave).set(corpo);
+    enfileirarNuvem(grupo,chave,corpo);
+    return;
+  }
+  if(db!==dbLocal&&dbLocal)await dbLocal.collection(baseLocal+"/"+grupo).doc(chave).set(corpo);
+  if(nuvemAtiva)removerFilaNuvem(grupo,chave);
+}
+async function salvarPendenciasTexto(){
+  clearTimeout(pendente); clearTimeout(pendenteNota);
+  if(await salvar()!==true)return false;
+  if(await salvarNota()!==true)return false;
+  return !sujo&&!notaSuja&&!salvando&&!salvandoNota;
+}
+async function executarAcaoTexto(acao,propagarErro){
+  if(acaoTextoAtiva){aviso("Aguarde a operação de salvamento em andamento.");return false;}
+  acaoTextoAtiva=true; atualizarTentativaTexto();
+  var foco=document.activeElement, travas=[];
+  /* Impede editar o item anterior enquanto uma leitura/criação assíncrona termina. */
+  document.querySelectorAll("body > :not(script):not(style)").forEach(function(no){travas.push({no:no,inert:no.inert});no.inert=true;});
+  try{
+    if(!await salvarPendenciasTexto())return false;
+    return await acao();
+  }catch(e){
+    if(propagarErro)throw e;
+    aviso("A operação não foi concluída. Preserve esta aba e seus backups antes de tentar novamente.");return false;
+  }finally{
+    travas.forEach(function(t){t.no.inert=t.inert;});
+    acaoTextoAtiva=false; atualizarTentativaTexto();
+    if((sujo||notaSuja)&&foco&&foco.isConnected&&foco.focus)foco.focus({preventScroll:true});
+  }
+}
+/* Atalhos e colagem também podem chegar ao document sem foco em um controle. */
+["keydown","beforeinput","paste","drop","pointerdown","click"].forEach(function(tipo){
+  document.addEventListener(tipo,function(ev){if(acaoTextoAtiva){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+});
 function marcarSujo(){
-  sujo=true; estado.textContent="não salvo";
+  sujo=true; revisaoCapitulo++; estado.textContent="não salvo"; atualizarTentativaTexto();
   clearTimeout(pendente);
   pendente=setTimeout(salvar,700);
 }
 
 async function salvar(){
-  if(!db||!doc||salvando) return;
-  salvando=true; estado.textContent="salvando…";
-  try{
-    doc.atualizadoEm=Date.now();
-    var corpo=JSON.parse(JSON.stringify(doc));
-    delete corpo.id;
-    if(nuvemAtiva) await salvarCapituloNuvem(doc.id,corpo); else await colCaps().doc(doc.id).set(corpo);
-    try{ await dbLocal.collection(baseLocal+"/capitulos").doc(doc.id).set(corpo); }catch(localErr){}
-    if(nuvemAtiva) removerFilaNuvem("capitulos",doc.id);
-    salvarCacheOffline();
-    sujo=false; estado.textContent="salvo";
-    var c=caps.filter(function(x){return x.id===doc.id;})[0];
-    if(c){ c.titulo=doc.titulo; c.numero=doc.numero; c.nPaineis=contarPaineis(doc.paginas); c.paginas=(doc.paginas||[]).length; c.status=statusCapitulo(doc.status); c.progresso=progressoCapitulo(doc.progresso); c.atualizadoEm=doc.atualizadoEm; }
-    registrarSincronizacao();
-    desenharLateral();
-    agendarBackupNuvem();
-  }catch(e){
-    try{ await dbLocal.collection(baseLocal+"/capitulos").doc(doc.id).set(corpo); }catch(localErr){}
-    enfileirarNuvem("capitulos",doc.id,corpo); salvarCacheOffline();
-    estado.textContent="erro ao salvar";
-    aviso(e&&e.code==="quota_exceeded"
-      ? "Espaço cheio. Apague um capítulo antigo para continuar."
-      : "Não foi possível salvar. As mudanças seguem na tela — tente de novo em instantes.");
-  }
-  salvando=false;
-  if(sujo){ clearTimeout(pendente); pendente=setTimeout(salvar,900); }
+  if(salvando)return salvando;
+  clearTimeout(pendente);
+  if(!sujo)return true;
+  if(!db||!doc){falhaSalvarTexto(null,false);return false;}
+  var alvo=doc, chave=alvo.id;
+  var tarefa=(async function(){
+    /* A primeira microtarefa garante que salvando seja definido antes da escrita. */
+    await Promise.resolve();
+    try{
+      do{
+        if(doc!==alvo)throw new Error("O capítulo ativo mudou durante o salvamento.");
+        var revisao=revisaoCapitulo;
+        alvo.atualizadoEm=Date.now();
+        var corpo=JSON.parse(JSON.stringify(alvo));delete corpo.id;
+        estado.textContent="salvando…";
+        await gravarTexto("capitulos",chave,corpo);
+        if(doc!==alvo)throw new Error("O capítulo ativo mudou durante o salvamento.");
+        if(revisao!==revisaoCapitulo)continue;
+        sujo=false;
+        if(window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false)textosVolateis=true;
+        var c=caps.filter(function(x){return x.id===chave;})[0];
+        if(c){c.titulo=corpo.titulo;c.numero=corpo.numero;c.nPaineis=contarPaineis(corpo.paginas);c.paginas=(corpo.paginas||[]).length;c.status=statusCapitulo(corpo.status);c.progresso=progressoCapitulo(corpo.progresso);c.atualizadoEm=corpo.atualizadoEm;}
+      }while(sujo);
+    }catch(e){sujo=true;falhaSalvarTexto(e,false);return false;}
+    mostrarEstadoTextoSalvo();
+    try{salvarCacheOffline();registrarSincronizacao();desenharLateral();agendarBackupNuvem();}catch(e){}
+    return true;
+  })();
+  salvando=tarefa; atualizarTentativaTexto();
+  try{return await tarefa;}finally{if(salvando===tarefa)salvando=false;atualizarTentativaTexto();}
 }
 
 /* ========== notas livres ========== */
@@ -6113,7 +6428,7 @@ function dataNota(v,completa){
   }catch(e){ return "agora"; }
 }
 function marcarNotaSuja(){
-  notaSuja=true; estado.textContent="não salvo";
+  notaSuja=true; revisaoNota++; estado.textContent="não salvo"; atualizarTentativaTexto();
   clearTimeout(pendenteNota);
   pendenteNota=setTimeout(salvarNota,700);
 }
@@ -6136,13 +6451,17 @@ async function hidratarImagensNota(n){
     var im=lista[i], host=null, caixas=tela.querySelectorAll("[data-nota-img-id]"), j;
     for(j=0;j<caixas.length;j++) if(caixas[j].getAttribute("data-nota-img-id")===String(im.id)){host=caixas[j];break;}
     if(!host) continue;
-    var rec=await bdLer(notaImagemChave(n.id,im.id));
-    if(rec&&rec.src){ var img=document.createElement("img"); img.src=rec.src; img.alt=im.nome||"Imagem da nota"; host.querySelector(".nota-imagem-carregando").replaceWith(img); }
-    else host.querySelector(".nota-imagem-carregando").textContent="Imagem não guardada neste aparelho";
+    var rec=null,falhou=false;try{rec=await bdLer(notaImagemChave(n.id,im.id));}catch(e){falhou=true;}
+    if(!host.isConnected||notaAtual!==n.id)return;
+    var carregando=host.querySelector(".nota-imagem-carregando");if(!carregando)continue;
+    if(falhou){carregando.textContent="Falha ao ler a imagem. Reabra a nota para tentar novamente.";continue;}
+    if(rec&&rec.src){var img=document.createElement("img");img.alt=im.nome||"Imagem da nota";img.onerror=function(){if(this.isConnected){var erro=document.createElement("div");erro.className="nota-imagem-carregando";erro.textContent="Não foi possível abrir esta imagem. Os dados armazenados foram preservados.";this.replaceWith(erro);}};img.src=rec.src;carregando.replaceWith(img);}
+    else carregando.textContent="Imagem referenciada não encontrada";
   }
 }
 function renderReferenciasEditor(host,opcoes){
   if(!host) return;
+  var token={};host.__mesaReferenciasToken=token;
   opcoes=opcoes||{};
   var grupos=notasDeImagens(), referencias=[], dados={};
   grupos.forEach(function(n){
@@ -6186,17 +6505,18 @@ function renderReferenciasEditor(host,opcoes){
   host.oninput=function(ev){ if(ev.target&&ev.target.matches("[data-ref-busca]")) aplicarFiltroReferencias(ev.target.value); };
   referencias.forEach(function(ref){
     bdLer(notaImagemChave(ref.nota.id,ref.meta.id)).then(function(rec){
+      if(host.__mesaReferenciasToken!==token||!host.isConnected)return;
       var img=host.querySelector('[data-ref-img="'+ref.chave+'"]'), card=img&&img.closest("[data-ref-inserir]"), carregando=card&&card.querySelector(".ed-ref-carregando");
       if(!img||!card) return;
-      if(rec&&rec.src){ dados[ref.chave]={src:rec.src,tipo:ref.meta.tipo||"image/png"}; img.src=rec.src; img.classList.remove("oculto"); if(carregando) carregando.remove(); card.disabled=false; }
-      else if(carregando) carregando.textContent="Imagem indisponível neste aparelho";
-    }).catch(function(){});
+      if(rec&&rec.src){img.onload=function(){if(host.__mesaReferenciasToken!==token||!img.isConnected)return;dados[ref.chave]={src:rec.src,tipo:ref.meta.tipo||"image/png"};img.classList.remove("oculto");if(carregando)carregando.remove();card.disabled=false;};img.onerror=function(){if(host.__mesaReferenciasToken===token&&carregando)carregando.textContent="Falha ao abrir a imagem. Tente reabrir as referências.";};img.src=rec.src;}
+      else if(carregando) carregando.textContent="Imagem referenciada não encontrada";
+    }).catch(function(){if(host.__mesaReferenciasToken!==token||!host.isConnected)return;var img=host.querySelector('[data-ref-img="'+ref.chave+'"]'),card=img&&img.closest("[data-ref-inserir]"),texto=card&&card.querySelector(".ed-ref-carregando");if(texto)texto.textContent="Falha ao ler. Reabra as referências para tentar novamente.";});
   });
 }
 async function abrirNotasDasReferencias(){
   try{
     var ok=window.EditorDesenho&&window.EditorDesenho.fechar?await window.EditorDesenho.fechar():true;
-    if(ok===false)return false;await abrirNotas();return true;
+    if(ok===false)return false;return await abrirNotas()!==false;
   }catch(e){aviso("Não foi possível abrir as notas de referência. Confira o salvamento do desenho antes de tentar novamente.");return false;}
 }
 window.MesaReferencias={
@@ -6212,62 +6532,86 @@ async function anexarImagensNota(arquivos){
      Copie os arquivos para um Array comum antes do primeiro await. */
   var selecionados=[];
   try{ selecionados=Array.prototype.slice.call(arquivos||[]); }catch(e){ selecionados=[]; }
-  var n=notaObj(notaAtual); if(!n||!selecionados.length) return;
-  if(!Array.isArray(n.imagens)) n.imagens=[];
-  var adicionadas=0;
-  for(var i=0;i<selecionados.length;i++){
-    var arquivo=selecionados[i]; if(!arquivo||!/^image\//i.test(arquivo.type||"")) continue;
-    try{
-      var iid=id("ni"), src=await arquivoDataUrl(arquivo), meta={id:iid,nome:arquivo.name||"Imagem",tipo:arquivo.type||"image/*",tamanho:arquivo.size||0,criadoEm:Date.now()};
-      await bdGravar(notaImagemChave(n.id,iid),{src:src,nome:meta.nome,tipo:meta.tipo,tamanho:meta.tamanho,criadoEm:meta.criadoEm});
-      n.imagens.push(meta); adicionadas++;
-    }catch(e){ aviso("Não foi possível guardar uma das imagens."); }
-  }
-  if(adicionadas){ marcarNotaSuja(); desenharNotas(); aviso(adicionadas+" imagem(ns) adicionada(s) à nota e guardada(s) neste aparelho."); }
+  var n=notaObj(notaAtual); if(!n||!selecionados.length)return false;
+  return executarAcaoTexto(async function(){
+    if(notaObj(notaAtual)!==n)return false;
+    if(!Array.isArray(n.imagens))n.imagens=[];
+    var adicionadas=0, falhas=0;
+    estado.textContent="guardando imagens…";
+    for(var i=0;i<selecionados.length;i++){
+      var arquivo=selecionados[i];if(!arquivo||!/^image\//i.test(arquivo.type||""))continue;
+      try{
+        var iid=id("ni"),src=await arquivoDataUrl(arquivo),meta={id:iid,nome:arquivo.name||"Imagem",tipo:arquivo.type||"image/*",tamanho:arquivo.size||0,criadoEm:Date.now()};
+        if(!src||await bdGravar(notaImagemChave(n.id,iid),{src:src,nome:meta.nome,tipo:meta.tipo,tamanho:meta.tamanho,criadoEm:meta.criadoEm})!==true)throw new Error("Imagem não confirmada.");
+        n.imagens.push(meta);adicionadas++;marcarNotaSuja();
+      }catch(e){falhas++;}
+    }
+    var salvo=!adicionadas||await salvarNota()===true;
+    if(adicionadas)desenharNotas();
+    if(falhas)aviso(falhas+" imagem(ns) não foram anexadas porque a gravação falhou. Selecione esses arquivos novamente após resolver o armazenamento.");
+    if(adicionadas&&salvo)aviso(adicionadas+" imagem(ns) anexada(s). "+rotuloSalvoTexto()+".");
+    if(!adicionadas)estado.textContent=rotuloSalvoTexto();
+    if(falhas)estado.textContent="falha ao anexar imagens · selecione os arquivos novamente";
+    return salvo&&!falhas;
+  });
 }
 async function removerImagemNota(idImagem){
-  var n=notaObj(notaAtual); if(!n||!idImagem) return;
-  var alvo=(n.imagens||[]).filter(function(im){return im.id===idImagem;})[0]; if(!alvo) return;
-  await apagarImagemNotaNuvem(n,idImagem); await bdApagar(notaImagemChave(n.id,idImagem)); n.imagens=(n.imagens||[]).filter(function(im){return im.id!==idImagem;}); marcarNotaSuja(); desenharNotas(); aviso("Imagem removida da nota.");
+  var n=notaObj(notaAtual);if(!n||!idImagem)return false;
+  return executarAcaoTexto(async function(){
+    if(notaObj(notaAtual)!==n)return false;
+    var anteriores=(n.imagens||[]).slice(),alvo=anteriores.filter(function(im){return im.id===idImagem;})[0];if(!alvo)return false;
+    n.imagens=anteriores.filter(function(im){return im.id!==idImagem;});marcarNotaSuja();
+    if(await salvarNota()!==true){
+      /* A referência e os pixels continuam recuperáveis quando o set falha. */
+      n.imagens=anteriores;marcarNotaSuja();clearTimeout(pendenteNota);desenharNotas();return false;
+    }
+    /* Só limpamos pixels depois de confirmar os metadados. */
+    var limpo=false;
+    try{await apagarImagemNotaNuvem(n,idImagem);limpo=await bdApagar(notaImagemChave(n.id,idImagem))===true;}catch(e){}
+    desenharNotas();aviso(limpo?"Imagem removida da nota.":"Referência removida da nota. Não foi possível confirmar a limpeza do arquivo de imagem neste aparelho.");return true;
+  });
 }
 async function salvarNota(){
-  if(!db||!notaAtual||salvandoNota||!notaSuja) return;
-  var n=notaObj(notaAtual); if(!n) return;
-  salvandoNota=true; estado.textContent="salvando…";
-  try{
-    n.atualizadoEm=Date.now();
-    var imagemApenas=notaSomenteImagens(n), textoNota=imagemApenas?"":(n.texto||""), tipoNota=imagemApenas?"imagens":"texto";
-    await colNotas().doc(n.id).set({
-      titulo:n.titulo||"", texto:textoNota, tags:imagemApenas?["imagens"]:tagsNota(n.tags), tipo:tipoNota, imagens:Array.isArray(n.imagens)?n.imagens:[], criadoEm:n.criadoEm||n.atualizadoEm,
-      atualizadoEm:n.atualizadoEm
-    });
-    try{ await dbLocal.collection(baseLocal+"/notas").doc(n.id).set({titulo:n.titulo||"",texto:textoNota,tags:imagemApenas?["imagens"]:tagsNota(n.tags),tipo:tipoNota,imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm}); }catch(localErr){}
-    if(nuvemAtiva) removerFilaNuvem("notas",n.id);
-    salvarCacheOffline();
-    notaSuja=false; estado.textContent="salvo"; registrarSincronizacao();
-    notas.sort(function(a,b){ return (b.atualizadoEm||0)-(a.atualizadoEm||0); });
-    desenharNotasLateral();
-    agendarBackupNuvem();
-  }catch(e){
-    var somenteImagens=notaSomenteImagens(n), dadosNota={titulo:n.titulo||"",texto:somenteImagens?"":(n.texto||""),tags:somenteImagens?["imagens"]:tagsNota(n.tags),tipo:somenteImagens?"imagens":"texto",imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm||Date.now()};
-    try{ await dbLocal.collection(baseLocal+"/notas").doc(n.id).set(dadosNota); }catch(localErr){}
-    enfileirarNuvem("notas",n.id,dadosNota); salvarCacheOffline();
-    estado.textContent="erro ao salvar";
-    aviso("Não foi possível salvar a nota. O texto continua na tela — tente novamente em instantes.");
-  }
-  salvandoNota=false;
-  if(notaSuja){ clearTimeout(pendenteNota); pendenteNota=setTimeout(salvarNota,900); }
+  if(salvandoNota)return salvandoNota;
+  clearTimeout(pendenteNota);
+  if(!notaSuja)return true;
+  var n=notaObj(notaAtual);if(!db||!n){falhaSalvarTexto(null,true);return false;}
+  var chave=n.id;
+  var tarefa=(async function(){
+    await Promise.resolve();
+    try{
+      do{
+        if(notaObj(notaAtual)!==n)throw new Error("A nota ativa mudou durante o salvamento.");
+        var revisao=revisaoNota;n.atualizadoEm=Date.now();
+        var imagemApenas=notaSomenteImagens(n),corpo=JSON.parse(JSON.stringify({titulo:n.titulo||"",texto:imagemApenas?"":(n.texto||""),tags:imagemApenas?["imagens"]:tagsNota(n.tags),tipo:imagemApenas?"imagens":"texto",imagens:Array.isArray(n.imagens)?n.imagens:[],criadoEm:n.criadoEm||n.atualizadoEm,atualizadoEm:n.atualizadoEm}));
+        estado.textContent="salvando…";
+        await gravarTexto("notas",chave,corpo);
+        if(notaObj(notaAtual)!==n)throw new Error("A nota ativa mudou durante o salvamento.");
+        if(revisao!==revisaoNota)continue;
+        notaSuja=false;
+        if(window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false)textosVolateis=true;
+      }while(notaSuja);
+    }catch(e){notaSuja=true;falhaSalvarTexto(e,true);return false;}
+    mostrarEstadoTextoSalvo();
+    try{salvarCacheOffline();registrarSincronizacao();notas.sort(function(a,b){return(b.atualizadoEm||0)-(a.atualizadoEm||0);});desenharNotasLateral();agendarBackupNuvem();}catch(e){}
+    return true;
+  })();
+  salvandoNota=tarefa;atualizarTentativaTexto();
+  try{return await tarefa;}finally{if(salvandoNota===tarefa)salvandoNota=false;atualizarTentativaTexto();}
 }
 async function abrirNotas(){
-  if(sujo){ clearTimeout(pendente); await salvar(); }
+  return executarAcaoTexto(abrirNotasSalvas);
+}
+async function abrirNotasSalvas(){
   modoNotas=true;
   if(!notaAtual&&notas.length) notaAtual=notas[0].id;
   desenharLateral(); desenhar(); alternarLateral(false);
 }
 async function criarNota(opcoes){
   if(!db){ aviso("Sem armazenamento disponível nesta visualização."); return; }
-  if(sujo){ clearTimeout(pendente); await salvar(); }
-  if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
+  return executarAcaoTexto(function(){return criarNotaSalva(opcoes);});
+}
+async function criarNotaSalva(opcoes){
   var cfg=opcoes||{}, agora=Date.now(), somenteImagens=cfg.tipo==="imagens", n={titulo:cfg.titulo||"Sem título",texto:somenteImagens?"":(cfg.texto||""),tags:somenteImagens?["imagens"]:(Array.isArray(cfg.tags)?cfg.tags:[]),tipo:somenteImagens?"imagens":"texto",imagens:[],criadoEm:agora,atualizadoEm:agora};
   var ref=colNotas().doc(id("n"));
   try{ await ref.set(n); registrarSincronizacao(); }
@@ -6279,21 +6623,24 @@ async function criarNota(opcoes){
   n.id=ref.path.split("/").pop(); notas.unshift(n);
   modoNotas=true; notaAtual=n.id; notaSuja=false;
   reiniciarMarcaNota();
-  estado.textContent="salvo";
+  estado.textContent=rotuloSalvoTexto();
   desenharLateral(); desenhar(); alternarLateral(false);
   requestAnimationFrame(function(){ var campo=el("notaTitulo"); if(campo){ campo.focus(); campo.select(); } });
 }
 async function abrirNota(idNota){
   if(!notaObj(idNota)) return;
-  if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
+  return executarAcaoTexto(function(){return abrirNotaSalva(idNota);});
+}
+async function abrirNotaSalva(idNota){
   if(idNota!==notaAtual)reiniciarMarcaNota();
   modoNotas=true; notaAtual=idNota; notaSuja=false;
-  estado.textContent="salvo";
+  estado.textContent=rotuloSalvoTexto();
   desenharLateral(); desenhar(); alternarLateral(false);
 }
 async function voltarEntrada(){
-  if(sujo){ clearTimeout(pendente); await salvar(); }
-  if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
+  return executarAcaoTexto(voltarEntradaSalva);
+}
+async function voltarEntradaSalva(){
   modoNotas=false; doc=null; capAtual=null; pgAtual=0; selPainel=null;
   reiniciarMarcaNota();
   estado.textContent="";
@@ -6302,14 +6649,16 @@ async function voltarEntrada(){
 }
 async function apagarNota(idNota){
   if(!db||!notaObj(idNota)) return;
-  if(notaAtual===idNota&&notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
+  return executarAcaoTexto(function(){return apagarNotaSalva(idNota);});
+}
+async function apagarNotaSalva(idNota){
   var notaApagada=notaObj(idNota);
   try{ await colNotas().doc(idNota).delete(); registrarSincronizacao(); }
   catch(e){ try{ await dbLocal.collection(baseLocal+"/notas").doc(idNota).delete(); }catch(localErr){ aviso("Não foi possível apagar a nota neste aparelho."); return; } enfileirarExclusao("notas",idNota); }
   for(var ii=0;ii<((notaApagada&&notaApagada.imagens)||[]).length;ii++){ await apagarImagemNotaNuvem(notaApagada,notaApagada.imagens[ii].id); await bdApagar(notaImagemChave(idNota,notaApagada.imagens[ii].id)); }
   notas=notas.filter(function(n){ return n.id!==idNota; }); salvarCacheOffline();
   if(notaAtual===idNota){notaAtual=notas.length?notas[0].id:null;reiniciarMarcaNota();}
-  notaSuja=false; estado.textContent="salvo";
+  notaSuja=false; estado.textContent=rotuloSalvoTexto();
   desenharLateral(); if(modoNotas) desenhar();
   aviso("Nota apagada.");
 }
@@ -6523,8 +6872,9 @@ function fecharFormObra(){
 async function criarObra(t){
   t=(t||"").trim(); if(!t) return;
   if(!db){ aviso("Sem armazenamento disponível nesta visualização."); return; }
-  if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
-  modoNotas=false;
+  return executarAcaoTexto(function(){return criarObraSalva(t);});
+}
+async function criarObraSalva(t){
   var o={titulo:t,criadoEm:Date.now(),personagens:[]};
   var ref=colObras().doc(id("o"));
   try{ await ref.set(o); }
@@ -6534,9 +6884,9 @@ async function criarObra(t){
     enfileirarNuvem("obras",idObraLocal,o); aviso("Obra criada e guardada neste aparelho.");
   }
   o.id=ref.path.split("/").pop(); try{ await dbLocal.collection(baseLocal+"/obras").doc(o.id).set(o); }catch(localErr){} obras.push(o);
-  obraAtual=o.id; capAtual=null; doc=null;
+  modoNotas=false;obraAtual=o.id; capAtual=null; doc=null;
   desenharLateral(); desenhar();
-  criarCapitulo();
+  await criarCapituloSalvo();
 }
 
 async function renomearObra(obraId){
@@ -6559,14 +6909,17 @@ async function renomearObra(obraId){
 
 async function apagarObra(obraId){
   if(!db||!obraId) return;
+  return executarAcaoTexto(function(){return apagarObraSalva(obraId);});
+}
+async function apagarObraSalva(obraId){
   var alvo=obras.filter(function(o){return o.id===obraId;})[0];
   if(!alvo) return;
-  var capsDaObra=caps.filter(function(c){return c.obraId===obraId;});
+  var capsDaObra=caps.filter(function(c){return c.obraId===obraId;}),limparDepois=[];
   try{
     for(var i=0;i<capsDaObra.length;i++){
       try{
         var snCap=await colCaps().doc(capsDaObra[i].id).get();
-        if(snCap.exists) apagarDesenhosDe(snCap.data().paginas);
+        if(snCap.exists)limparDepois.push(snCap.data().paginas);
       }catch(e2){}
       await colCaps().doc(capsDaObra[i].id).delete();
     }
@@ -6579,6 +6932,8 @@ async function apagarObra(obraId){
     for(var qi=0;qi<capsDaObra.length;qi++) enfileirarExclusao("capitulos",capsDaObra[qi].id);
     enfileirarExclusao("obras",obraId);
   }
+  /* Uma falha de exclusão não pode eliminar os pixels ainda referenciados. */
+  limparDepois.forEach(function(paginas){apagarDesenhosDe(paginas);});
   obras=obras.filter(function(o){return o.id!==obraId;});
   caps=caps.filter(function(c){return c.obraId!==obraId;});
   if(obraAtual===obraId){ obraAtual=null; capAtual=null; doc=null; }
@@ -6610,8 +6965,9 @@ async function removerPersonagem(nome){
 
 async function criarCapitulo(){
   if(!obraAtual||!db) return;
-  if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
-  modoNotas=false;
+  return executarAcaoTexto(criarCapituloSalvo);
+}
+async function criarCapituloSalvo(){
   var meus=caps.filter(function(c){return c.obraId===obraAtual;});
   var novo={
     obraId:obraAtual, numero:meus.length+1, titulo:"", status:"roteiro", progresso:0,
@@ -6626,7 +6982,7 @@ async function criarCapitulo(){
   }
   novo.id=ref.path.split("/").pop(); try{ await dbLocal.collection(baseLocal+"/capitulos").doc(novo.id).set(novo); }catch(localErr){}
   caps.push({id:novo.id,obraId:obraAtual,numero:novo.numero,titulo:"",nPaineis:1,paginas:1,status:"roteiro",progresso:0,atualizadoEm:novo.atualizadoEm}); registrarSincronizacao();
-  doc=novo; capAtual=novo.id;
+  modoNotas=false;doc=novo; capAtual=novo.id;
   desenharLateral(); desenhar();
 }
 
@@ -6650,7 +7006,7 @@ function duplicarPainel(pn){
   if(pn.recolhido) c.recolhido=true;
   if(pn.temDesenho){
     c.temDesenho=true; c.miniatura=pn.miniatura;
-    window.EditorDesenho.copiar(pn.id,c.id);   /* copia também o desenho guardado */
+    window.EditorDesenho.copiar(pn.id,c.id).catch(function(){aviso("Não foi possível confirmar a cópia do desenho. O original foi preservado; confira o painel duplicado antes de continuar.");});
   }
   return c;
 }
@@ -6762,9 +7118,17 @@ function normalizarDocumento(d){
 }
 
 async function abrirCapitulo(cid){
-  if(sujo){ clearTimeout(pendente); await salvar(); }
-  if(notaSuja){ clearTimeout(pendenteNota); await salvarNota(); }
-  modoNotas=false;
+  return executarAcaoTexto(function(){return abrirCapituloSalvo(cid);});
+}
+async function abrirObra(oid){
+  return executarAcaoTexto(async function(){
+    var meus=caps.filter(function(c){return c.obraId===oid;});
+    if(meus.length)return abrirCapituloSalvo(meus[0].id);
+    modoNotas=false;obraAtual=oid;capAtual=null;doc=null;
+    desenharLateral();desenhar();alternarLateral(false);
+  });
+}
+async function abrirCapituloSalvo(cid){
   try{
     var s;
     try{ s=await colCaps().doc(cid).get(); }catch(offlineErr){
@@ -6774,21 +7138,21 @@ async function abrirCapitulo(cid){
       s={exists:true,data:function(){return localDoc;}};
     }
     if(!s.exists){ aviso("Capítulo não encontrado."); return; }
-    doc=s.data(); doc.id=cid;
-    if(doc.paginasSeparadas&&nuvemAtiva){
+    var aberto=s.data(); aberto.id=cid;
+    if(aberto.paginasSeparadas&&nuvemAtiva){
       try{
         var sp=await colCaps().doc(cid).collection("paginas").orderBy("indice","asc").get();
-        doc.paginas=sp.docs.map(function(d){ var v=d.data(); return v.pagina||v; });
+        aberto.paginas=sp.docs.map(function(d){ var v=d.data(); return v.pagina||v; });
       }catch(splitErr){
         var cached=window.__mesaCapsOffline||[], cachedCap=cached.filter(function(x){return x.id===cid;})[0];
-        if(cachedCap&&Array.isArray(cachedCap.paginas)&&cachedCap.paginas.length) doc.paginas=cachedCap.paginas; else throw splitErr;
+        if(cachedCap&&Array.isArray(cachedCap.paginas)&&cachedCap.paginas.length) aberto.paginas=cachedCap.paginas; else throw splitErr;
       }
     }
-    capAtual=cid; obraAtual=doc.obraId;
+    doc=aberto;modoNotas=false;capAtual=cid;obraAtual=doc.obraId;
     if(!doc.paginas||!doc.paginas.length) doc.paginas=[novaPagina()];
     normalizarDocumento(doc);
     pgAtual=0; selPainel=null;
-    estado.textContent="salvo";
+    estado.textContent=rotuloSalvoTexto();
     desenharLateral(); desenhar(); atualizarPersonagens();
     alternarLateral(false);
     el("tela").scrollTop=0;
@@ -6988,7 +7352,7 @@ function carregarPrevias(){
       if(previas[pid]) URL.revokeObjectURL(previas[pid]);
       previas[pid]=u;
       if(img.isConnected) img.src=u;
-    });
+    }).catch(function(){if(img.isConnected){img.title="Falha ao ler a prévia. A miniatura anterior foi preservada; tente abrir o desenho novamente.";img.setAttribute("data-prev-falha","1");}});
   });
 }
 function soltarPrevia(pid){
@@ -7454,7 +7818,9 @@ function fecharLeituraCapitulo(){
 }
 async function abrirLeituraCapitulo(){
   if(!doc||modoLeitura) return;
-  if(sujo){ clearTimeout(pendente); await salvar(); }
+  return executarAcaoTexto(abrirLeituraSalva);
+}
+async function abrirLeituraSalva(){
   if(!doc||!doc.paginas||!doc.paginas.length) return;
   var paginas=doc.paginas.slice(), titulo=doc.titulo||("Capítulo "+(doc.numero||1)), token=id("leitura");
   modoLeitura=true;
@@ -7487,7 +7853,10 @@ tela.addEventListener("input",function(ev){if(ev.target.matches("[data-leitura-z
 window.addEventListener("resize",function(){if(modoLeitura)atualizarZoomLeitura(LEITURA.zoom,true);});
 
 /* ========== desenho livre, independente de obras e capítulos ========== */
-function abrirDesenhoLivre(registro){
+async function abrirDesenhoLivre(registro){
+  return executarAcaoTexto(function(){return abrirDesenhoLivreSalvo(registro);});
+}
+function abrirDesenhoLivreSalvo(registro){
   if(!window.EditorDesenho) return;
   if(!registro||!registro.id){
     var nome=window.prompt("Nome do desenho livre:","Meu desenho");
@@ -7598,6 +7967,7 @@ async function compPagina(pg,W,semSobre){
     if(fw<4||fh<4) continue;
     var fm=formaPainel(pn), bw=(typeof pn.borda==="number"&&pn.borda<=0)?0:2*k;
     var img=pn.temDesenho?await window.EditorDesenho.compor(pn.id,pn,1600,false):null;
+    if(pn.temDesenho&&!img)throw new Error("Um desenho da página não pôde ser lido. A composição foi interrompida.");
     cx.save(); trilhaQuadro(cx,fm,fx,fy,fw,fh); cx.clip();
     /* painel flutuante preserva transparência para revelar os quadros abaixo */
     if(!pn.sobreposto){ cx.fillStyle="#fff"; cx.fillRect(fx,fy,fw,fh); }
@@ -7751,12 +8121,7 @@ document.querySelector(".rolagem").addEventListener("click",function(ev){
   var b=ev.target.closest("[data-obra],[data-cap]");
   if(!b) return;
   if(b.hasAttribute("data-obra")){
-    modoNotas=false;
-    obraAtual=b.getAttribute("data-obra");
-    var meus=caps.filter(function(c){return c.obraId===obraAtual;});
-    desenharLateral();
-    if(meus.length) abrirCapitulo(meus[0].id);
-    else{ capAtual=null; doc=null; desenhar(); alternarLateral(false); }
+    abrirObra(b.getAttribute("data-obra"));
   }else{
     abrirCapitulo(b.getAttribute("data-cap"));
   }
@@ -8217,7 +8582,7 @@ el("btInstalar").onclick=async function(){
   if(!conviteInstalacao){ aviso("Use o menu do navegador e escolha 'Instalar app' ou 'Adicionar à tela inicial'."); return; }
   conviteInstalacao.prompt(); try{ await conviteInstalacao.userChoice; }catch(e){} conviteInstalacao=null; el("btInstalar").classList.remove("visivel");
 };
-window.addEventListener("online",async function(){ atualizarConexao(); agendarBackupNuvem(); await processarFilaNuvem(); try{ await carregarListas(); await sincronizarImagensNuvem(); desenharLateral(); }catch(e){} });
+window.addEventListener("online",async function(){ atualizarConexao(); agendarBackupNuvem(); await processarFilaNuvem(); /* Reconectar não deve substituir notas editadas na memória. */ });
 window.addEventListener("offline",atualizarConexao);
 atualizarConexao();
 
@@ -8233,6 +8598,10 @@ el("btEscolherPasta").onclick=async function(){
   catch(e){ if(e&&e.name==="AbortError") return; el("integridadeBackup").textContent="Não foi possível escolher a pasta. Use “Baixar backup” como alternativa."; aviso("A pasta não foi autorizada; seus dados atuais permanecem intactos."); }
 };
 el("btSalvarNaPasta").onclick=function(){ salvarBackupNaPasta(); };
+el("btRestaurarNuvem").onclick=function(){return restaurarBackupDaNuvem();};
+el("btMaisCopiasNuvem").onclick=function(){return listarCopiasNuvem(true);};
+el("btEnviarCopiaNuvem").onclick=function(){return enviarBackupNuvemAutomatico(true);};
+el("btTentarSalvarTexto").onclick=function(){return executarAcaoTexto(function(){return true;});};
 el("btImportarBackup").onclick=function(){ el("arquivoBackup").click(); };
 el("arquivoBackup").onchange=async function(){
   var arquivo=this.files&&this.files[0]; this.value="";
@@ -8258,7 +8627,7 @@ el("btBaixar").onclick=async function(){
 };
 
 window.addEventListener("beforeunload",function(e){
-  if(sujo||notaSuja||(window.EditorDesenho&&window.EditorDesenho.temAlteracoes&&window.EditorDesenho.temAlteracoes())){ e.preventDefault(); e.returnValue=""; }
+  if(sujo||notaSuja||salvando||salvandoNota||acaoTextoAtiva||textosVolateis||(window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false&&(obras.length||caps.length||notas.length))||(window.EditorDesenho&&window.EditorDesenho.temAlteracoes&&window.EditorDesenho.temAlteracoes())){ e.preventDefault(); e.returnValue=""; }
 });
 
 /* ========== arranque ========== */
