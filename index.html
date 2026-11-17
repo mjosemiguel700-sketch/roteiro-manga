@@ -716,6 +716,11 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
 </style>
 </head>
 <body>
+<div id="avisoRecuperacao" class="oculto" role="alert" style="padding:18px;background:#fff4d5;color:#513b00">
+  <p id="textoRecuperacao">Uma operação de armazenamento interrompida precisa ser recuperada antes de editar. Os registros de recuperação foram preservados. Mantenha seus backups e não limpe os dados do navegador.</p>
+  <button type="button" class="bt" id="btRetomarRecuperacao">Tentar recuperar novamente</button>
+  <button type="button" class="bt oculto" id="btExportarDesenhoPendente">Baixar PNG do desenho ainda aberto</button>
+</div>
 <div class="app">
   <div class="fundo-lateral" id="fundoLateral"></div>
   <aside class="lateral" id="lateral">
@@ -795,6 +800,11 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
       <span class="estado" id="estado" aria-live="polite"></span>
       <button type="button" class="bt mini oculto" id="btTentarSalvarTexto">Tentar salvar</button>
     </div>
+    <div class="oculto" id="avisoLeituraLocal" role="status" style="padding:10px 14px;background:#fff4d5;color:#513b00;border-bottom:1px solid #cfba7b">
+      <p id="textoLeituraLocal" style="margin:0 0 7px"></p>
+      <button type="button" class="bt mini" id="btRelerDadosLocais">Tentar ler novamente</button>
+      <button type="button" class="bt mini" id="btConsultarCacheLocal">Consultar cópia de textos</button>
+    </div>
     <div class="tela" id="tela"></div>
   </main>
 </div>
@@ -817,12 +827,16 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
 <dialog id="dlgNuvem">
   <div class="dlg-topo"><h3>Conectar à nuvem</h3><button class="bt mini" id="fecharNuvem">Fechar</button></div>
   <div class="dlg-corpo" style="max-width:480px">
-    <p>Ao entrar, os trabalhos deste navegador podem ser copiados para esta conta após 2 minutos sem alterações. Cada envio cria uma nova versão no Supabase. As cópias ocupam espaço adicional e podem ser consultadas em Backup.</p>
+    <p>Entrar permite consultar as cópias da conta. Para enviar os trabalhos locais, autorize esta biblioteca para a conta conectada. Depois disso, cada envio automático cria uma nova versão após 2 minutos sem alterações.</p>
+    <p id="identidadeContaNuvem" role="status">Nenhuma conta conectada.</p>
+    <p>Esta biblioteca local é compartilhada neste perfil do navegador. Sair da nuvem mantém os trabalhos neste computador.</p>
+    <div id="formContaNuvem">
     <label style="display:block;margin:10px 0 4px;font-weight:700">E-mail</label><input id="emailNuvem" type="email" autocomplete="email" placeholder="voce@exemplo.com" style="width:100%;box-sizing:border-box">
     <label style="display:block;margin:10px 0 4px;font-weight:700">Senha</label><input id="senhaNuvem" type="password" autocomplete="current-password" minlength="8" placeholder="Mínimo de 8 caracteres" style="width:100%;box-sizing:border-box">
+    </div>
     <p class="nota-meta" id="estadoContaNuvem" aria-live="polite">Use uma senha nova e forte. Nunca use a senha do banco de dados aqui.</p>
   </div>
-  <div class="dlg-pe"><button class="bt" id="btEntrarNuvem">Entrar</button><button class="bt forte" id="btCriarContaNuvem">Criar conta</button></div>
+  <div class="dlg-pe"><button class="bt" id="btEntrarNuvem">Entrar</button><button class="bt forte" id="btCriarContaNuvem">Criar conta</button><button class="bt forte oculto" id="btAutorizarBibliotecaNuvem">Autorizar cópias desta biblioteca</button><button class="bt oculto" id="btSairNuvem">Sair da conta neste navegador</button></div>
 </dialog>
 
 <dialog id="dlgBackup">
@@ -850,11 +864,21 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
     <button class="bt" id="btSalvarNaPasta" disabled>Salvar versão na pasta</button>
     <button class="bt" id="btRestaurarNuvem">Cópias na nuvem</button>
     <button class="bt" id="btEnviarCopiaNuvem">Enviar cópia agora</button>
+    <button class="bt" id="btConsultarCacheBackup">Consultar cópia de textos</button>
     <button class="bt forte" id="btImportarBackup">Importar backup</button>
     <input id="arquivoBackup" type="file" accept="application/json,.json" hidden>
   </div>
 </dialog>
 
+<dialog id="dlgConsultaCache">
+  <div class="dlg-topo"><h3>Cópia de textos para consulta</h3><button type="button" class="bt mini" id="btFecharConsultaCache">Fechar</button></div>
+  <div class="dlg-corpo" style="max-width:680px">
+    <p id="estadoConsultaCache" aria-live="polite"></p>
+    <p>Esta é uma cópia do cache, que pode ser antiga. Ela não substitui um backup completo com imagens e não será aberta para edição ou importada automaticamente.</p>
+    <textarea id="conteudoConsultaCache" readonly aria-label="Dados da cópia de textos, somente leitura" style="width:100%;min-height:35vh;box-sizing:border-box"></textarea>
+  </div>
+  <div class="dlg-pe"><button type="button" class="bt" id="btBaixarConsultaCache">Baixar esta cópia para recuperação</button></div>
+</dialog>
 <div class="aviso oculto" id="aviso" role="status"></div>
 <div class="nota-imagem-lightbox oculto" id="notaImagemLightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada">
   <button type="button" class="bt mini" id="fecharNotaImagemLightbox">✕ Fechar</button>
@@ -868,20 +892,276 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
 (function(){
 "use strict";
 
-var P="mesa:", mem={}, ls=null;
-try{ ls=window.localStorage; ls.setItem(P+"_t","1"); ls.removeItem(P+"_t"); }catch(e){ ls=null; }
+/* Motor local de importação. O chamador prepara/valida o plano e obtém a
+   confirmação do usuário antes de executar. Não acessa Supabase nem arquivos.
+   O marker é compartilhado entre abas; esta versão deve verificá-lo antes de
+   qualquer escrita normal. Abas antigas e modificações externas não obedecem
+   a esse bloqueio e exigem fechar as outras abas antes da importação.
+   Não há transação conjunta entre localStorage e IndexedDB: o journal mantém
+   a operação reversível até a confirmação final. Durabilidade estrita é usada
+   quando disponível; isso não equivale a backup externo contra falha do disco. */
+function criarMotorImportacao(abrirBanco,obterStorage){
+  "use strict";
+  var CHAVE_JOURNAL=["mesa-sistema","importacao",1],CHAVE_MARKER="mesa:importacao-pendente-v1";
+  var FORMATO_JOURNAL="mesa-importacao-journal",FORMATO_MARKER="mesa-importacao-pendente";
+  var estado={ativa:false,bloqueada:false};
+  if(typeof abrirBanco!=="function"||typeof obterStorage!=="function")throw new TypeError("O motor precisa das fontes locais de armazenamento.");
 
-function ler(k){ return ls ? ls.getItem(P+k) : (k in mem ? mem[k] : null); }
-function gravar(k,v){
-  try{ if(ls) ls.setItem(P+k,v); else mem[k]=v; }
+  function erro(mensagem,codigo,causa){var e=new Error(mensagem);e.code=codigo||"importacao_local";if(causa)e.cause=causa;return e;}
+  function pendente(causa,mensagem){var e=erro(mensagem||"Há uma importação local ainda não recuperada. Preserve esta aba e tente recuperar antes de editar.","importacao_pendente",causa);e.pendente=true;return e;}
+  function objeto(v){return !!v&&typeof v==="object"&&!Array.isArray(v);}
+  function possui(v,k){return Object.prototype.hasOwnProperty.call(v,k);}
+  function chavesExatas(v,campos){return objeto(v)&&Object.keys(v).length===campos.length&&campos.every(function(k){return possui(v,k);});}
+  function idValido(v){return (typeof v==="string"&&v.length>0)||(typeof v==="number"&&isFinite(v));}
+  function chaveTextoValida(v){
+    return typeof v==="string"&&(
+      /^mesa:roteiros\/local\/(obras|capitulos|notas)\/[^\/]+$/.test(v)||
+      v==="mesa:desenhos-livres"||v==="mesa:fichas-personagem-v1"
+    );
+  }
+  function lista(v,visitar){
+    if(!Array.isArray(v))throw erro("O plano de importação contém uma lista inválida.","importacao_plano");
+    for(var i=0;i<v.length;i++){if(!possui(v,i))throw erro("A lista de importação está incompleta.","importacao_plano");visitar(v[i],i);}
+  }
+  function copiar(v){
+    if(typeof structuredClone!=="function")throw erro("Este navegador não oferece a preparação segura da importação.","importacao_indisponivel");
+    try{return structuredClone(v);}catch(e){throw erro("Não foi possível preparar os dados da importação.","importacao_plano",e);}
+  }
+  function storage(){
+    var s=obterStorage();
+    if(!s)return null;
+    if(typeof s.getItem!=="function"||typeof s.setItem!=="function"||typeof s.removeItem!=="function")throw erro("O armazenamento local não está disponível.");
+    return s;
+  }
+  function lerTexto(s,chave){
+    var v=s.getItem(chave);if(v!==null&&typeof v!=="string")throw erro("A leitura do armazenamento local não foi confirmada.");return v;
+  }
+  function validarMarker(bruto){
+    var m;try{m=JSON.parse(bruto);}catch(e){throw pendente(e,"O aviso de importação pendente está ilegível. Nenhum dado foi substituído pela recuperação.");}
+    if(!chavesExatas(m,["formato","versao","id"])||m.formato!==FORMATO_MARKER||m.versao!==1||typeof m.id!=="string"||! /^[A-Za-z0-9_-]{1,128}$/.test(m.id))throw pendente(null,"O aviso de importação pendente é inválido. Preserve os dados antes de tentar novamente.");
+    return m;
+  }
+  function novoMarker(){
+    var identificador;
+    if(typeof crypto!=="undefined"&&crypto&&typeof crypto.randomUUID==="function")identificador=crypto.randomUUID();
+    else identificador=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2)+"-"+Math.random().toString(36).slice(2);
+    return{formato:FORMATO_MARKER,versao:1,id:identificador};
+  }
+  function preparar(textos,imagens,s){
+    var saidaTextos=[],saidaImagens=[],vistosTextos=new Set(),vistosImagens=new Set();
+    lista(textos,function(t){
+      if(!objeto(t)||!chaveTextoValida(t.chave)||(t.valor!==null&&typeof t.valor!=="string")||vistosTextos.has(t.chave))throw erro("O plano contém um destino de texto inválido ou repetido.","importacao_plano");
+      vistosTextos.add(t.chave);saidaTextos.push({chave:t.chave,anterior:lerTexto(s,t.chave),valor:t.valor});
+    });
+    lista(imagens,function(im){
+      if(!objeto(im)||!idValido(im.id)||!objeto(im.rec)||vistosImagens.has(String(im.id)))throw erro("O plano contém um destino de imagem inválido ou repetido.","importacao_plano");
+      vistosImagens.add(String(im.id));saidaImagens.push({id:im.id,rec:copiar(im.rec)});
+    });
+    return{textos:saidaTextos,imagens:saidaImagens};
+  }
+  function validarJournal(j,m){
+    if(!chavesExatas(j,["formato","versao","id","textos","imagens"])||j.formato!==FORMATO_JOURNAL||j.versao!==1||j.id!==m.id)throw pendente(null,"O registro de recuperação não corresponde ao aviso local. Nenhum dado foi restaurado automaticamente.");
+    var textos=new Set(),imagens=new Set();
+    try{
+      lista(j.textos,function(t){
+        if(!chavesExatas(t,["chave","anterior","valor"])||!chaveTextoValida(t.chave)||(t.anterior!==null&&typeof t.anterior!=="string")||(t.valor!==null&&typeof t.valor!=="string")||textos.has(t.chave))throw erro("Destino de texto inválido no registro de recuperação.");
+        textos.add(t.chave);
+      });
+      lista(j.imagens,function(im){
+        if(!chavesExatas(im,["id","existia","anterior"])||!idValido(im.id)||typeof im.existia!=="boolean"||imagens.has(String(im.id))||(!im.existia&&im.anterior!==undefined))throw erro("Destino de imagem inválido no registro de recuperação.");
+        imagens.add(String(im.id));
+      });
+    }catch(e){throw pendente(e,"O registro de recuperação contém dados inválidos. Ele foi preservado para análise.");}
+    return j;
+  }
+  function abrirTransacao(db,modo){
+    if(!db||typeof db.transaction!=="function")throw erro("Não foi possível abrir o armazenamento de recuperação.","importacao_indisponivel");
+    if(modo!=="readwrite")return db.transaction("d",modo);
+    try{return db.transaction("d",modo,{durability:"strict"});}
+    catch(e){if(!e||e.name!=="TypeError")throw e;return db.transaction("d",modo);}
+  }
+  function transacao(db,modo,prepararOperacoes){
+    return new Promise(function(resolve,rejeitar){
+      var tx,resultado,falha=null,terminou=false;
+      function rejeicao(e){if(terminou)return;terminou=true;rejeitar(e||erro("A transação de recuperação foi interrompida."));}
+      function abortar(e){
+        if(terminou)return;falha=e||erro("A transação de recuperação falhou.");
+        if(!tx){rejeicao(falha);return;}
+        try{tx.abort();}catch(ignorar){rejeicao(falha);}
+      }
+      function observar(req,aoSucesso){
+        req.onerror=function(){abortar(req.error||erro("Uma operação do armazenamento de recuperação falhou."));};
+        req.onsuccess=function(){try{aoSucesso(req.result);}catch(e){abortar(e);}};
+        return req;
+      }
+      try{
+        tx=abrirTransacao(db,modo);
+        tx.oncomplete=function(){if(terminou)return;terminou=true;resolve(resultado);};
+        tx.onerror=function(){falha=falha||tx.error||erro("A transação de recuperação falhou.");try{tx.abort();}catch(e){rejeicao(falha);}};
+        tx.onabort=function(){rejeicao(falha||tx.error||erro("A transação de recuperação foi cancelada."));};
+        prepararOperacoes(tx.objectStore("d"),observar,function(v){resultado=v;},abortar);
+      }catch(e){abortar(e);}
+    });
+  }
+  function lerJournal(db){
+    return transacao(db,"readonly",function(st,observar,resultado){
+      var chaveLida=false,valorLido=false,chave,valor;
+      function pronto(){if(chaveLida&&valorLido)resultado({existe:chave!==undefined,valor:valor});}
+      observar(st.getKey(CHAVE_JOURNAL),function(v){chave=v;chaveLida=true;pronto();});
+      observar(st.get(CHAVE_JOURNAL),function(v){valor=v;valorLido=true;pronto();});
+    });
+  }
+  function gravarPreparacao(db,m,plano){
+    return transacao(db,"readwrite",function(st,observar,resultado){
+      var existentes=plano.imagens.map(function(im){return{id:im.id,existia:false,anterior:undefined};});
+      var faltam=2+plano.imagens.length*2,journalExistente=false;
+      function recebida(){
+        faltam--;if(faltam)return;
+        if(journalExistente)throw pendente(null,"Já existe um registro de importação pendente. Preserve os dados e feche as outras abas.");
+        var j={formato:FORMATO_JOURNAL,versao:1,id:m.id,textos:plano.textos,imagens:existentes};validarJournal(j,m);
+        st.put(j,CHAVE_JOURNAL);
+        plano.imagens.forEach(function(im){st.put(im.rec,im.id);});
+        resultado(j);
+      }
+      observar(st.getKey(CHAVE_JOURNAL),function(v){journalExistente=v!==undefined;recebida();});
+      observar(st.get(CHAVE_JOURNAL),function(){recebida();});
+      plano.imagens.forEach(function(im,i){
+        observar(st.getKey(im.id),function(v){existentes[i].existia=v!==undefined;recebida();});
+        observar(st.get(im.id),function(v){existentes[i].anterior=v;recebida();});
+      });
+    });
+  }
+  function markerConfere(s,bruto){if(lerTexto(s,CHAVE_MARKER)!==bruto)throw pendente(null,"O aviso local mudou durante a operação. A recuperação foi interrompida para preservar outras alterações.");}
+  function limparMarker(s,bruto){
+    var atual=lerTexto(s,CHAVE_MARKER);if(atual===null)return;
+    if(atual!==bruto)throw pendente(null,"O aviso local mudou; ele não foi removido automaticamente.");
+    s.removeItem(CHAVE_MARKER);if(lerTexto(s,CHAVE_MARKER)!==null)throw pendente(null,"Não foi possível confirmar a limpeza do aviso local.");
+  }
+  function compararTextos(s,j,novos){
+    j.textos.forEach(function(t){var atual=lerTexto(s,t.chave);if(novos?atual!==t.valor:(atual!==t.anterior&&atual!==t.valor))throw pendente(null,"Um texto foi alterado fora da importação. A recuperação foi interrompida sem substituir essa versão.");});
+  }
+  function aplicarTextos(s,j,bruto){
+    markerConfere(s,bruto);compararTextos(s,j,false);
+    j.textos.forEach(function(t){
+      markerConfere(s,bruto);var atual=lerTexto(s,t.chave);
+      if(atual!==t.anterior&&atual!==t.valor)throw pendente(null,"Um texto mudou durante a importação. A operação foi interrompida.");
+      /* null é exclusão explícita do plano autorizado, nunca o texto "null". */
+      if(atual!==t.valor){if(t.valor===null)s.removeItem(t.chave);else s.setItem(t.chave,t.valor);}
+      if(lerTexto(s,t.chave)!==t.valor)throw erro("A releitura de um texto importado divergiu. A importação não foi confirmada.");
+    });
+    compararTextos(s,j,true);
+  }
+  function removerJournal(db,m,s,bruto){
+    return transacao(db,"readwrite",function(st,observar,resultado){
+      var lido=false,chaveLida=false,valor,chave;
+      function pronto(){if(!lido||!chaveLida)return;if(chave===undefined)throw pendente(null,"O registro de recuperação desapareceu antes da confirmação.");validarJournal(valor,m);markerConfere(s,bruto);compararTextos(s,valor,true);st.delete(CHAVE_JOURNAL);resultado(true);}
+      observar(st.getKey(CHAVE_JOURNAL),function(v){chave=v;chaveLida=true;pronto();});
+      observar(st.get(CHAVE_JOURNAL),function(v){valor=v;lido=true;pronto();});
+    });
+  }
+  async function restaurar(db,s,j,m,bruto){
+    validarJournal(j,m);markerConfere(s,bruto);compararTextos(s,j,false);
+    /* Libera primeiro chaves criadas pela importação, sem tocar valores terceiros. */
+    var ordem=j.textos.filter(function(t){return t.anterior===null;}).concat(j.textos.filter(function(t){return t.anterior!==null;}));
+    ordem.forEach(function(t){
+      markerConfere(s,bruto);var atual=lerTexto(s,t.chave);
+      if(atual!==t.anterior&&atual!==t.valor)throw pendente(null,"Um texto mudou durante a recuperação. A versão encontrada foi preservada.");
+      if(atual!==t.anterior){if(t.anterior===null)s.removeItem(t.chave);else s.setItem(t.chave,t.anterior);}
+      if(lerTexto(s,t.chave)!==t.anterior)throw pendente(null,"Não foi possível confirmar a restauração de um texto. O registro de recuperação foi mantido.");
+    });
+    await transacao(db,"readwrite",function(st,observar,resultado){
+      var chaveLida=false,lido=false,chave,valor;
+      function pronto(){
+        if(!chaveLida||!lido)return;
+        if(chave===undefined)throw pendente(null,"O registro de recuperação não está mais disponível.");
+        validarJournal(valor,m);markerConfere(s,bruto);
+        j.textos.forEach(function(t){if(lerTexto(s,t.chave)!==t.anterior)throw pendente(null,"Um texto mudou antes da confirmação da recuperação.");});
+        j.imagens.forEach(function(im){if(im.existia)st.put(im.anterior,im.id);else st.delete(im.id);});
+        st.delete(CHAVE_JOURNAL);resultado(true);
+      }
+      observar(st.getKey(CHAVE_JOURNAL),function(v){chave=v;chaveLida=true;pronto();});
+      observar(st.get(CHAVE_JOURNAL),function(v){valor=v;lido=true;pronto();});
+    });
+    limparMarker(s,bruto);
+  }
+  function impedirGravacao(){
+    if(estado.ativa)throw pendente(null,"Aguarde a importação ou recuperação terminar antes de salvar.");
+    if(estado.bloqueada)throw pendente();
+    try{var s=storage();if(s&&lerTexto(s,CHAVE_MARKER)!==null){estado.bloqueada=true;throw pendente();}}
+    catch(e){estado.bloqueada=true;if(e&&e.pendente)throw e;throw pendente(e,"Não foi possível confirmar se há uma importação pendente. As escritas foram bloqueadas por segurança.");}
+    return false;
+  }
+  async function executar(textos,imagens){
+    if(estado.ativa)throw pendente(null,"Já há uma importação ou recuperação em andamento.");
+    if(estado.bloqueada)throw pendente();
+    estado.ativa=true;
+    var s,m,bruto,db,journal,markerTentado=false,fonteConfirmada=false,confirmado=false;
+    try{
+      s=storage();if(!s)throw erro("A importação precisa de armazenamento local persistente.","importacao_indisponivel");
+      if(lerTexto(s,CHAVE_MARKER)!==null){estado.bloqueada=true;throw pendente();}
+      fonteConfirmada=true;
+      var plano=preparar(textos,imagens,s);m=novoMarker();bruto=JSON.stringify(m);
+      markerTentado=true;s.setItem(CHAVE_MARKER,bruto);markerConfere(s,bruto);
+      db=await abrirBanco();journal=await gravarPreparacao(db,m,plano);
+      aplicarTextos(s,journal,bruto);
+      await removerJournal(db,m,s,bruto);confirmado=true;
+      limparMarker(s,bruto);estado.bloqueada=false;
+      return{importado:true};
+    }catch(causa){
+      if(confirmado){estado.bloqueada=true;var committed=pendente(causa,"Os dados foram importados, mas a limpeza do aviso local não foi confirmada. Recupere o aviso antes de editar.");committed.importado=true;throw committed;}
+      if(journal){
+        try{await restaurar(db,s,journal,m,bruto);estado.bloqueada=false;var desfeito=erro("A importação não foi concluída. Os dados anteriores foram restaurados.","importacao_recuperada",causa);desfeito.recuperado=true;throw desfeito;}
+        catch(recuperacao){if(recuperacao&&recuperacao.recuperado)throw recuperacao;estado.bloqueada=true;throw pendente(recuperacao,"A importação não foi confirmada e a recuperação ainda está pendente. Preserve esta aba, feche as outras abas e tente recuperar.");}
+      }
+      if(causa&&causa.pendente){estado.bloqueada=true;throw causa;}
+      try{if(markerTentado)limparMarker(s,bruto);else if(s&&lerTexto(s,CHAVE_MARKER)!==null)throw pendente();}
+      catch(limpeza){estado.bloqueada=true;throw pendente(limpeza,"A preparação da importação falhou e o aviso local ainda não pôde ser conferido.");}
+      if(!fonteConfirmada){estado.bloqueada=true;throw pendente(causa);}
+      estado.bloqueada=false;var intacto=erro("A importação não foi iniciada; os dados anteriores foram preservados.","importacao_recuperada",causa);intacto.recuperado=true;throw intacto;
+    }finally{estado.ativa=false;}
+  }
+  async function recuperar(){
+    if(estado.ativa)throw pendente(null,"Aguarde a operação local em andamento antes de recuperar.");
+    estado.ativa=true;
+    try{
+      var s=storage();if(!s){estado.bloqueada=false;return false;}
+      var bruto=lerTexto(s,CHAVE_MARKER);if(bruto===null){estado.bloqueada=false;return false;}
+      estado.bloqueada=true;
+      var m=validarMarker(bruto),db=await abrirBanco(),lido=await lerJournal(db);
+      if(!lido||typeof lido.existe!=="boolean")throw pendente(null,"A leitura do registro de recuperação não foi confirmada.");
+      if(!lido.existe){limparMarker(s,bruto);estado.bloqueada=false;return true;}
+      var j=validarJournal(lido.valor,m);await restaurar(db,s,j,m,bruto);estado.bloqueada=false;return true;
+    }catch(e){estado.bloqueada=true;if(e&&e.pendente)throw e;throw pendente(e);}
+    finally{estado.ativa=false;}
+  }
+  return{estado:estado,executar:executar,recuperar:recuperar,impedirGravacao:impedirGravacao};
+}
+var P="mesa:", mem=Object.create(null), ls=null, falhaAcesso=false;
+/* Uma fonte legível continua válida mesmo quando não há espaço para escrever. */
+try{ls=window.localStorage||null;}catch(e){falhaAcesso=true;}
+function erroLeituraTexto(){var e=new Error("Não foi possível ler os dados locais com segurança. Preserve esta aba e tente novamente sem apagar os dados do navegador.");e.code="leitura_local";return e;}
+function fonteLocal(){
+  if(!ls&&falhaAcesso){try{ls=window.localStorage;if(!ls)throw erroLeituraTexto();falhaAcesso=false;if(window.__mesaArmazenamento)window.__mesaArmazenamento.temLocalStorage=true;}catch(e){throw erroLeituraTexto();}}
+  return ls;
+}
+
+function ler(k){try{var fonte=fonteLocal();return fonte?fonte.getItem(P+k):(Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null);}catch(e){throw erroLeituraTexto();}}
+function lerDocumento(path){
+  var bruto=ler(path);if(bruto===null)return null;
+  try{var v=JSON.parse(bruto);if(!v||typeof v!=="object"||Array.isArray(v))throw erroLeituraTexto();return v;}catch(e){throw erroLeituraTexto();}
+}
+function gravar(k,v,restauracaoConfirmada){
+  if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
+  if(/^roteiros\/local\//.test(k)){if(restauracaoConfirmada)ler(k);else lerDocumento(k);}
+  var fonte=fonteLocal();
+  try{ if(fonte) fonte.setItem(P+k,v); else mem[k]=v; }
   catch(e){ var er=new Error("Armazenamento cheio"); er.code="quota_exceeded"; throw er; }
   try{if(/^roteiros\/local\//.test(k)&&window.agendarBackupNuvem)window.agendarBackupNuvem();}catch(e){}
 }
-function apagar(k){ if(ls) ls.removeItem(P+k); else delete mem[k];try{if(/^roteiros\/local\//.test(k)&&window.agendarBackupNuvem)window.agendarBackupNuvem();}catch(e){} }
+function apagar(k){if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();if(/^roteiros\/local\//.test(k))lerDocumento(k);var fonte=fonteLocal();if(fonte)fonte.removeItem(P+k);else delete mem[k];try{if(/^roteiros\/local\//.test(k)&&window.agendarBackupNuvem)window.agendarBackupNuvem();}catch(e){} }
 function chaves(){
   var out=[],i,k;
-  if(ls){ for(i=0;i<ls.length;i++){ k=ls.key(i); if(k.indexOf(P)===0) out.push(k.slice(P.length)); } }
-  else out=Object.keys(mem);
+  try{var fonte=fonteLocal();if(fonte){for(i=0;i<fonte.length;i++){k=fonte.key(i);if(typeof k!=="string")throw erroLeituraTexto();if(k.indexOf(P)===0)out.push(k.slice(P.length));}}else out=Object.keys(mem);}catch(e){throw erroLeituraTexto();}
   return out;
 }
 function novoId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -891,12 +1171,12 @@ function docRef(path){
   return {
     path:path, id:id,
     get:async function(){
-      var v=ler(path);
-      return {exists:v!==null, id:id, data:function(){ return v===null?undefined:JSON.parse(v); }};
+      var v=lerDocumento(path);
+      return {exists:v!==null, id:id, data:function(){return v===null?undefined:JSON.parse(JSON.stringify(v));}};
     },
-    set:async function(d){ gravar(path,JSON.stringify(d)); },
+    set:async function(d,opcoes){gravar(path,JSON.stringify(d),!!(opcoes&&opcoes.restauracaoConfirmada));},
     update:async function(d){
-      var v=ler(path), o=v?JSON.parse(v):{}, k;
+      var o=lerDocumento(path)||{},k;
       for(k in d) o[k]=d[k];
       gravar(path,JSON.stringify(o));
     },
@@ -912,7 +1192,7 @@ function consulta(cp,campo,dir){
       var docs=chaves().filter(function(k){
         return k.indexOf(pre)===0 && k.indexOf("/",pre.length)<0;
       }).map(function(k){
-        var d=JSON.parse(ler(k));
+        var d=lerDocumento(k);if(d===null)throw erroLeituraTexto();
         return {id:k.slice(pre.length), ref:docRef(k), data:function(){ return d; }};
       });
       if(campo) docs.sort(function(a,b){
@@ -979,10 +1259,11 @@ var dbLocal={
     return {nome:h.name||"pasta escolhida",arquivo:filename};
   }
   async function nomePastaBackup(){ var h=await configPasta("ler"); return h?(h.name||"pasta escolhida"):null; }
-  window.__mesaArmazenamento={db:dbLocal, baixador:baixadorLocal, temLocalStorage:!!ls, escolherPastaBackup:escolherPastaBackup, salvarEmPasta:salvarEmPasta, nomePastaBackup:nomePastaBackup, nomeVersao:nomeVersao, suportaPasta:!!window.showDirectoryPicker};
+  window.__mesaArmazenamento={db:dbLocal,baixador:baixadorLocal,temLocalStorage:!!ls,modoMemoria:!ls&&!falhaAcesso,lerValor:ler,gravarValor:gravar,escolherPastaBackup:escolherPastaBackup,salvarEmPasta:salvarEmPasta,nomePastaBackup:nomePastaBackup,nomeVersao:nomeVersao,suportaPasta:!!window.showDirectoryPicker};
+  window.__mesaArmazenamento.recuperacao=criarMotorImportacao(function(){if(!window.EditorDesenho||!window.EditorDesenho.bdAbrir)throw new Error("O banco de desenhos não está disponível.");return window.EditorDesenho.bdAbrir();},fonteLocal);
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js" integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O" crossorigin="anonymous"></script>
 <script>
 /* Chave publicável: segura no navegador somente com RLS ativado. Nunca coloque
    aqui senha do banco, service_role ou qualquer chave marcada como secreta. */
@@ -1135,7 +1416,9 @@ function bdLer(id){
   });
 }
 function bdGravar(id,rec){
+  try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){return Promise.resolve(false);}
   return bdAbrir().then(function(db){
+  try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){return Promise.resolve(false);}
     if(!db){ window.__mesaFalhaIndexedDB=true; BD.mem[id]=rec; return false; }
     return new Promise(function(res){
       try{
@@ -1147,7 +1430,9 @@ function bdGravar(id,rec){
   });
 }
 function bdApagar(id){
+  try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){return Promise.resolve(false);}
   return bdAbrir().then(function(db){
+  try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){return Promise.resolve(false);}
     if(!db){ delete BD.mem[id]; return false; }
     return new Promise(function(res){
       try{
@@ -1159,7 +1444,9 @@ function bdApagar(id){
   });
 }
 function bdListar(){
+  try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){return Promise.reject(e);}
   return bdAbrir().then(function(db){
+  if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
     if(!db)throw erroLeituraImagem();
     return new Promise(function(res,rejeitar){
       var out=[],terminou=false;
@@ -1206,8 +1493,11 @@ async function importarDesenhos(lista){
   for(var i=0;i<lista.length;i++){
     var item=lista[i], rec=item&&item.rec; if(!item||!item.id||!rec) continue;
     rec.camadas=(rec.camadas||[]).map(function(c){var nc=Object.create(null); Object.keys(c).forEach(function(k){nc[k]=c[k];}); nc.blob=dataParaBlob(nc.blob); nc.originalBlob=dataParaBlob(nc.originalBlob); return nc;});
-    await bdGravar(item.id,rec);
+    if(await bdGravar(item.id,rec)!==true)throw new Error("Não foi possível confirmar a gravação de todos os desenhos.");
   }
+}
+function prepararDesenhosImportacao(lista){
+  return (lista||[]).map(function(item){var rec=JSON.parse(JSON.stringify(item.rec));rec.camadas=(rec.camadas||[]).map(function(c){var nc=Object.create(null);Object.keys(c).forEach(function(k){nc[k]=c[k];});nc.blob=dataParaBlob(nc.blob);nc.originalBlob=dataParaBlob(nc.originalBlob);return nc;});return{id:item.id,rec:rec};});
 }
 
 /* ---------- ferramentas e pincéis ---------- */
@@ -4903,7 +5193,9 @@ function recortarCamadaSelecao(){
 /* exportar */
 function baixar(blob,nome){
   var a=document.createElement("a"), u=URL.createObjectURL(blob);
-  a.href=u; a.download=nome; document.body.appendChild(a); a.click(); a.remove();
+  var rec=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao,pai=document.body;
+  if(rec&&rec.estado.bloqueada&&document.getElementById("avisoRecuperacao"))pai=document.getElementById("avisoRecuperacao");
+  a.href=u; a.download=nome; pai.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(u); },1500);
 }
 function exportar(){
@@ -4937,19 +5229,20 @@ function atualizarPaginaNoEditor(res,b,limpar,limparPainel){
 }
 function executarEdicaoPagina(tipo,valor,b){
   if(!S||!S.opts||!S.opts.editarPagina||S.trocandoPagina||S.editandoPagina)return Promise.resolve(false);
-  var s=S,editar=s.opts.editarPagina,ir=s.opts.irPagina,limpar=s.opts.limparPaginaRemovida,limparPainel=s.opts.limparPainelRemovido,textoBotao=b&&b.textContent,botaoDesabilitado=b&&b.disabled;
+  var s=S,editar=s.opts.editarPagina,ir=s.opts.irPagina,limpar=s.opts.limparPaginaRemovida,limparPainel=s.opts.limparPainelRemovido,textoBotao=b&&b.textContent,botaoDesabilitado=b&&b.disabled,estruturaConfirmada=false;
   s.editandoPagina=true;if(b){b.disabled=true;b.textContent="Salvando…";}
-  return tentarSalvarDesenho().then(function(ok){
+  return tentarSalvarDesenho().then(async function(ok){
     if(!ok||S!==s||s.sujo)return false;
-    var res=editar(tipo,valor);if(!res||typeof res.indice!=="number")return false;
+    var res=await editar(tipo,valor);if(!res||typeof res.indice!=="number")return false;
+    estruturaConfirmada=!!res.confirmada;
     if(res.recarregar||res.atualizarUI){atualizarPaginaNoEditor(res,b,limpar,limparPainel);return true;}
     s.trocandoPagina=true;if(b)b.textContent="Abrindo…";
     return sair(function(){
       if(res.removida&&limpar)limpar(res.removida);
       if(res.painelRemovido&&limparPainel)limparPainel(res.painelRemovido);
       if(ir)ir(res.indice);
-    },true);
-  }).catch(function(){if(S===s)aviso("Não foi possível concluir a operação da página. O editor continua aberto.");return false;}).finally(function(){
+    },true).then(function(ok){if(!ok&&estruturaConfirmada&&s.opts.aoFalharEstrutura)s.opts.aoFalharEstrutura();return ok;});
+  }).catch(function(){if(estruturaConfirmada&&s.opts.aoFalharEstrutura)s.opts.aoFalharEstrutura();else if(S===s)aviso("Não foi possível concluir a operação da página. O editor continua aberto.");return false;}).finally(function(){
     s.editandoPagina=false;if(S===s)s.trocandoPagina=false;if(b){b.disabled=botaoDesabilitado;b.textContent=textoBotao;}
   });
 }function confirmarAcaoPagina(b,texto,tipo,valor){
@@ -5474,11 +5767,15 @@ window.EditorDesenho={
   previa:previa,
   compor:compor,
   exportarDados:exportarDadosEditor,
-  importarDados:importarDesenhos,
+  exportarPNG:exportar,
+  importarDados:function(lista){if(!window.__mesaImportarPacote)throw new Error("O importador ainda não foi iniciado.");return window.__mesaImportarPacote({obras:[],capitulos:[],notas:[],desenhos:lista});},
   bdLer:bdLer,
   bdGravar:bdGravar,
   bdApagar:bdApagar,
   bdListar:bdListar,
+  bdAbrir:bdAbrir,
+  prepararDadosImportacao:prepararDesenhosImportacao,
+  aguardarOperacoes:function(){return Promise.all(COPIAS_DESENHO.slice()).then(tentarSalvarDesenho);},
   TAMANHOS:TAMANHOS,
   ORDEM:ORDEM
 };
@@ -5534,6 +5831,7 @@ var desenhosLivres=[];
 var pendenteNota=null, salvandoNota=false, notaSuja=false, revisaoNota=0;
 var acaoTextoAtiva=false, textosVolateis=false;
 var modoLeitura=false;
+var BIBLIOTECA_TEXTOS_OK=false,DESENHOS_LIVRES_LIDOS=false,FALHAS_LEITURA_LOCAL=Object.create(null),CACHE_CONSULTA=null,RECUPERACAO_INICIAL=true;
 var LEITURA={zoom:100,base:420};
 
 var el=function(id){return document.getElementById(id);};
@@ -5556,32 +5854,66 @@ function tagsNota(valor){
 function textoTags(valor){ return tagsNota(valor).join(", "); }
 function htmlTags(valor,idNota){var lista=tagsNota(valor),nid=idNota||notaAtual,n=notaObj(nid),imagens=n&&notaSomenteImagens(n);return lista.length?'<div class="nota-tags" aria-label="Etiquetas">'+lista.map(function(t){var ativa=MARCA_NOTA.notaId===nid&&normalizarBuscaNota(t)===normalizarBuscaNota(MARCA_NOTA.termo);return '<button type="button" class="nota-tag" data-nota-tag="'+esc(t)+'" data-nota-tag-id="'+esc(nid||"")+'" aria-pressed="'+ativa+'" title="Grifar e ir até esta etiqueta no texto da nota"'+(imagens?' disabled':'')+'>#'+esc(t)+'</button>';}).join("")+'</div>':"";}
 function horaCurta(valor){ try{return new Date(valor).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});}catch(e){return "agora";} }
-function lerMetaLocal(chave){ try{return JSON.parse(window.localStorage.getItem("mesa:"+chave)||"null");}catch(e){return null;} }
-function gravarMetaLocal(chave,valor){ try{window.localStorage.setItem("mesa:"+chave,JSON.stringify(valor));}catch(e){} }
-function carregarDesenhosLivres(){
-  var lista=lerMetaLocal("desenhos-livres");
-  desenhosLivres=(Array.isArray(lista)?lista:[]).filter(function(x){return x&&x.id&&x.titulo;}).map(function(x){return {id:String(x.id),titulo:String(x.titulo),criadoEm:x.criadoEm||Date.now(),atualizadoEm:x.atualizadoEm||x.criadoEm||Date.now()};});
-  desenhosLivres.sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});
+function erroLeituraLocal(mensagem){var e=new Error(mensagem||"Não foi possível ler os textos ou metadados locais. Preserve seus backups e tente novamente sem apagar dados.");e.code="leitura_local";return e;}
+function registrarFalhaLocal(grupo,mensagem){FALHAS_LEITURA_LOCAL[grupo]=mensagem;atualizarFalhasLocais();}
+function limparFalhaLocal(grupo){delete FALHAS_LEITURA_LOCAL[grupo];atualizarFalhasLocais();}
+function atualizarFalhasLocais(){var box=el("avisoLeituraLocal"),texto=el("textoLeituraLocal");if(!box||!texto)return;var lista=Object.keys(FALHAS_LEITURA_LOCAL);box.classList.toggle("oculto",!lista.length);texto.textContent=lista.map(function(k){return FALHAS_LEITURA_LOCAL[k];}).join(" ");}
+function lerJsonLocal(chave){
+  var bruto;
+  try{var ar=window.__mesaArmazenamento;bruto=ar&&ar.lerValor?ar.lerValor(chave):window.localStorage.getItem("mesa:"+chave);if(bruto===null)return{existe:false,valor:null};return{existe:true,valor:JSON.parse(bruto)};}catch(e){throw erroLeituraLocal();}
 }
-function salvarDesenhosLivres(){ gravarMetaLocal("desenhos-livres",desenhosLivres);agendarBackupNuvem(); }
+function lerMetaLocal(chave){return lerJsonLocal(chave).valor;}
+function lerListaEssencial(chave){
+  var l=lerJsonLocal(chave);if(!l.existe)return[];var lista=l.valor,vistos=Object.create(null);
+  if(!Array.isArray(lista))throw erroLeituraLocal("Uma biblioteca local contém dados inválidos. Ela foi preservada sem substituição.");
+  lista.forEach(function(v){
+    if(!v||typeof v!=="object"||Array.isArray(v)||!((typeof v.id==="string"&&v.id)||(typeof v.id==="number"&&isFinite(v.id)))||vistos[String(v.id)])throw erroLeituraLocal("Uma biblioteca local contém registros inválidos ou repetidos. Ela foi preservada sem substituição.");
+    vistos[String(v.id)]=true;
+    if(chave==="desenhos-livres"&&typeof v.titulo!=="string")throw erroLeituraLocal();
+    if(chave==="fichas-personagem-v1"){
+      if(v.notas!=null&&(typeof v.notas!=="object"||Array.isArray(v.notas)))throw erroLeituraLocal();
+      if(v.imagens!=null&&!Array.isArray(v.imagens))throw erroLeituraLocal();
+      var imgs=Object.create(null);(v.imagens||[]).forEach(function(im){if(!im||typeof im!=="object"||!im.id||imgs[String(im.id)])throw erroLeituraLocal();imgs[String(im.id)]=true;});
+    }
+  });return lista;
+}
+function gravarMetaLocal(chave,valor,restauracaoConfirmada){
+  try{
+    if(chave==="desenhos-livres"||chave==="fichas-personagem-v1"){
+      if(!restauracaoConfirmada)lerListaEssencial(chave);
+      else{var fonte=window.__mesaArmazenamento;if(fonte&&fonte.lerValor)fonte.lerValor(chave);else window.localStorage.getItem("mesa:"+chave);}
+    }
+    var ar=window.__mesaArmazenamento;if(ar&&ar.gravarValor)ar.gravarValor(chave,JSON.stringify(valor));else window.localStorage.setItem("mesa:"+chave,JSON.stringify(valor));return true;
+  }catch(e){return false;}
+}
+function carregarDesenhosLivres(){
+  try{var lista=lerListaEssencial("desenhos-livres").map(function(x){var v=dadosProfundos(x);v.id=String(x.id);return v;});lista.sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});desenhosLivres=lista;DESENHOS_LIVRES_LIDOS=true;limparFalhaLocal("livres");return true;}
+  catch(e){DESENHOS_LIVRES_LIDOS=false;registrarFalhaLocal("livres","Não foi possível ler a lista de desenhos livres; ela não será substituída por uma lista vazia.");throw e;}
+}
+function garantirDesenhosLivresLidos(){if(!DESENHOS_LIVRES_LIDOS)carregarDesenhosLivres();}
+function salvarDesenhosLivres(restauracaoConfirmada){
+  if(!restauracaoConfirmada)garantirDesenhosLivresLidos();
+  if(!gravarMetaLocal("desenhos-livres",desenhosLivres,restauracaoConfirmada)){registrarFalhaLocal("livres","A lista de desenhos livres não foi salva. A versão anterior foi preservada; tente novamente.");return false;}
+  DESENHOS_LIVRES_LIDOS=true;limparFalhaLocal("livres");agendarBackupNuvem();return true;
+}
 /* ========== fichas visuais de personagens ========== */
 var FICHAS={lista:null,atual:null,escopo:null,aba:"vistas",janela:null,zoom:null,importando:false};
 var FICHA_ABAS=[["geral","Geral"],["vistas","Vistas"],["expressoes","Expressões"],["roupas","Roupas"],["detalhes","Detalhes"]];
 function normalizarFichaPersonagem(v){
   if(!v||typeof v!=="object"||!v.id)return null;
-  var notasFicha={},notasBrutas=v.notas||{};FICHA_ABAS.forEach(function(a){notasFicha[a[0]]=String(notasBrutas[a[0]]||"").slice(0,20000);});
-  var vistos=Object.create(null),imagens=(Array.isArray(v.imagens)?v.imagens:[]).filter(function(im){if(!im||!im.id||vistos[im.id])return false;vistos[im.id]=true;return true;}).map(function(im){return{id:String(im.id),nome:String(im.nome||"Referência").slice(0,160),aba:FICHA_ABAS.some(function(a){return a[0]===im.aba;})?im.aba:"vistas",vista:String(im.vista||"Livre").slice(0,30),retirada:!!im.retirada};});
-  return{id:String(v.id),nome:String(v.nome||"Sem nome").trim().slice(0,80)||"Sem nome",obraId:v.obraId?String(v.obraId):null,notas:notasFicha,imagens:imagens,arquivada:!!v.arquivada,atualizadoEm:+v.atualizadoEm||Date.now()};
+  var notasBrutas=v.notas||{},notasFicha=dadosProfundos(notasBrutas);FICHA_ABAS.forEach(function(a){notasFicha[a[0]]=String(notasBrutas[a[0]]||"").slice(0,20000);});
+  var vistos=Object.create(null),imagens=(Array.isArray(v.imagens)?v.imagens:[]).filter(function(im){if(!im||!im.id||vistos[im.id])return false;vistos[im.id]=true;return true;}).map(function(im){return Object.assign(dadosProfundos(im),{id:String(im.id),nome:String(im.nome||"Referência").slice(0,160),aba:FICHA_ABAS.some(function(a){return a[0]===im.aba;})?im.aba:"vistas",vista:String(im.vista||"Livre").slice(0,30),retirada:!!im.retirada});});
+  return Object.assign(dadosProfundos(v),{id:String(v.id),nome:String(v.nome||"Sem nome").trim().slice(0,80)||"Sem nome",obraId:v.obraId?String(v.obraId):null,notas:notasFicha,imagens:imagens,arquivada:!!v.arquivada,atualizadoEm:+v.atualizadoEm||Date.now()});
 }
 function fichasLer(){
-  if(!FICHAS.lista){var lista=lerMetaLocal("fichas-personagem-v1");FICHAS.lista=(Array.isArray(lista)?lista:[]).map(normalizarFichaPersonagem).filter(Boolean);}
+  if(!FICHAS.lista){try{var lista=lerListaEssencial("fichas-personagem-v1").map(normalizarFichaPersonagem);if(lista.some(function(v){return!v;}))throw erroLeituraLocal();FICHAS.lista=lista;limparFalhaLocal("fichas");}catch(e){registrarFalhaLocal("fichas","Não foi possível ler as fichas; a biblioteca existente foi preservada.");throw e;}}
   return FICHAS.lista;
 }
 function fichaAtual(){return fichasLer().filter(function(f){return f.id===FICHAS.atual;})[0]||null;}
 function fichaStatus(texto,erro){if(!FICHAS.janela)return;var st=FICHAS.janela.querySelector("[data-ficha-status]");if(st){st.textContent=texto;st.classList.toggle("erro",!!erro);}}
 function fichasGravar(){
-  try{localStorage.setItem("mesa:fichas-personagem-v1",JSON.stringify(fichasLer()));agendarBackupNuvem();fichaStatus("Salvo neste aparelho.");return true;}
-  catch(e){fichaStatus("Não foi possível guardar a ficha. Faça um backup antes de fechar esta página.",true);return false;}
+  try{if(!gravarMetaLocal("fichas-personagem-v1",fichasLer()))throw erroLeituraLocal();FICHAS.pendente=false;limparFalhaLocal("fichas");agendarBackupNuvem();fichaStatus("Salvo neste aparelho.");return true;}
+  catch(e){FICHAS.pendente=true;registrarFalhaLocal("fichas","Há alterações de ficha ainda não salvas. Mantenha esta aba aberta e tente novamente.");fichaStatus("Não foi possível guardar a ficha. As alterações continuam nesta aba.",true);return false;}
 }
 function fichaImagemChave(fid,iid){return "ficha-imagem/"+fid+"/"+iid;}
 function fichaCriar(nome,obraIdFicha){
@@ -5613,6 +5945,7 @@ function renderFichasPersonagem(){
   var conteudo=f?'<div class="fichas-abas" role="group" aria-label="Seções da ficha">'+FICHA_ABAS.map(function(a){return '<button type="button" class="bt mini" data-ficha-aba="'+a[0]+'" aria-pressed="'+(FICHAS.aba===a[0])+'">'+a[1]+'</button>';}).join("")+'</div><label>'+({geral:"Identidade, personalidade e proporções",vistas:"Frente, perfil e costas — detalhes para manter consistência",expressoes:"Expressões, olhos, boca e gestos",roupas:"Roupas, acessórios e cores",detalhes:"Cabelo, marcas e detalhes importantes"}[FICHAS.aba])+'<textarea data-ficha-notas aria-label="Anotações da ficha" rows="4" placeholder="Descreva o que você precisa lembrar ao desenhar…">'+esc(f.notas[FICHAS.aba])+'</textarea></label><div class="fichas-linha"><label style="flex:1;margin:0">Identificar imagens<select data-ficha-vista aria-label="Identificar as próximas imagens"><option>Frente</option><option>Perfil</option><option>Costas</option><option>Três quartos</option><option>Livre</option></select></label><button type="button" class="bt mini" data-ficha-adicionar'+(FICHAS.importando?' disabled':'')+'>+ Referências</button><input type="file" data-ficha-arquivos accept="image/*" multiple hidden></div><p class="fichas-dica">Toque na imagem para ampliar. As referências ficam nesta ficha, sem entrar no papel.</p><div class="fichas-grade" data-ficha-grade></div>'+(retiradas.length?'<details class="fichas-retiradas"><summary>Imagens retiradas ('+retiradas.length+')</summary>'+retiradas.map(function(im){return '<button class="bt mini" type="button" data-ficha-restaurar-imagem="'+esc(im.id)+'">Restaurar '+esc(im.nome)+'</button>';}).join("")+'</details>':'')+'<div class="fichas-linha"><button type="button" class="bt mini" data-ficha-arquivar>Arquivar ficha</button></div>':'<p class="fichas-vazio">Escolha um personagem ou crie uma ficha. Guarde vistas, expressões e roupas para consultar ao lado do desenho.</p>';
   FICHAS.janela.querySelector(".fichas-corpo").innerHTML='<label>Biblioteca<select data-ficha-escopo aria-label="Obra das fichas">'+opt+'</select></label><label>Personagem<select data-ficha-selecionar aria-label="Escolher ficha de personagem">'+selecao+'</select></label><div class="fichas-linha"><input type="text" data-ficha-nome maxlength="80" placeholder="Nome de outro personagem" aria-label="Nome do novo personagem"><button type="button" class="bt mini" data-ficha-criar>Criar ficha</button></div>'+conteudo+(arquivadas.length?'<details class="fichas-retiradas"><summary>Fichas arquivadas ('+arquivadas.length+')</summary>'+arquivadas.map(function(x){return '<button type="button" class="bt mini" data-ficha-restaurar="'+esc(x.id)+'">Restaurar '+esc(x.nome)+'</button>';}).join("")+'</details>':'')+'<p class="fichas-status" data-ficha-status role="status">Salvo neste aparelho. Incluído no backup completo.</p>';
   if(f)hidratarFichaImagens(f);
+  if(FICHAS.pendente)fichaStatus("Não foi possível guardar a ficha. As alterações continuam nesta aba.",true);
 }
 async function hidratarFichaImagens(f){
   var host=FICHAS.janela.querySelector("[data-ficha-grade]"),aba=FICHAS.aba,lista=f.imagens.filter(function(im){return!im.retirada&&im.aba===aba;});if(!host)return;
@@ -5627,12 +5960,15 @@ async function hidratarFichaImagens(f){
   }
 }
 function abrirFichasPersonagem(nome){
+  try{
   montarFichasPersonagem();var jaAberta=!FICHAS.janela.classList.contains("oculto");if(!jaAberta)FICHAS.escopo=obraAtual||"";
   if(nome){var ficha=fichaCriar(nome,FICHAS.escopo);if(ficha)FICHAS.atual=ficha.id;}
   else if(!fichaAtual()||(fichaAtual().obraId||"")!==FICHAS.escopo){var prim=fichasLer().filter(function(f){return(f.obraId||"")===FICHAS.escopo&&!f.arquivada;})[0];FICHAS.atual=prim?prim.id:null;}
   var pai=document.fullscreenElement||document.body;if(FICHAS.janela.parentNode!==pai)pai.appendChild(FICHAS.janela);if(FICHAS.zoom.parentNode!==pai)pai.appendChild(FICHAS.zoom);
   FICHAS.janela.classList.remove("oculto");renderFichasPersonagem();
+  }catch(e){mostrarFalhaFichas();}
 }
+function mostrarFalhaFichas(){montarFichasPersonagem();FICHAS.janela.classList.remove("oculto");FICHAS.janela.querySelector(".fichas-corpo").innerHTML='<p role="status">Não foi possível ler a biblioteca de fichas. Os dados existentes foram preservados.</p><button type="button" class="bt" data-ficha-reler>Tentar ler novamente</button>';}
 function fecharFichasPersonagem(){if(FICHAS.janela)FICHAS.janela.classList.add("oculto");if(FICHAS.zoom){FICHAS.zoom.classList.add("oculto");FICHAS.zoom.querySelector("img").removeAttribute("src");}}
 function fichaEntrada(e){var f=fichaAtual();if(!f)return;if(e.target.hasAttribute("data-ficha-notas")){f.notas[FICHAS.aba]=e.target.value;f.atualizadoEm=Date.now();fichasGravar();}else if(e.target.hasAttribute("data-ficha-legenda")){var iid=e.target.getAttribute("data-ficha-legenda"),im=f.imagens.filter(function(x){return x.id===iid;})[0];if(im){im.nome=e.target.value.slice(0,160);f.atualizadoEm=Date.now();fichasGravar();}}}
 function fichaMudanca(e){
@@ -5641,8 +5977,10 @@ function fichaMudanca(e){
   else if(t.hasAttribute("data-ficha-arquivos")){var arquivos=Array.prototype.slice.call(t.files||[]);t.value="";adicionarFichaImagens(arquivos);}
 }
 async function fichaClique(e){
-  var b=e.target.closest("button"),f=fichaAtual();if(!b)return;
+  var b=e.target.closest("button");if(!b)return;
   if(b.hasAttribute("data-ficha-fechar")){fecharFichasPersonagem();return;}
+  if(b.hasAttribute("data-ficha-reler")){abrirFichasPersonagem();return;}
+  var f;try{f=fichaAtual();}catch(err){mostrarFalhaFichas();return;}
   if(b.hasAttribute("data-ficha-criar")){var nome=FICHAS.janela.querySelector("[data-ficha-nome]").value,novo=fichaCriar(nome,FICHAS.escopo);if(novo)renderFichasPersonagem();return;}
   if(b.hasAttribute("data-ficha-restaurar")){var ar=fichasLer().filter(function(x){return x.id===b.getAttribute("data-ficha-restaurar");})[0];if(ar){ar.arquivada=false;FICHAS.atual=ar.id;fichasGravar();renderFichasPersonagem();}return;}
   if(!f)return;
@@ -5673,9 +6011,7 @@ async function exportarFichasPersonagem(){
   return{fichas:fichas,imagens:imagens};
 }
 async function importarFichasPersonagem(pacote){
-  if(!pacote||!Array.isArray(pacote.fichas))return;var fichas=pacote.fichas.map(normalizarFichaPersonagem).filter(Boolean),permitidas={};fichas.forEach(function(f){f.imagens.forEach(function(im){permitidas[fichaImagemChave(f.id,im.id)]=true;});});
-  for(var i=0;i<(pacote.imagens||[]).length;i++){var im=pacote.imagens[i];if(!im||!permitidas[im.chave]||!/^data:image\//i.test(im.src||""))continue;if(!await bdGravar(im.chave,{src:im.src,nome:String(im.nome||"Referência")}))throw new Error("Não foi possível restaurar as imagens das fichas.");}
-  fichas.forEach(function(f){var pos=fichasLer().findIndex(function(x){return x.id===f.id;});if(pos<0)FICHAS.lista.push(f);else FICHAS.lista[pos]=f;});if(!fichasGravar())throw new Error("Não foi possível restaurar as fichas.");if(FICHAS.janela&&!FICHAS.janela.classList.contains("oculto"))renderFichasPersonagem();
+  return importarBackupArquivo({text:async function(){return JSON.stringify({obras:[],capitulos:[],notas:[],fichasPersonagem:pacote});}});
 }
 window.FichasPersonagem={abrir:abrirFichasPersonagem,fechar:fecharFichasPersonagem,exportar:exportarFichasPersonagem,importar:importarFichasPersonagem};
 document.addEventListener("click",function(e){var b=e.target.closest("[data-ficha-personagem]");if(b){e.preventDefault();abrirFichasPersonagem(b.getAttribute("data-ficha-personagem")||null);}});
@@ -5687,24 +6023,29 @@ document.addEventListener("keydown",function(e){
 },true);
 document.addEventListener("fullscreenchange",function(){if(FICHAS.janela&&!FICHAS.janela.classList.contains("oculto")){var pai=document.fullscreenElement||document.body;pai.appendChild(FICHAS.janela);pai.appendChild(FICHAS.zoom);}});
 function registrarDesenhoLivre(idLivre,titulo,criadoEm){
+  garantirDesenhosLivresLidos();var anteriores=dadosProfundos(desenhosLivres);
   if(!idLivre) return null;
   titulo=(titulo||"Desenho livre").trim()||"Desenho livre";
   var agora=Date.now(), item=desenhosLivres.filter(function(x){return x.id===idLivre;})[0];
   if(!item){ item={id:idLivre,titulo:titulo,criadoEm:criadoEm||agora,atualizadoEm:agora}; desenhosLivres.unshift(item); }
   else{ item.titulo=titulo; item.atualizadoEm=agora; }
-  desenhosLivres.sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);}); salvarDesenhosLivres(); return item;
+  desenhosLivres.sort(function(a,b){return (b.atualizadoEm||0)-(a.atualizadoEm||0);});if(!salvarDesenhosLivres()){desenhosLivres=anteriores;aviso("Não foi possível guardar o registro do desenho livre. A lista anterior foi preservada.");return null;}return item;
 }
 function renomearDesenhoLivre(idLivre){
+  try{garantirDesenhosLivresLidos();}catch(e){aviso("Não foi possível ler a lista de desenhos livres. O nome anterior foi preservado.");return false;}
   var item=desenhosLivres.filter(function(x){return x.id===idLivre;})[0]; if(!item) return;
   var novo=window.prompt("Nome do desenho livre:",item.titulo||""); if(novo===null) return;
   novo=novo.trim(); if(!novo){ aviso("O nome não pode ficar vazio."); return; }
-  item.titulo=novo; item.atualizadoEm=Date.now(); salvarDesenhosLivres(); desenhar(); aviso("Desenho livre renomeado.");
+  var anteriores=dadosProfundos(desenhosLivres);item.titulo=novo;item.atualizadoEm=Date.now();if(!salvarDesenhosLivres()){desenhosLivres=anteriores;aviso("O novo nome não foi salvo. O registro anterior foi preservado.");return;}desenhar();aviso("Desenho livre renomeado.");
 }
 async function apagarDesenhoLivre(idLivre){
+  try{garantirDesenhosLivresLidos();}catch(e){aviso("Não foi possível ler a lista de desenhos livres. Nenhum desenho foi apagado.");return false;}
   var item=desenhosLivres.filter(function(x){return x.id===idLivre;})[0]; if(!item) return;
   if(!window.confirm("Apagar o desenho livre “"+(item.titulo||"Desenho livre")+"”? Esta ação não pode ser desfeita.")) return;
-  if(window.EditorDesenho&&window.EditorDesenho.apagar) await window.EditorDesenho.apagar(idLivre);
-  desenhosLivres=desenhosLivres.filter(function(x){return x.id!==idLivre;}); salvarDesenhosLivres(); desenhar(); aviso("Desenho livre apagado.");
+  var anteriores=desenhosLivres;desenhosLivres=desenhosLivres.filter(function(x){return x.id!==idLivre;});
+  if(!salvarDesenhosLivres()){desenhosLivres=anteriores;aviso("Não foi possível confirmar a remoção. O desenho e seu registro foram preservados.");return false;}
+  var limpo=window.EditorDesenho&&window.EditorDesenho.apagar?await window.EditorDesenho.apagar(idLivre):false;
+  desenhar();aviso(limpo===true?"Desenho livre apagado.":"Registro removido. A limpeza dos pixels não foi confirmada.");return true;
 }
 function htmlEntradaBiblioteca(){
   var obraHtml=obras.map(function(o){
@@ -5718,11 +6059,11 @@ function htmlEntradaBiblioteca(){
   var livresHtml=desenhosLivres.map(function(d){
     return '<div class="entrada-biblioteca-item" role="group"><button type="button" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:inherit" data-entrada-livre="'+esc(d.id)+'"><span class="entrada-mini-icone" aria-hidden="true">✎</span><span class="entrada-mini-texto"><strong>'+esc(d.titulo)+'</strong><small>Desenho livre · '+esc(dataNota(d.atualizadoEm||d.criadoEm||Date.now(),false))+'</small></span><span class="entrada-mini-seta" aria-hidden="true">→</span></button><span class="entrada-biblioteca-acoes"><button type="button" class="bt-texto" data-entrada-livre-renomear="'+esc(d.id)+'">renomear</button><button type="button" class="bt-texto risco" data-entrada-livre-apagar="'+esc(d.id)+'">apagar</button></span></div>';
   }).join("");
-  if(!obraHtml&&!notasHtml&&!livresHtml) return "";
+  if(!obraHtml&&!notasHtml&&!livresHtml&&DESENHOS_LIVRES_LIDOS) return "";
   return '<section class="entrada-biblioteca" aria-labelledby="entradaBibliotecaTitulo"><div class="entrada-biblioteca-cab"><div><h3 id="entradaBibliotecaTitulo">Sua biblioteca</h3><p>Obras, notas e desenhos livres ficam organizados aqui.</p></div></div><div class="entrada-biblioteca-grid">'+
     '<section class="entrada-biblioteca-secao" aria-labelledby="entradaObrasTitulo"><h4 id="entradaObrasTitulo">Obras <span>'+obras.length+'</span></h4><div class="entrada-biblioteca-lista">'+(obraHtml||'<p class="entrada-biblioteca-vazio">Nenhuma obra criada ainda.</p>')+'</div></section>'+ 
     '<section class="entrada-biblioteca-secao" aria-labelledby="entradaNotasTitulo"><h4 id="entradaNotasTitulo">Notas <span>'+notas.length+'</span></h4><div class="entrada-biblioteca-lista">'+(notasHtml||'<p class="entrada-biblioteca-vazio">Nenhuma nota criada ainda.</p>')+'</div><div class="entrada-biblioteca-acoes"><button type="button" class="bt mini" data-entrada-nota-nova>+ Nova nota</button></div></section>'+ 
-    '<section class="entrada-biblioteca-secao" aria-labelledby="entradaLivresTitulo"><h4 id="entradaLivresTitulo">Desenhos livres <span>'+desenhosLivres.length+'</span></h4><div class="entrada-biblioteca-lista">'+(livresHtml||'<p class="entrada-biblioteca-vazio">Nenhum desenho livre salvo ainda.</p>')+'</div><div class="entrada-biblioteca-acoes"><button type="button" class="bt mini" data-entrada-novo-livre>+ Novo desenho livre</button></div></section>'+ 
+    '<section class="entrada-biblioteca-secao" aria-labelledby="entradaLivresTitulo"><h4 id="entradaLivresTitulo">Desenhos livres <span>'+(DESENHOS_LIVRES_LIDOS?desenhosLivres.length:'?')+'</span></h4><div class="entrada-biblioteca-lista">'+(DESENHOS_LIVRES_LIDOS?(livresHtml||'<p class="entrada-biblioteca-vazio">Nenhum desenho livre salvo ainda.</p>'):'<p class="entrada-biblioteca-vazio">A lista de desenhos livres não pôde ser lida. Tente ler novamente no aviso acima.</p>')+'</div><div class="entrada-biblioteca-acoes"><button type="button" class="bt mini" data-entrada-novo-livre>+ Novo desenho livre</button></div></section>'+ 
     '</div></section>';
 }
 function ligarEntradaBiblioteca(){
@@ -5742,16 +6083,19 @@ function enfileirarNuvem(){ }
 function enfileirarExclusao(){ }
 function removerFilaNuvem(){ }
 async function processarFilaNuvem(){ return; }
-function salvarCacheOffline(){
+function salvarCacheOffline(fonteConfirmada){
+  if(!BIBLIOTECA_TEXTOS_OK)return false;
   try{
+    if(fonteConfirmada){window.__mesaCapsOffline=dadosProfundos(fonteConfirmada.caps);return gravarMetaLocal("offline-cache",Object.assign({},fonteConfirmada,{em:Date.now()}));}
     var capsCache=Array.isArray(window.__mesaCapsOffline)?window.__mesaCapsOffline.slice():[];
     if(doc&&doc.id){ var cp=JSON.parse(JSON.stringify(doc)); var ci=capsCache.findIndex(function(x){return x.id===doc.id;}); if(ci>=0) capsCache[ci]=cp; else capsCache.push(cp); }
     window.__mesaCapsOffline=capsCache;
-    window.localStorage.setItem("mesa:offline-cache",JSON.stringify({obras:obras,caps:capsCache,notas:notas,em:Date.now()}));
-  }catch(e){}
+    return gravarMetaLocal("offline-cache",{obras:obras,caps:capsCache,notas:notas,em:Date.now()});
+  }catch(e){return false;}
 }
 function atualizarEstadoBackup(){
-  var alvo=el("estadoBackup"), meta=lerMetaLocal("backup-meta"), sync=lerMetaLocal("sync-meta"); if(!alvo) return;
+  var alvo=el("estadoBackup");if(!alvo)return;var meta;
+  try{meta=lerMetaLocal("backup-meta");}catch(e){alvo.textContent="Não foi possível ler o registro do último backup. Isso não indica ausência das suas cópias.";return;}
   alvo.textContent=meta&&meta.em?"Último backup deste aparelho: "+dataNota(meta.em,true)+" · "+(meta.itens||0)+" item(ns).":"Último backup: ainda não registrado neste aparelho.";
   /* Este modo não usa nuvem; o arquivo de backup é a forma de transportar os dados. */
 }
@@ -5801,37 +6145,108 @@ async function copiarBibliotecaLocal(bancoDestino,raizDestino){
     }
   }
 }
+var CONTA_NUVEM={uid:null,geracao:0,autorizada:false,pausada:false,operando:false,assinatura:null,consultas:0};
+function invalidarContaNuvem(uid){
+  CONTA_NUVEM.uid=uid||null;CONTA_NUVEM.geracao++;CONTA_NUVEM.consultas++;CONTA_NUVEM.autorizada=false;contaNuvemPronta=false;
+  clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
+  COPIA_NUVEM.pendente=null;COPIA_NUVEM.ultima=null;COPIA_NUVEM.lista=[];COPIA_NUVEM.contextoLista=null;COPIA_NUVEM.offset=0;
+  var lista=el("listaCopiasNuvem");if(lista)lista.replaceChildren();var mais=el("btMaisCopiasNuvem");if(mais)mais.classList.add("oculto");
+  var st=el("estadoCopiasNuvem");if(st)st.textContent="A sessão mudou. Atualize a lista para consultar esta conta.";
+}
+function vinculoNuvemPermitido(uid){
+  try{var v=lerMetaLocal("nuvem-vinculo-v1"),cfg=window.MesaNuvem;return!!(v&&v.versao===1&&v.uid===uid&&v.projeto===cfg.url&&v.ativo===true);}catch(e){return false;}
+}
+function conferirContextoConta(c){
+  var cfg=window.MesaNuvem;if(!c||!cfg||c.cfg!==cfg||c.client!==cfg.client||c.uid!==CONTA_NUVEM.uid||c.geracao!==CONTA_NUVEM.geracao)throw erroCopiaNuvem("nuvem_conta","A sessão mudou. Atualize a conta e tente novamente.");
+  if(c.exigirEnvio&&(CONTA_NUVEM.pausada||!vinculoNuvemPermitido(c.uid)))throw erroCopiaNuvem("nuvem_autorizacao","Autorize esta biblioteca para esta conta antes de enviar trabalhos.");
+}
+function atualizarControlesConta(){
+  var ocupado=CONTA_NUVEM.operando,conectado=!!CONTA_NUVEM.uid;
+  ["emailNuvem","senhaNuvem","btEntrarNuvem","btCriarContaNuvem"].forEach(function(k){var b=el(k);if(b)b.disabled=ocupado||conectado;});
+  var autorizar=el("btAutorizarBibliotecaNuvem"),sair=el("btSairNuvem"),form=el("formContaNuvem");
+  if(autorizar){autorizar.classList.toggle("oculto",!conectado);autorizar.disabled=ocupado||!conectado||CONTA_NUVEM.autorizada;}
+  if(sair){sair.classList.toggle("oculto",!conectado);sair.disabled=ocupado||!conectado;}
+  if(form)form.classList.toggle("oculto",conectado);
+}
+async function consultarUsuarioNuvem(){
+  var cfg=window.MesaNuvem;if(!cfg||!cfg.client)throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
+  var r=await esperarCopiaNuvem(cfg.client.auth.getSession());if(r&&r.error)throw r.error;
+  var sessao=r&&r.data&&r.data.session,u=sessao&&sessao.user;if(!u)return null;
+  if(typeof u.id!=="string"||! /^[a-zA-Z0-9_-]+$/.test(u.id))throw erroCopiaNuvem("nuvem_conta","A sessão local não pôde ser conferida.");
+  var ver=await esperarCopiaNuvem(cfg.client.auth.getUser());if(ver&&ver.error)throw ver.error;
+  var confirmado=ver&&ver.data&&ver.data.user;if(!confirmado||confirmado.id!==u.id)throw erroCopiaNuvem("nuvem_conta","A conta mudou ou não pôde ser confirmada pelo servidor.");
+  return confirmado;
+}
 async function atualizarContaNuvem(){
-  var alvo=el("estadoNuvem"), botao=el("btContaNuvem"), cfg=window.MesaNuvem;
-  if(!cfg||!cfg.client){ if(alvo) alvo.textContent="Nuvem indisponível"; return null; }
-  var r=await cfg.client.auth.getSession(), usuario=r&&r.data&&r.data.session&&r.data.session.user;
-  /* O modo antigo de nuvem permanece desligado; o backup Supabase abaixo é
-     independente e nunca muda a fonte local dos dados. */
-  nuvemAtiva=false; contaNuvemPronta=!!usuario;
-  if(alvo) alvo.textContent=usuario?"Conta conectada · cópias em versões":"Nuvem desconectada";
-  if(botao) botao.textContent=usuario?"Conta conectada":"Conectar nuvem";
-  return usuario||null;
+  var alvo=el("estadoNuvem"),botao=el("btContaNuvem"),painel=el("estadoContaNuvem"),identidade=el("identidadeContaNuvem"),cfg=window.MesaNuvem;
+  if(!cfg||!cfg.client){if(alvo)alvo.textContent="Nuvem indisponível";return null;}
+  var consulta=++CONTA_NUVEM.consultas;
+  try{
+    var usuario=await consultarUsuarioNuvem();if(consulta!==CONTA_NUVEM.consultas)return null;
+    var uid=usuario&&usuario.id||null;if(uid!==CONTA_NUVEM.uid)invalidarContaNuvem(uid);
+    nuvemAtiva=false;CONTA_NUVEM.autorizada=!!uid&&!CONTA_NUVEM.pausada&&vinculoNuvemPermitido(uid);contaNuvemPronta=CONTA_NUVEM.autorizada;
+    if(identidade)identidade.textContent=usuario?"Conta conectada: "+(usuario.email||usuario.id):"Nenhuma conta conectada.";
+    if(alvo)alvo.textContent=usuario?(contaNuvemPronta?"Conta conectada · cópias autorizadas":"Conta conectada · autorize esta biblioteca"):"Nuvem desconectada";
+    if(botao)botao.textContent=usuario?"Minha conta":"Conectar nuvem";
+    if(painel)painel.textContent=usuario?(contaNuvemPronta?"Cópias automáticas autorizadas para esta conta após 2 minutos sem alterações.":"Entrar não envia seus trabalhos. Autorize esta biblioteca para habilitar as cópias nesta conta."):"Entre para consultar cópias ou autorizar o envio desta biblioteca.";
+    atualizarControlesConta();return usuario||null;
+  }catch(e){if(consulta===CONTA_NUVEM.consultas){invalidarContaNuvem(null);if(alvo)alvo.textContent="Conta não confirmada · cópias pausadas";if(identidade)identidade.textContent="Não foi possível confirmar a conta no servidor.";if(painel)painel.textContent="Verifique a conexão antes de usar a nuvem. Seus trabalhos locais continuam disponíveis.";atualizarControlesConta();}return null;}
+}
+function receberEventoContaNuvem(evento,sessao){
+  var uid=sessao&&sessao.user&&sessao.user.id||null;
+  if(uid!==CONTA_NUVEM.uid||evento==="SIGNED_OUT")invalidarContaNuvem(uid);
+  if(evento==="PASSWORD_RECOVERY"){CONTA_NUVEM.pausada=true;CONTA_NUVEM.autorizada=false;contaNuvemPronta=false;CONTA_NUVEM.geracao++;clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;}
+  /* O callback do SDK termina antes de chamar APIs assíncronas de autenticação. */
+  setTimeout(function(){atualizarContaNuvem().then(function(){if(contaNuvemPronta)agendarBackupNuvem();}).catch(function(){});},0);
 }
 async function iniciarContaNuvem(){
-  var cfg=window.MesaNuvem;
-  if(!cfg||!window.supabase||!window.supabase.createClient) return;
-  cfg.client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});
-  await atualizarContaNuvem(); agendarBackupNuvem();
+  var cfg=window.MesaNuvem;if(!cfg||!window.supabase||!window.supabase.createClient)return;
+  if(!cfg.client)cfg.client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});
+  if(!CONTA_NUVEM.assinatura&&cfg.client.auth.onAuthStateChange){var r=cfg.client.auth.onAuthStateChange(receberEventoContaNuvem);CONTA_NUVEM.assinatura=r&&r.data&&r.data.subscription||null;}
+  setTimeout(function(){atualizarContaNuvem().then(function(){if(contaNuvemPronta)agendarBackupNuvem();}).catch(function(){});},0);
 }
 async function usarContaNuvem(){
-  var usuario=await atualizarContaNuvem();
-  if(usuario){ aviso("Conta conectada. Cópias automáticas após 2 minutos sem alterações. Consulte as versões em Backup."); return true; }
-  el("dlgNuvem").showModal(); return false;
+  el("dlgNuvem").showModal();return!!await atualizarContaNuvem();
+}
+async function autorizarBibliotecaNuvem(){
+  if(CONTA_NUVEM.operando)return false;CONTA_NUVEM.operando=true;atualizarControlesConta();var alvo=el("estadoContaNuvem");
+  try{
+    var c=await contextoCopiaNuvem(false),u=await consultarUsuarioNuvem();conferirContextoConta(c);if(!u||u.id!==c.uid)throw erroCopiaNuvem("nuvem_conta","A conta mudou antes da autorização.");
+    if(!window.confirm("Autorizar cópias de TODOS os trabalhos locais deste perfil do navegador para a conta "+(u.email||u.id)+"?\n\nInclui obras, notas, desenhos e imagens. Os envios automáticos ocorrerão após 2 minutos sem alterações. Cópias anteriores de outras contas serão preservadas."))return false;
+    await confirmarContaCopia(c);conferirContextoConta(c);
+    var v={versao:1,projeto:c.cfg.url,uid:c.uid,ativo:true,em:Date.now()};
+    if(!gravarMetaLocal("nuvem-vinculo-v1",v)||!vinculoNuvemPermitido(c.uid))throw erroCopiaNuvem("nuvem_autorizacao","Não foi possível guardar a autorização. As cópias continuam pausadas.");
+    if(c.geracao!==CONTA_NUVEM.geracao||c.uid!==CONTA_NUVEM.uid)throw erroCopiaNuvem("nuvem_conta","A conta mudou antes da confirmação.");
+    CONTA_NUVEM.pausada=false;CONTA_NUVEM.autorizada=true;contaNuvemPronta=true;
+    await atualizarContaNuvem();if(contaNuvemPronta){agendarBackupNuvem();alvo.textContent="Biblioteca autorizada. A primeira cópia será preparada após 2 minutos sem alterações.";}else alvo.textContent="Autorização guardada. As cópias aguardam a confirmação da conta e da conexão.";return true;
+  }catch(e){alvo.textContent=e&&e.code==="nuvem_autorizacao"?e.message:"A autorização não foi confirmada. Confira a conta e a conexão antes de tentar novamente.";return false;}
+  finally{CONTA_NUVEM.operando=false;atualizarControlesConta();}
+}
+async function sairContaNuvem(){
+  if(CONTA_NUVEM.operando)return false;CONTA_NUVEM.operando=true;atualizarControlesConta();
+  var cfg=window.MesaNuvem,uid=CONTA_NUVEM.uid,alvo=el("estadoContaNuvem");
+  invalidarContaNuvem(uid);CONTA_NUVEM.pausada=true;var guardou=uid?gravarMetaLocal("nuvem-vinculo-v1",{versao:1,projeto:cfg.url,uid:uid,ativo:false,em:Date.now()}):true;
+  try{
+    var r=await esperarCopiaNuvem(cfg.client.auth.signOut({scope:"local"}));if(r&&r.error)throw r.error;
+    invalidarContaNuvem(null);CONTA_NUVEM.pausada=true;el("senhaNuvem").value="";await atualizarContaNuvem();
+    alvo.textContent="Sessão encerrada neste navegador. Os trabalhos locais e os backups existentes foram preservados."+(guardou?"":" A preferência de pausa não pôde ser gravada; confira a conta antes de reabrir.");return true;
+  }catch(e){alvo.textContent="A saída não foi confirmada pelo servidor. Nenhuma cópia será iniciada nesta aba; preserve a aba e tente novamente."+(guardou?"":" A pausa também não pôde ser gravada para uma próxima abertura.");return false;}
+  finally{CONTA_NUVEM.operando=false;el("senhaNuvem").value="";atualizarControlesConta();}
 }
 async function enviarContaNuvem(criar){
-  var cfg=window.MesaNuvem, alvo=el("estadoContaNuvem"), email=(el("emailNuvem").value||"").trim(), senha=el("senhaNuvem").value||"";
-  if(!cfg||!cfg.client){ alvo.textContent="A conexão com a nuvem não foi carregada."; return; }
-  if(!email||senha.length<8){ alvo.textContent="Informe um e-mail e uma senha com pelo menos 8 caracteres."; return; }
-  alvo.textContent=criar?"Criando conta…":"Entrando…";
-  var r=criar?await cfg.client.auth.signUp({email:email,password:senha}):await cfg.client.auth.signInWithPassword({email:email,password:senha});
-  if(r.error){ alvo.textContent="Não foi possível continuar: "+r.error.message; return; }
-  if(criar&&!r.data.session){ alvo.textContent="Conta criada. Verifique seu e-mail para confirmar o acesso e depois entre."; return; }
-  await atualizarContaNuvem(); agendarBackupNuvem(); el("dlgNuvem").close(); el("senhaNuvem").value=""; aviso("Conta conectada. A primeira cópia será enviada após 2 minutos sem alterações.");
+  if(CONTA_NUVEM.operando)return false;
+  var cfg=window.MesaNuvem,alvo=el("estadoContaNuvem"),email=(el("emailNuvem").value||"").trim(),senha=el("senhaNuvem").value||"";
+  if(!cfg||!cfg.client){alvo.textContent="A conexão com a nuvem não foi carregada.";return false;}
+  if(CONTA_NUVEM.uid){alvo.textContent="Saia da conta conectada antes de entrar em outra.";return false;}
+  if(!email||senha.length<8){alvo.textContent="Informe um e-mail e uma senha com pelo menos 8 caracteres.";return false;}
+  CONTA_NUVEM.operando=true;atualizarControlesConta();alvo.textContent=criar?"Criando conta…":"Entrando…";
+  try{
+    var r=criar?await esperarCopiaNuvem(cfg.client.auth.signUp({email:email,password:senha})):await esperarCopiaNuvem(cfg.client.auth.signInWithPassword({email:email,password:senha}));
+    if(r.error){alvo.textContent="Não foi possível continuar: "+r.error.message;return false;}
+    if(criar&&!(r.data&&r.data.session)){alvo.textContent="Verifique seu e-mail para confirmar o acesso e depois entre. Entrar não autoriza envio de trabalhos.";return true;}
+    await atualizarContaNuvem();return true;
+  }catch(e){alvo.textContent="Não foi possível concluir o acesso. Confira a conexão e tente novamente.";return false;}
+  finally{senha="";el("senhaNuvem").value="";CONTA_NUVEM.operando=false;atualizarControlesConta();}
 }
 var temporizadorBackupNuvem=null, backupNuvemEmCurso=false;
 var COPIA_NUVEM={revisao:0,tentativas:0,pendente:null,ultima:null,lista:[],contextoLista:null,offset:0,consultando:false,baixando:false};
@@ -5842,16 +6257,21 @@ function esperarCopiaNuvem(promessa){
     Promise.resolve(promessa).then(function(v){clearTimeout(t);resolve(v);},function(e){clearTimeout(t);reject(e);});
   });
 }
-async function contextoCopiaNuvem(){
+async function contextoCopiaNuvem(exigirEnvio){
   var cfg=window.MesaNuvem;if(!cfg||!cfg.client)throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
-  var r=await esperarCopiaNuvem(cfg.client.auth.getSession()),u=r&&r.data&&r.data.session&&r.data.session.user;
-  if(r&&r.error)throw r.error;
-  if(!u||typeof u.id!=="string"||! /^[a-zA-Z0-9_-]+$/.test(u.id))throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
-  return {cfg:cfg,client:cfg.client,uid:u.id};
+  var geracao=CONTA_NUVEM.geracao,uidInicial=CONTA_NUVEM.uid,u=await consultarUsuarioNuvem();
+  if(geracao!==CONTA_NUVEM.geracao)throw erroCopiaNuvem("nuvem_conta","A sessão mudou durante a operação. Tente novamente.");
+  if(!u)throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
+  if(u.id!==CONTA_NUVEM.uid){invalidarContaNuvem(u.id);if(uidInicial)throw erroCopiaNuvem("nuvem_conta","A conta mudou. Confira a conta antes de continuar.");}
+  if(exigirEnvio&&(CONTA_NUVEM.pausada||!vinculoNuvemPermitido(u.id)))throw erroCopiaNuvem("nuvem_autorizacao","Autorize esta biblioteca na janela Minha conta antes de enviar trabalhos para esta conta.");
+  return {cfg:cfg,client:cfg.client,uid:u.id,geracao:CONTA_NUVEM.geracao,exigirEnvio:!!exigirEnvio};
 }
 async function confirmarContaCopia(c){
-  var atual=await contextoCopiaNuvem();
-  if(atual.cfg!==c.cfg||atual.client!==c.client||atual.uid!==c.uid)throw erroCopiaNuvem("nuvem_conta","A conta mudou. Atualize a lista e tente novamente.");
+  conferirContextoConta(c);
+  if(c.geracao!==CONTA_NUVEM.geracao)throw erroCopiaNuvem("nuvem_conta","A sessão mudou. Atualize a lista e tente novamente.");
+  var atual=await contextoCopiaNuvem(c.exigirEnvio);
+  conferirContextoConta(c);
+  if(atual.cfg!==c.cfg||atual.client!==c.client||atual.uid!==c.uid||atual.geracao!==c.geracao)throw erroCopiaNuvem("nuvem_conta","A conta mudou. Atualize a lista e tente novamente.");
 }
 function caminhoVersaoCopia(caminho,uid){
   var prefixo=uid+"/sincronizacao/versoes/";
@@ -5882,9 +6302,10 @@ async function validarTextoCopiaNuvem(texto,estrito){
 async function lerTextoCopiaNuvem(c,caminho){
   if(caminho!==c.uid+"/sincronizacao/atual.json"&&!caminhoVersaoCopia(caminho,c.uid))throw erroCopiaNuvem("nuvem_caminho","O caminho da cópia não pertence à conta atual.");
   await confirmarContaCopia(c);
+  conferirContextoConta(c);
   var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").download(caminho));if(r.error)throw r.error;
   if(!r.data||typeof r.data.text!=="function")throw erroCopiaNuvem("nuvem_integridade","A nuvem não retornou o arquivo esperado.");
-  var texto=await esperarCopiaNuvem(r.data.text());await confirmarContaCopia(c);return texto;
+  var texto=await esperarCopiaNuvem(r.data.text());await confirmarContaCopia(c);conferirContextoConta(c);return texto;
 }
 function programarCopiaNuvem(atraso){
   clearTimeout(temporizadorBackupNuvem);
@@ -5898,6 +6319,7 @@ function agendarBackupNuvem(){
 /* O editor usa este ponto de entrada depois de confirmar uma transação. */
 window.agendarBackupNuvem=agendarBackupNuvem;
 async function enviarBackupNuvemAutomatico(forcar){
+  try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){var pend=el("estadoNuvem");if(pend)pend.textContent="Importação em recuperação · cópia adiada";return false;}
   if(backupNuvemEmCurso)return false;
   var alvo=el("estadoNuvem");
   if(!navigator.onLine){if(alvo)alvo.textContent="Sem internet · cópia pendente";return false;}
@@ -5905,42 +6327,55 @@ async function enviarBackupNuvemAutomatico(forcar){
   clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
   if(forcar===true){COPIA_NUVEM.tentativas=0;COPIA_NUVEM.pendente=null;}
   backupNuvemEmCurso=true;
-  var revisao=COPIA_NUVEM.revisao,adiar=false,falhou=false,confirmou=false;
+  var revisao=COPIA_NUVEM.revisao,geracaoEnvio=CONTA_NUVEM.geracao,adiar=false,falhou=false,confirmou=false;
   try{
-    var c=await contextoCopiaNuvem(),p=COPIA_NUVEM.pendente;
+    var c=await contextoCopiaNuvem(true),p=COPIA_NUVEM.pendente;
+    conferirContextoConta(c);
     if(p&&p.uid!==c.uid){COPIA_NUVEM.pendente=null;p=null;}
     if(p)revisao=p.revisao;
     if(!p){
       if(alvo)alvo.textContent="Preparando versão da nuvem…";
       var pacote=await criarBackup();
+      conferirContextoConta(c);
       if(!backupNuvemTemConteudo(pacote)){if(alvo)alvo.textContent="Nenhum trabalho local · cópias anteriores preservadas";return false;}
-      var resumo=await resumoCopiaNuvem(pacote),anterior=COPIA_NUVEM.ultima||lerMetaLocal("backup-nuvem-versao-v1");
+      var resumo=await resumoCopiaNuvem(pacote),anterior=COPIA_NUVEM.ultima;
+      conferirContextoConta(c);
+      if(!anterior)try{anterior=lerMetaLocal("backup-nuvem-versao-v1");}catch(e){anterior=null;}
       if(forcar!==true&&anterior&&anterior.uid===c.uid&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
         var antiga=await validarTextoCopiaNuvem(await lerTextoCopiaNuvem(c,anterior.caminho),true);
-        if(await resumoCopiaNuvem(antiga.pacote)!==resumo)throw erroCopiaNuvem("nuvem_integridade","A cópia anterior não corresponde aos trabalhos locais. Use Enviar cópia agora para criar outra versão.");
+        var resumoAnterior=await resumoCopiaNuvem(antiga.pacote);conferirContextoConta(c);
+        if(resumoAnterior!==resumo)throw erroCopiaNuvem("nuvem_integridade","A cópia anterior não corresponde aos trabalhos locais. Use Enviar cópia agora para criar outra versão.");
+        if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
         COPIA_NUVEM.ultima=anterior;COPIA_NUVEM.tentativas=0;
         confirmou=true;
         if(alvo)alvo.textContent="Cópia anterior verificada · sem novas alterações";return true;
       }
       var texto=await prepararBackup(pacote);await validarTextoCopiaNuvem(texto,true);
+      conferirContextoConta(c);
       p={uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false};
       COPIA_NUVEM.pendente=p;
     }
     await confirmarContaCopia(c);
+    conferirContextoConta(c);
+    if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
     if(!p.enviada){
       if(alvo)alvo.textContent="Enviando nova versão da nuvem…";
       var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").upload(p.caminho,new Blob([p.texto],{type:"application/json"}),{upsert:false,cacheControl:"0",contentType:"application/json"}));
+      conferirContextoConta(c);
       if(r.error){
         /* Uma resposta perdida pode esconder um upload já concluído. Não troque o caminho. */
         var existente=await lerTextoCopiaNuvem(c,p.caminho);
         if(existente!==p.texto)throw erroCopiaNuvem("nuvem_integridade","O arquivo remoto não corresponde ao envio. Nenhuma cópia foi substituída.");
       }
-      p.enviada=true;
+      conferirContextoConta(c);p.enviada=true;
     }
     if(alvo)alvo.textContent="Conferindo a versão enviada…";
     var relido=await lerTextoCopiaNuvem(c,p.caminho);
+    conferirContextoConta(c);
     if(relido!==p.texto)throw erroCopiaNuvem("nuvem_integridade","A releitura da nuvem divergiu do arquivo enviado. A cópia não foi confirmada.");
     await validarTextoCopiaNuvem(relido,true);await confirmarContaCopia(c);
+    conferirContextoConta(c);
+    if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
     var meta={uid:c.uid,resumo:p.resumo,caminho:p.caminho,em:Date.now()};
     COPIA_NUVEM.ultima=meta;COPIA_NUVEM.pendente=null;COPIA_NUVEM.tentativas=0;
     gravarMetaLocal("backup-nuvem-versao-v1",meta);
@@ -5948,19 +6383,24 @@ async function enviarBackupNuvemAutomatico(forcar){
     if(alvo)alvo.textContent="Versão na nuvem verificada · "+horaCurta(meta.em);
     return true;
   }catch(e){
+    if((c?c.geracao:geracaoEnvio)!==CONTA_NUVEM.geracao)return false;
+    if(e&&e.code==="nuvem_conta"){if(alvo)alvo.textContent="Conta não confirmada · confira a sessão antes de tentar novamente";return false;}
+    if(e&&e.pendente){COPIA_NUVEM.pendente=null;adiar=true;if(alvo)alvo.textContent="Importação em recuperação · cópia adiada";return false;}
     if(e&&e.code==="backup_ocupado"){adiar=true;if(alvo)alvo.textContent="Cópia adiada · operação local em andamento";return false;}
     falhou=true;COPIA_NUVEM.tentativas++;
-    var leituraLocal=e&&/^(leitura_imagem|registro_imagem|desenho_ausente)$/.test(e.code||"");
+    var leituraLocal=e&&/^(leitura_local|leitura_imagem|registro_imagem|desenho_ausente)$/.test(e.code||"");
     var detalhe=e&&(leituraLocal||/^(nuvem_|backup_)/.test(e.code||""))?e.message:"Confira conexão, conta, espaço e permissões do bucket mesa-arquivos.";
     if(alvo)alvo.textContent="Cópia não confirmada · "+(leituraLocal?"falha na leitura local: ":"")+detalhe;
     aviso("A nova cópia na nuvem não foi confirmada. As versões anteriores permanecem preservadas. Use Backup para tentar novamente.");return false;
   }finally{
     backupNuvemEmCurso=false;
+    if((c?c.geracao:geracaoEnvio)===CONTA_NUVEM.geracao){
     if(confirmou&&COPIA_NUVEM.revisao!==revisao&&alvo)alvo.textContent="Versão verificada · novas alterações aguardando cópia";
     if(contaNuvemPronta&&adiar)programarCopiaNuvem(120000);
     else if(contaNuvemPronta&&falhou&&COPIA_NUVEM.tentativas<5)programarCopiaNuvem(Math.min(120000*Math.pow(2,COPIA_NUVEM.tentativas-1),900000));
     else if(falhou){clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;if(alvo)alvo.textContent+=" Tentativas automáticas pausadas; use Enviar cópia agora.";}
     else if(contaNuvemPronta&&COPIA_NUVEM.revisao!==revisao)programarCopiaNuvem(120000);
+    }
   }
 }
 async function restaurarBackupDaNuvem(){
@@ -5969,14 +6409,16 @@ async function restaurarBackupDaNuvem(){
 async function listarCopiasNuvem(mais){
   if(COPIA_NUVEM.consultando||COPIA_NUVEM.baixando)return false;
   COPIA_NUVEM.consultando=true;
-  var alvo=el("estadoCopiasNuvem"),botao=el("btMaisCopiasNuvem");
+  var alvo=el("estadoCopiasNuvem"),botao=el("btMaisCopiasNuvem"),geracaoLista=CONTA_NUVEM.geracao;
   try{
     alvo.textContent="Consultando cópias da conta…";
     var c=await contextoCopiaNuvem();
+    conferirContextoConta(c);
     if(!mais||!COPIA_NUVEM.contextoLista||COPIA_NUVEM.contextoLista.uid!==c.uid||COPIA_NUVEM.contextoLista.client!==c.client||COPIA_NUVEM.contextoLista.cfg!==c.cfg){COPIA_NUVEM.lista=[];COPIA_NUVEM.offset=0;COPIA_NUVEM.contextoLista=c;}
     var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").list(c.uid+"/sincronizacao/versoes",{limit:50,offset:COPIA_NUVEM.offset,sortBy:{column:"name",order:"desc"}}));if(r.error)throw r.error;
     if(!Array.isArray(r.data))throw erroCopiaNuvem("nuvem_integridade","A listagem da nuvem está incompleta.");
     await confirmarContaCopia(c);
+    conferirContextoConta(c);
     r.data.forEach(function(v){var caminho=c.uid+"/sincronizacao/versoes/"+v.name;if(caminhoVersaoCopia(caminho,c.uid)&&!COPIA_NUVEM.lista.some(function(a){return a.caminho===caminho;}))COPIA_NUVEM.lista.push({caminho:caminho,nome:v.name,data:v.created_at||"",legado:false});});
     COPIA_NUVEM.offset+=r.data.length;
     botao.classList.toggle("oculto",r.data.length<50);
@@ -5984,6 +6426,7 @@ async function listarCopiasNuvem(mais){
     if(!COPIA_NUVEM.lista.some(function(v){return v.legado;}))COPIA_NUVEM.lista.push({caminho:c.uid+"/sincronizacao/atual.json",nome:"Cópia antiga (se disponível)",legado:true});
     renderCopiasNuvem();alvo.textContent="Selecione uma cópia para baixar e verificar. O download não altera os trabalhos locais.";return true;
   }catch(e){
+    if((c?c.geracao:geracaoLista)!==CONTA_NUVEM.geracao)return false;
     COPIA_NUVEM.lista=[];COPIA_NUVEM.contextoLista=null;botao.classList.add("oculto");renderCopiasNuvem();
     alvo.textContent="Não foi possível consultar as cópias. Confira sua conta, conexão e permissões; uma lista vazia não comprova ausência de backups.";return false;
   }finally{COPIA_NUVEM.consultando=false;}
@@ -6005,11 +6448,13 @@ async function baixarCopiaNuvem(indice){
     if(!baixador)throw erroCopiaNuvem("nuvem_download","Download indisponível neste navegador.");
     alvo.textContent="Baixando e verificando a cópia…";
     var texto=await lerTextoCopiaNuvem(c,item.caminho),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);
+    conferirContextoConta(c);
     var p=ver.pacote,resumo=(p.obras||[]).length+" obra(s), "+(p.capitulos||[]).length+" capítulo(s), "+(p.notas||[]).length+" nota(s), "+(p.desenhos||[]).length+" desenho(s).";
     await baixador.save({filename:item.legado?"mesa-de-roteiro-copia-antiga.json":"mesa-de-roteiro-"+item.nome,data:texto});
+    if(c.geracao!==CONTA_NUVEM.geracao)return true;
     alvo.textContent=(ver.legado?"Cópia antiga baixada sem SHA-256; confira o conteúdo.":"Arquivo verificado por SHA-256 e preparado para download.")+" "+resumo+(ver.plano.avisos.length?" Atenção: "+ver.plano.avisos.join("; ")+".":"")+" Preserve um backup local antes de usar Importar backup.";
     return true;
-  }catch(e){alvo.textContent="O download não foi confirmado. A cópia pode estar ausente, inacessível ou inválida. Seus trabalhos locais permanecem intactos.";return false;}
+  }catch(e){if(c.geracao===CONTA_NUVEM.geracao)alvo.textContent="O download não foi confirmado. A cópia pode estar ausente, inacessível ou inválida. Seus trabalhos locais permanecem intactos.";return false;}
   finally{COPIA_NUVEM.baixando=false;}
 }
 async function iniciarArmazenamento(){
@@ -6033,7 +6478,8 @@ function colNotas(){ return db.collection(base+"/notas"); }
    SHA-256 do conteúdo; as versões antigas continuam aceitas na importação. */
 function preferenciasBackup(){
   var out=[], prefixos=["mesa:","mesa.ed."];
-  try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(prefixos.some(function(p){return k.indexOf(p)===0;})) out.push({chave:k,valor:localStorage.getItem(k)}); } }catch(e){}
+  if(window.__mesaArmazenamento&&window.__mesaArmazenamento.modoMemoria)return out;
+  try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(typeof k!=="string")throw erroLeituraLocal();if(prefixos.some(function(p){return k.indexOf(p)===0;})){var valor=localStorage.getItem(k);if(valor===null)throw erroLeituraLocal();out.push({chave:k,valor:valor});}}}catch(e){throw erroLeituraLocal("Não foi possível ler todas as preferências e bibliotecas locais. O backup completo foi interrompido.");}
   return out;
 }
 async function sha256Texto(texto){
@@ -6070,7 +6516,8 @@ async function criarBackupSalvo(){
   /* Salvar o desenho pode atualizar os metadados do capítulo via aoMudar. */
   var desenhos=window.EditorDesenho&&window.EditorDesenho.exportarDados?await window.EditorDesenho.exportarDados():[];
   if(await salvarPendenciasTexto()!==true)throw new Error("Backup interrompido: não foi possível confirmar os metadados após salvar o desenho.");
-  var grupos=["obras","capitulos","notas"], pacote={versao:3,formato:"mesa-de-roteiro-backup",criadoEm:Date.now(),obras:[],capitulos:[],notas:[],desenhos:desenhos,desenhosLivres:desenhosLivres,preferenciasLocal:preferenciasBackup()};
+  var livresConfirmados=dadosProfundos(lerListaEssencial("desenhos-livres"));lerListaEssencial("fichas-personagem-v1");
+  var grupos=["obras","capitulos","notas"], pacote={versao:3,formato:"mesa-de-roteiro-backup",criadoEm:Date.now(),obras:[],capitulos:[],notas:[],desenhos:desenhos,desenhosLivres:livresConfirmados,preferenciasLocal:preferenciasBackup()};
   for(var i=0;i<grupos.length;i++){
     var grupo=grupos[i], lista=await db.collection(base+"/"+grupo).get();
     pacote[grupo]=lista.docs.map(function(item){ return {id:item.id,dados:dadosProfundos(item.data())}; });
@@ -6218,51 +6665,83 @@ async function importarBackupArquivo(arquivo){
   if(!arquivo) return;
   return executarAcaoTexto(function(){return importarBackupSalvo(arquivo);});
 }
+function prepararPlanoImportacao(pacote,plano){
+  var textos=[],imagens=[],chavesTexto=Object.create(null),chavesImagem=Object.create(null);
+  function texto(chave,valor){if(chavesTexto[chave])throw new Error("O backup usa o mesmo destino de texto mais de uma vez.");chavesTexto[chave]=true;textos.push({chave:chave,valor:JSON.stringify(valor)});}
+  function imagem(idImagem,rec){var k=typeof idImagem+":"+idImagem;if(chavesImagem[k])throw new Error("O backup usa o mesmo destino de imagem mais de uma vez.");chavesImagem[k]=true;imagens.push({id:idImagem,rec:rec});}
+  var ed=window.EditorDesenho;
+  if((pacote.desenhos||[]).length&&(!ed||!ed.prepararDadosImportacao))throw new Error("O importador de desenhos não está disponível.");
+  (ed&&ed.prepararDadosImportacao?ed.prepararDadosImportacao(pacote.desenhos||[]):[]).forEach(function(v){imagem(v.id,v.rec);});
+  var pf=pacote.fichasPersonagem||(plano.fichasLegadas!==null?{fichas:plano.fichasLegadas,imagens:[]}:null);
+  if(pf){
+    var fichas=lerListaEssencial("fichas-personagem-v1").map(normalizarFichaPersonagem);
+    pf.fichas.map(normalizarFichaPersonagem).forEach(function(f){if(!f)throw erroLeituraLocal();var pos=fichas.findIndex(function(v){return v.id===f.id;});if(pos<0)fichas.push(f);else fichas[pos]=f;});
+    texto("mesa:fichas-personagem-v1",fichas);
+    (pf.imagens||[]).forEach(function(im){imagem(im.chave,{src:im.src,nome:String(im.nome||"Referência")});});
+  }
+  if(Array.isArray(pacote.desenhosLivres))texto("mesa:desenhos-livres",dadosProfundos(pacote.desenhosLivres));
+  ["obras","capitulos","notas"].forEach(function(grupo){pacote[grupo].forEach(function(item){
+    var dadosItem=dadosProfundos(item.dados);
+    if(Array.isArray(dadosItem.imagensDados)){
+      dadosItem.imagens=Array.isArray(dadosItem.imagens)?dadosItem.imagens.slice():[];
+      dadosItem.imagensDados.forEach(function(im){var meta=im.meta;imagem(notaImagemChave(item.id,meta.id),{src:im.src,nome:meta.nome||"Imagem",tipo:meta.tipo||"image/*",tamanho:meta.tamanho||0,criadoEm:meta.criadoEm||Date.now()});var pos=dadosItem.imagens.findIndex(function(v){return String(v.id)===String(meta.id);});if(pos<0)dadosItem.imagens.push(meta);else dadosItem.imagens[pos]=meta;});
+      delete dadosItem.imagensDados;
+    }
+    texto("mesa:roteiros/local/"+grupo+"/"+item.id,dadosItem);
+  });});
+  return{textos:textos,imagens:imagens};
+}
+function comTravaImportacao(acao){
+  if(navigator.locks&&navigator.locks.request)return navigator.locks.request("mesa-importacao-local-v1",{mode:"exclusive",ifAvailable:true},function(trava){if(!trava)throw new Error("Outra aba está importando ou recuperando dados. Aguarde e tente novamente.");return acao();});
+  return Promise.resolve().then(acao);
+}
+function mostrarBloqueioImportacao(){
+  var r=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao;if(r)r.estado.bloqueada=true;
+  var box=el("avisoRecuperacao"),app=document.querySelector(".app");if(box)box.classList.remove("oculto");if(app)app.inert=true;
+  estado.textContent="recuperação pendente";
+}
+window.__mesaImportarPacote=function(pacote){return importarBackupArquivo({text:async function(){return JSON.stringify(pacote);}});};
 async function importarBackupSalvo(arquivo){
-  var importacaoIniciada=false;
+  var importacaoIniciada=false,confirmada=false;
   try{
-    var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote, grupos=["obras","capitulos","notas"];
+    var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote;
     if(!ver.ok) throw new Error("A verificação SHA-256 falhou; a importação foi cancelada.");
     var plano=validarBackupParaImportacao(pacote), mensagem="Importar "+plano.total+" item(ns)? Itens com o mesmo identificador serão substituídos.";
     if(Array.isArray(pacote.desenhosLivres))mensagem+=" A lista de desenhos livres deste aparelho será substituída pela lista do arquivo.";
     if(plano.avisos.length)mensagem+="\n\nAtenção: "+plano.avisos.join("; ")+". As referências serão preservadas, mas as imagens ausentes não podem ser recuperadas deste arquivo.";
+    mensagem+="\n\nFeche outras abas da Mesa de Roteiro antes de continuar. Se houver falha, será tentada a recuperação dos registros anteriores.";
     if(!window.confirm(mensagem)) return false;
+    if(backupNuvemEmCurso||FICHAS.importando)throw new Error("Aguarde o envio da nuvem ou a importação de referências terminar antes de importar.");
+    var ed=window.EditorDesenho;
+    if(ed&&ed.aguardarOperacoes&&await ed.aguardarOperacoes()!==true)throw new Error("Salve o desenho aberto antes de importar.");
+    if(ed&&ed.estaAberto&&ed.estaAberto()&&await ed.fechar()!==true)throw new Error("Não foi possível fechar com segurança o desenho aberto.");
+    if(!await salvarPendenciasTexto())throw new Error("Há textos ainda não salvos.");
+    if(FICHAS.pendente&&!fichasGravar())throw new Error("Há fichas ainda não salvas.");
+    var ar=window.__mesaArmazenamento;if(!ar||!ar.recuperacao)throw new Error("A recuperação de importação não está disponível.");
+    var operacoes=prepararPlanoImportacao(pacote,plano);
     estado.textContent="importando backup…";
     importacaoIniciada=true;
-    if(pacote.desenhos&&window.EditorDesenho&&window.EditorDesenho.importarDados) await window.EditorDesenho.importarDados(pacote.desenhos);
-    if(pacote.fichasPersonagem) await importarFichasPersonagem(pacote.fichasPersonagem);
-    else if(plano.fichasLegadas!==null)await importarFichasPersonagem({fichas:plano.fichasLegadas,imagens:[]});
-    if(Array.isArray(pacote.desenhosLivres)){ desenhosLivres=pacote.desenhosLivres.filter(function(x){return x&&x.id&&x.titulo;}); salvarDesenhosLivres(); }
-    for(var g=0;g<grupos.length;g++){
-      var itens=pacote[grupos[g]];
-      for(var j=0;j<itens.length;j++){
-        var dadosItem=dadosProfundos(itens[j].dados);
-        if(Array.isArray(dadosItem.imagensDados)){
-          dadosItem.imagens=Array.isArray(dadosItem.imagens)?dadosItem.imagens.slice():[];
-          for(var imj=0;imj<dadosItem.imagensDados.length;imj++){
-            var imagemBackup=dadosItem.imagensDados[imj], metaImagem=imagemBackup.meta||{};
-            if(await bdGravar(notaImagemChave(itens[j].id,metaImagem.id),{src:imagemBackup.src,nome:metaImagem.nome||"Imagem",tipo:metaImagem.tipo||"image/*",tamanho:metaImagem.tamanho||0,criadoEm:metaImagem.criadoEm||Date.now()})!==true)throw new Error("Falha ao gravar imagem do backup.");
-            var posImagem=dadosItem.imagens.findIndex(function(im){return String(im.id)===String(metaImagem.id);});
-            if(posImagem<0)dadosItem.imagens.push(metaImagem);else dadosItem.imagens[posImagem]=metaImagem;
-          }
-          delete dadosItem.imagensDados;
-        }
-        await db.collection(base+"/"+grupos[g]).doc(itens[j].id).set(dadosItem);
-      }
-    }
-    registrarSincronizacao();
+    clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
+    var resultado=await comTravaImportacao(function(){if(backupNuvemEmCurso)throw new Error("Aguarde a cópia da nuvem terminar.");return ar.recuperacao.executar(operacoes.textos,operacoes.imagens);});
+    if(!resultado||resultado.importado!==true)throw new Error("Não foi possível confirmar a importação.");
+    confirmada=true;
+    if(typeof COPIA_NUVEM!=="undefined")COPIA_NUVEM.pendente=null;
+    /* Modelos antigos não podem voltar a gravar por cima da versão confirmada. */
+    obraAtual=null;capAtual=null;doc=null;notaAtual=null;modoNotas=false;sujo=false;notaSuja=false;
+    FICHAS.lista=null;FICHAS.atual=null;FICHAS.pendente=false;fecharFichasPersonagem();carregarDesenhosLivres();
     await carregarListas();
-    /* A tela antiga não pode sobrescrever os registros recém-importados. */
     mostrarEntradaInicial();
-    desenharLateral(); desenhar(); atualizarPersonagens();
     el("integridadeBackup").textContent=ver.legado?"Backup antigo importado sem soma de verificação.":"Backup verificado por SHA-256 e importado.";
     if(plano.avisos.length)el("integridadeBackup").textContent+=" Atenção: "+plano.avisos.join("; ")+". As referências foram preservadas.";
     aviso("Backup importado com sucesso.");
+    agendarBackupNuvem();
     return true;
   }catch(e){
+    if(e&&e.importado){confirmada=true;obraAtual=null;capAtual=null;doc=null;notaAtual=null;modoNotas=false;sujo=false;notaSuja=false;FICHAS.lista=null;FICHAS.atual=null;FICHAS.pendente=false;fecharFichasPersonagem();}
     var detalhe=e&&e.code==="backup_formato"?"Backup inválido em "+e.message:(e&&e.message&&e.message.indexOf("SHA-256")>=0?e.message:"Não foi possível ler ou importar esse arquivo.");
-    var texto=importacaoIniciada?"A importação não foi concluída. Alguns itens podem ter sido alterados; preserve seus backups antes de tentar novamente.":detalhe+" Nenhum item deste backup foi gravado.";
-    el("integridadeBackup").textContent=texto;if(importacaoIniciada)estado.textContent="importação incompleta";aviso(texto);return false;
+    var texto=confirmada?(e&&e.pendente?"Os dados foram importados e confirmados. Falta concluir a limpeza do aviso de recuperação; tente recuperar novamente antes de editar.":"Os dados do backup foram importados e confirmados, mas a tela não pôde ser atualizada. Reabra a página para carregar a biblioteca."):e&&e.pendente?"A importação foi interrompida e a recuperação ainda não foi confirmada. Os registros de recuperação foram preservados. Não limpe os dados do navegador; tente recuperar novamente.":e&&e.recuperado?"A importação falhou. Os registros anteriores foram recuperados e conferidos. Nenhum item deste backup permaneceu aplicado.":detalhe+" Nenhum item deste backup foi confirmado.";
+    el("integridadeBackup").textContent=texto;if(importacaoIniciada)estado.textContent=confirmada?"importado · reabra a página":e&&e.pendente?"recuperação pendente":"importação cancelada";
+    if((e&&e.pendente)||confirmada){if(confirmada)el("textoRecuperacao").textContent=texto;mostrarBloqueioImportacao();}aviso(texto);return confirmada;
   }
 }
 
@@ -6272,30 +6751,65 @@ async function carregarListas(){
     var so=await colObras().orderBy("criadoEm","asc").get();
     var sc=await colCaps().orderBy("numero","asc").get();
     var sn=await colNotas().orderBy("atualizadoEm","desc").get();
-    obras=so.docs.map(function(d){var v=d.data();v.id=d.id;v.personagens=v.personagens||[];return v;});
-    var capsBrutos=sc.docs.map(function(d){var v=d.data();v.id=d.id;return v;});
+    var novasObras=so.docs.map(function(d){var v=validarDocumentoLocal(d.data());v.id=d.id;v.personagens=v.personagens||[];return v;});
+    var capsBrutos=sc.docs.map(function(d){var v=validarDocumentoLocal(d.data());v.id=d.id;return v;});
     if(nuvemAtiva){
       for(var cbi=0;cbi<capsBrutos.length;cbi++) if(capsBrutos[cbi].paginasSeparadas){
-        try{ var cps=await colCaps().doc(capsBrutos[cbi].id).collection("paginas").orderBy("indice","asc").get(); capsBrutos[cbi].paginas=cps.docs.map(function(d){var pv=d.data();return pv.pagina||pv;}); }catch(e){}
+        var cps=await colCaps().doc(capsBrutos[cbi].id).collection("paginas").orderBy("indice","asc").get();capsBrutos[cbi].paginas=cps.docs.map(function(d){var pv=d.data();return pv.pagina||pv;});validarDocumentoLocal(capsBrutos[cbi]);
       }
     }
-    window.__mesaCapsOffline=capsBrutos;
-    caps=capsBrutos.map(function(v){
+    var novosCaps=capsBrutos.map(function(v){
       return {id:v.id,obraId:v.obraId,numero:v.numero,titulo:v.titulo,
         nPaineis:v.nPaineis||contarPaineis(v.paginas),paginas:v.nPaginas||((v.paginas||[]).length),status:statusCapitulo(v.status),progresso:progressoCapitulo(v.progresso),atualizadoEm:v.atualizadoEm||0};
     });
-    notas=sn.docs.map(function(d){var v=d.data(), tags=tagsNota(v.tags), somenteImagens=v.tipo==="imagens"||tags.some(function(t){return String(t).toLocaleLowerCase("pt-BR")==="imagens";});return {id:d.id,titulo:v.titulo||"",texto:somenteImagens?"":(v.texto||""),tags:tags,imagens:Array.isArray(v.imagens)?v.imagens:[],tipo:somenteImagens?"imagens":"texto",criadoEm:v.criadoEm||0,atualizadoEm:v.atualizadoEm||0};});
-    try{ localStorage.setItem("mesa:offline-cache",JSON.stringify({obras:obras,caps:capsBrutos,notas:notas,em:Date.now()})); }catch(e){}
+    var novasNotas=sn.docs.map(function(d){var v=validarDocumentoLocal(d.data()),tags=tagsNota(v.tags),somenteImagens=v.tipo==="imagens"||tags.some(function(t){return String(t).toLocaleLowerCase("pt-BR")==="imagens";});return Object.assign(v,{id:d.id,titulo:v.titulo||"",texto:somenteImagens?"":(v.texto||""),tags:tags,imagens:Array.isArray(v.imagens)?v.imagens:[],tipo:somenteImagens?"imagens":"texto",criadoEm:v.criadoEm||0,atualizadoEm:v.atualizadoEm||0});});
+    obras=novasObras;caps=novosCaps;notas=novasNotas;window.__mesaCapsOffline=capsBrutos;BIBLIOTECA_TEXTOS_OK=true;
+    limparFalhaLocal("textos");salvarCacheOffline({obras:novasObras,caps:capsBrutos,notas:novasNotas});return true;
   }catch(e){
-    try{
-      var cache=JSON.parse(localStorage.getItem("mesa:offline-cache")||"null");
-      if(!cache) throw e;
-      obras=cache.obras||[]; window.__mesaCapsOffline=cache.caps||[];
-       caps=(cache.caps||[]).map(function(v){return {id:v.id,obraId:v.obraId,numero:v.numero,titulo:v.titulo,nPaineis:v.nPaineis||contarPaineis(v.paginas),paginas:v.nPaginas||((v.paginas||[]).length),status:statusCapitulo(v.status),progresso:progressoCapitulo(v.progresso),atualizadoEm:v.atualizadoEm||0};});
-      notas=(cache.notas||[]).map(function(v){var tags=tagsNota(v.tags), somenteImagens=v.tipo==="imagens"||tags.some(function(t){return String(t).toLocaleLowerCase("pt-BR")==="imagens";});return {id:v.id,titulo:v.titulo||"",texto:somenteImagens?"":(v.texto||""),tags:tags,imagens:Array.isArray(v.imagens)?v.imagens:[],tipo:somenteImagens?"imagens":"texto",criadoEm:v.criadoEm||0,atualizadoEm:v.atualizadoEm||0};}); aviso("Modo offline: usando a última cópia deste celular.");
-    }catch(f){ throw e; }
+    BIBLIOTECA_TEXTOS_OK=false;registrarFalhaLocal("textos","A biblioteca de textos não foi carregada por completo. A cópia de consulta não será aberta para edição.");throw e;
   }
-}function contarPaineis(pgs){
+}
+function validarDocumentoLocal(v){
+  function objeto(x){if(!x||typeof x!=="object"||Array.isArray(x))throw erroLeituraLocal();}
+  function textos(x,campos){campos.forEach(function(k){if(x[k]!=null&&typeof x[k]!=="string")throw erroLeituraLocal();});}
+  function lista(x,visitar){if(x==null)return;if(!Array.isArray(x))throw erroLeituraLocal();x.forEach(visitar);}
+  function nome(x){if(typeof x!=="string")throw erroLeituraLocal();}
+  function painel(pn){
+    objeto(pn);textos(pn,["enquadramento","tipoPainel","enq","distancia","plano","angulo","tamanho","acao","sfx","nota","miniatura"]);
+    lista(pn.personagens,nome);lista(pn.falas,function(f){objeto(f);textos(f,["quem","tipo","texto"]);});
+  }
+  objeto(v);textos(v,["titulo","texto","tipo","status"]);lista(v.personagens,nome);
+  if(v.tags!=null&&typeof v.tags!=="string")lista(v.tags,nome);
+  lista(v.imagens,function(im){objeto(im);textos(im,["nome","tipo"]);});
+  lista(v.paginas,function(pg){objeto(pg);textos(pg,["layoutPag"]);lista(pg.paineis,painel);});
+  return dadosProfundos(v);
+}
+function consultarCacheTextos(){
+  try{
+    var l=lerJsonLocal("offline-cache");if(!l.existe)throw erroLeituraLocal("Não há cópia de textos no cache deste navegador.");var cache=l.valor;
+    if(!cache||typeof cache!=="object"||!["obras","caps","notas"].every(function(k){return Array.isArray(cache[k]);}))throw erroLeituraLocal("A cópia de consulta está incompleta ou inválida.");
+    ["obras","caps","notas"].forEach(function(k){cache[k].forEach(function(v){validarDocumentoLocal(v);if(!v.id)throw erroLeituraLocal();});});
+    CACHE_CONSULTA=dadosProfundos(cache);el("conteudoConsultaCache").value=JSON.stringify(CACHE_CONSULTA,null,2);el("estadoConsultaCache").textContent="Cópia apenas para consulta · "+(cache.em?dataNota(cache.em,true):"data não registrada")+". Nenhum registro local foi substituído.";
+    el("dlgConsultaCache").showModal();return true;
+  }catch(e){aviso(e.message||"Não foi possível ler a cópia de consulta.");return false;}
+}
+async function baixarCacheConsulta(){
+  if(!CACHE_CONSULTA||!baixador)return false;
+  try{await baixador.save({filename:"mesa-de-roteiro-cache-para-recuperacao.json",data:JSON.stringify({formato:"mesa-de-roteiro-cache-consulta",cache:CACHE_CONSULTA},null,2)});el("estadoConsultaCache").textContent="Cópia preparada para download. Confira a pasta de downloads. Este arquivo é para recuperação dos textos, não um backup completo de imagens.";return true;}catch(e){aviso("Não foi possível preparar o download da cópia de consulta.");return false;}
+}
+async function tentarRelerDadosLocais(){
+  if(window.EditorDesenho&&window.EditorDesenho.temAlteracoes&&window.EditorDesenho.temAlteracoes()){aviso("Salve o desenho aberto antes de recarregar a biblioteca.");return false;}
+  return executarAcaoTexto(async function(){
+    if(FICHAS.pendente&&!fichasGravar())return false;
+    try{carregarDesenhosLivres();}catch(e){}
+    if(FALHAS_LEITURA_LOCAL.fichas&&!FICHAS.pendente){FICHAS.lista=null;try{fichasLer();}catch(e){}}
+    await carregarListas();
+    if(capAtual&&caps.some(function(c){return c.id===capAtual;}))await abrirCapituloSalvo(capAtual);
+    else if(modoNotas&&notaObj(notaAtual)){desenharLateral();desenhar();}
+    else mostrarEntradaInicial();return true;
+  });
+}
+function contarPaineis(pgs){
   var n=0,i; if(!pgs) return 0;
   for(i=0;i<pgs.length;i++) n+=(pgs[i].paineis||[]).length;
   return n;
@@ -6347,6 +6861,7 @@ async function salvarPendenciasTexto(){
   return !sujo&&!notaSuja&&!salvando&&!salvandoNota;
 }
 async function executarAcaoTexto(acao,propagarErro){
+  if(typeof RECUPERACAO_INICIAL!=="undefined"&&RECUPERACAO_INICIAL){aviso("Aguarde a verificação de recuperação antes de editar.");return false;}
   if(acaoTextoAtiva){aviso("Aguarde a operação de salvamento em andamento.");return false;}
   acaoTextoAtiva=true; atualizarTentativaTexto();
   var foco=document.activeElement, travas=[];
@@ -6360,13 +6875,14 @@ async function executarAcaoTexto(acao,propagarErro){
     aviso("A operação não foi concluída. Preserve esta aba e seus backups antes de tentar novamente.");return false;
   }finally{
     travas.forEach(function(t){t.no.inert=t.inert;});
+    if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao&&window.__mesaArmazenamento.recuperacao.estado.bloqueada)mostrarBloqueioImportacao();
     acaoTextoAtiva=false; atualizarTentativaTexto();
     if((sujo||notaSuja)&&foco&&foco.isConnected&&foco.focus)foco.focus({preventScroll:true});
   }
 }
 /* Atalhos e colagem também podem chegar ao document sem foco em um controle. */
 ["keydown","beforeinput","paste","drop","pointerdown","click"].forEach(function(tipo){
-  document.addEventListener(tipo,function(ev){if(acaoTextoAtiva){ev.preventDefault();ev.stopImmediatePropagation();}},true);
+  document.addEventListener(tipo,function(ev){var recuperacao=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao;if(RECUPERACAO_INICIAL||acaoTextoAtiva||(recuperacao&&recuperacao.estado.bloqueada&&!(ev.target.closest&&ev.target.closest("#avisoRecuperacao")))){ev.preventDefault();ev.stopImmediatePropagation();}},true);
 });
 function marcarSujo(){
   sujo=true; revisaoCapitulo++; estado.textContent="não salvo"; atualizarTentativaTexto();
@@ -6911,37 +7427,7 @@ async function apagarObra(obraId){
   if(!db||!obraId) return;
   return executarAcaoTexto(function(){return apagarObraSalva(obraId);});
 }
-async function apagarObraSalva(obraId){
-  var alvo=obras.filter(function(o){return o.id===obraId;})[0];
-  if(!alvo) return;
-  var capsDaObra=caps.filter(function(c){return c.obraId===obraId;}),limparDepois=[];
-  try{
-    for(var i=0;i<capsDaObra.length;i++){
-      try{
-        var snCap=await colCaps().doc(capsDaObra[i].id).get();
-        if(snCap.exists)limparDepois.push(snCap.data().paginas);
-      }catch(e2){}
-      await colCaps().doc(capsDaObra[i].id).delete();
-    }
-    await colObras().doc(obraId).delete();
-  }catch(e){
-    try{
-      for(var li=0;li<capsDaObra.length;li++) await dbLocal.collection(baseLocal+"/capitulos").doc(capsDaObra[li].id).delete();
-      await dbLocal.collection(baseLocal+"/obras").doc(obraId).delete();
-    }catch(localErr){ aviso("Não foi possível apagar a obra neste aparelho."); return; }
-    for(var qi=0;qi<capsDaObra.length;qi++) enfileirarExclusao("capitulos",capsDaObra[qi].id);
-    enfileirarExclusao("obras",obraId);
-  }
-  /* Uma falha de exclusão não pode eliminar os pixels ainda referenciados. */
-  limparDepois.forEach(function(paginas){apagarDesenhosDe(paginas);});
-  obras=obras.filter(function(o){return o.id!==obraId;});
-  caps=caps.filter(function(c){return c.obraId!==obraId;});
-  if(obraAtual===obraId){ obraAtual=null; capAtual=null; doc=null; }
-  desenharLateral();
-  desenhar();
-  alternarLateral(false);
-  aviso("Obra apagada.");
-}
+async function apagarObraSalva(obraId){return executarExclusaoObra(obraId);}
 
 async function adicionarPersonagem(nome){
   nome=(nome||"").trim(); if(!nome) return;
@@ -6986,48 +7472,168 @@ async function criarCapituloSalvo(){
   desenharLateral(); desenhar();
 }
 
+/* Prepara apenas metadados e registros de imagem. O chamador confirma o plano
+   completo antes de publicar o capítulo ou mostrar a duplicação como salva. */
+function erroDuplicacaoEstrutura(mensagem){var e=new Error(mensagem);e.code="estrutura_incompleta";return e;}
+function validarRegistroDuplicacao(rec,obrigatorio){
+  if(!rec||typeof rec!=="object"||Array.isArray(rec)||!Array.isArray(rec.camadas)||(obrigatorio&&!rec.camadas.length)||(rec.baloes!=null&&!Array.isArray(rec.baloes))||!rec.camadas.every(function(c){return c&&typeof c==="object"&&c.blob;}))throw erroDuplicacaoEstrutura("O desenho original está incompleto. Nenhuma duplicação foi aplicada.");
+}
+async function duplicarPainelSeguro(pn,imagens){
+  if(!pn||typeof pn!=="object"||Array.isArray(pn)||!Array.isArray(imagens))throw erroDuplicacaoEstrutura("Não foi possível preparar o painel para duplicação.");
+  var c=dadosProfundos(pn);c.id=id("p");
+  /* A flag pode estar antiga: existência só é confirmada pela leitura do banco. */
+  var rec=await bdLer(pn.id);
+  if(rec===null){if(pn.temDesenho)throw erroDuplicacaoEstrutura("O desenho do painel original não está disponível. Nenhuma duplicação foi aplicada.");}
+  else{validarRegistroDuplicacao(rec,!!pn.temDesenho);imagens.push({id:c.id,rec:rec});if(rec.camadas.length)c.temDesenho=true;}
+  return c;
+}
+async function duplicarPaginaSegura(pg,imagens){
+  if(!pg||typeof pg!=="object"||Array.isArray(pg)||!Array.isArray(pg.paineis)||!Array.isArray(imagens))throw erroDuplicacaoEstrutura("Não foi possível preparar a página para duplicação.");
+  var c=dadosProfundos(pg),novosPorId=Object.create(null);c.id=id("pg");c.paineis=[];
+  for(var i=0;i<pg.paineis.length;i++){
+    var anterior=pg.paineis[i],chave=String(anterior&&anterior.id);
+    if(Object.prototype.hasOwnProperty.call(novosPorId,chave))throw erroDuplicacaoEstrutura("A página contém identificadores repetidos. A duplicação não foi aplicada.");
+    var novo=await duplicarPainelSeguro(anterior,imagens);novosPorId[chave]=novo.id;c.paineis.push(novo);
+  }
+  if(pg.composicaoLivre!=null){
+    if(typeof pg.composicaoLivre!=="object"||Array.isArray(pg.composicaoLivre))throw erroDuplicacaoEstrutura("A composição da página está inválida. A duplicação não foi aplicada.");
+    var composicao=Object.create(null);
+    Object.keys(pg.composicaoLivre).forEach(function(chave){
+      var destino=Object.prototype.hasOwnProperty.call(novosPorId,chave)?novosPorId[chave]:chave;
+      if(Object.prototype.hasOwnProperty.call(composicao,destino))throw erroDuplicacaoEstrutura("Dois registros da composição usariam o mesmo destino. A duplicação não foi aplicada.");
+      composicao[destino]=dadosProfundos(pg.composicaoLivre[chave]);
+    });
+    c.composicaoLivre=composicao;
+  }
+  /* A sobreposição do editor de página tem um registro independente dos painéis. */
+  var arte=await bdLer(idArtePagina(pg));
+  if(arte!==null){validarRegistroDuplicacao(arte,false);imagens.push({id:idArtePagina(c),rec:arte});}
+  return c;
+}
+function erroEstrutura(mensagem){var e=new Error(mensagem);e.code="estrutura_incompleta";return e;}
+function chaveArteValida(v){return(typeof v==="string"&&v.length>0)||(typeof v==="number"&&isFinite(v));}
+function chavesArtePaginas(paginas,exigirIds){
+  var chaves=new Set();(paginas||[]).forEach(function(pg){
+    if(!chaveArteValida(pg.id)){if(exigirIds)throw erroEstrutura("Não foi possível confirmar todos os identificadores das páginas.");}else chaves.add(idArtePagina(pg));
+    (pg.paineis||[]).forEach(function(pn){if(!chaveArteValida(pn.id)){if(exigirIds)throw erroEstrutura("Não foi possível confirmar todos os identificadores dos quadros.");}else chaves.add(pn.id);});
+  });return chaves;
+}
+async function referenciasArtePersistidas(exigirIds){
+  var referencias=new Set(),sc=await colCaps().get(),sn=await colNotas().get();
+  sc.docs.forEach(function(d){var v=validarDocumentoLocal(d.data());if(v.paginasSeparadas)throw erroEstrutura("Há páginas externas que não puderam ser inventariadas.");chavesArtePaginas(v.paginas,exigirIds).forEach(function(k){referencias.add(k);});});
+  sn.docs.forEach(function(d){var v=validarDocumentoLocal(d.data());(v.imagens||[]).forEach(function(im){if(!chaveArteValida(im.id))throw erroEstrutura("Uma referência de nota não pôde ser conferida.");referencias.add(notaImagemChave(d.id,im.id));});});
+  lerListaEssencial("desenhos-livres").forEach(function(v){referencias.add(v.id);});
+  lerListaEssencial("fichas-personagem-v1").forEach(function(f){(f.imagens||[]).forEach(function(im){if(!chaveArteValida(im.id))throw erroEstrutura("Uma referência de ficha não pôde ser conferida.");referencias.add(fichaImagemChave(f.id,im.id));});});
+  return referencias;
+}
+async function limparArteSemReferencias(chaves){
+  var lista=Array.from(new Set(chaves||[]));if(!lista.length)return{pendentes:0,compartilhados:0};
+  var referencias;try{referencias=await referenciasArtePersistidas(true);}catch(e){return{pendentes:lista.length,compartilhados:0};}
+  var pendentes=0,compartilhados=0;
+  for(var i=0;i<lista.length;i++){
+    if(referencias.has(lista[i])){compartilhados++;continue;}
+    try{if(await window.EditorDesenho.apagar(lista[i])!==true)pendentes++;}catch(e){pendentes++;}
+  }
+  return{pendentes:pendentes,compartilhados:compartilhados};
+}
+function validarIdsEstrutura(c){
+  var paginas=new Set(),paineis=new Set();(c.paginas||[]).forEach(function(pg){
+    if(!chaveArteValida(pg.id)||paginas.has(String(pg.id)))throw erroEstrutura("Há identificadores de página ausentes ou repetidos. A operação foi interrompida para preservar os registros.");paginas.add(String(pg.id));
+    (pg.paineis||[]).forEach(function(p){if(!chaveArteValida(p.id)||paineis.has(String(p.id)))throw erroEstrutura("Há identificadores de quadro ausentes ou repetidos. A operação foi interrompida para preservar os desenhos.");paineis.add(String(p.id));});
+  });
+}
+async function prepararEdicaoEstrutural(origem,tipo,valor){
+  valor=valor||{};var c=validarDocumentoLocal(origem);validarIdsEstrutura(c);
+  var i=c.paginas.findIndex(function(p){return String(p.id)===String(valor.paginaId);});if(i<0)throw erroEstrutura("A página escolhida não está mais disponível.");
+  var pg=c.paginas[i],imagens=[],limpar=[],res={indice:i,trocar:true},n=Math.max(1,Math.min(24,parseInt(valor.quantidade,10)||1));
+  function painelPorId(pid){for(var pi=0;pi<c.paginas.length;pi++){var p=c.paginas[pi].paineis.find(function(pn){return String(pn.id)===String(pid);});if(p)return p;}return null;}
+  if(tipo==="painel"){
+    var alvo=valor.destinoId!=null?c.paginas.find(function(p){return String(p.id)===String(valor.destinoId);}):pg;if(!alvo)throw erroEstrutura("A página de destino não está mais disponível.");
+    if(valor.duplicarId){var fonte=painelPorId(valor.duplicarId);if(!fonte)throw erroEstrutura("O quadro original não está mais disponível.");alvo.paineis.push(await duplicarPainelSeguro(fonte,imagens));}
+    else for(var q=0;q<n;q++)alvo.paineis.push(novoPainel());
+    if(alvo.composicaoLivre)garantirComposicaoLivre(alvo);
+  }else if(tipo==="painel-duplicar"){
+    var ip=pg.paineis.findIndex(function(p){return String(p.id)===String(valor.painelId);});if(ip<0)throw erroEstrutura("O quadro original não está mais disponível.");
+    pg.paineis.splice(ip+1,0,await duplicarPainelSeguro(pg.paineis[ip],imagens));if(pg.composicaoLivre)garantirComposicaoLivre(pg);
+  }else if(tipo==="painel-apagar"){
+    var ap=pg.paineis.findIndex(function(p){return String(p.id)===String(valor.painelId);});if(ap<0)throw erroEstrutura("O quadro escolhido não está mais disponível.");
+    if(valor.manterUm&&pg.paineis.length<2)throw erroEstrutura("Mantenha pelo menos um painel nesta página.");
+    var removido=pg.paineis.splice(ap,1)[0];limpar.push(removido.id);if(pg.composicaoLivre)delete pg.composicaoLivre[removido.id];
+  }else if(tipo==="duplicar"){
+    c.paginas.splice(i+1,0,await duplicarPaginaSegura(pg,imagens));res.indice=i+1;
+  }else if(tipo==="apagar"){
+    if(valor.manterUma&&c.paginas.length<2)throw erroEstrutura("Mantenha pelo menos uma página no capítulo.");
+    limpar=Array.from(chavesArtePaginas([pg],true));c.paginas.splice(i,1);if(!c.paginas.length)c.paginas.push(novaPagina());res.indice=Math.min(i,c.paginas.length-1);
+  }else if(tipo==="nova")c.paginas.splice(i+1,0,novaPagina(n));
+  else if(tipo==="layout"){
+    var arvore=arvoreDoLayout(valor.layout);if(!arvore||folhasDoLayout(arvore)<pg.paineis.length)throw erroEstrutura("Esse layout não comporta todos os quadros da página.");pg.layoutPag=valor.layout;
+  }else throw erroEstrutura("A operação escolhida não é reconhecida.");
+  validarIdsEstrutura(c);return{capitulo:c,imagens:imagens,limpar:limpar,res:res};
+}
+async function prepararAmbienteEstrutural(doEditor){
+  if(db!==dbLocal||nuvemAtiva)throw erroEstrutura("A operação protegida requer a biblioteca local deste aparelho.");
+  if(backupNuvemEmCurso||FICHAS.importando)throw erroEstrutura("Aguarde a cópia da nuvem ou a gravação de referências terminar.");
+  var ed=window.EditorDesenho;if(!ed)throw erroEstrutura("O armazenamento de desenhos não está disponível.");
+  if(ed.aguardarOperacoes&&await ed.aguardarOperacoes()!==true)throw erroEstrutura("Salve o desenho aberto antes de alterar a estrutura.");
+  if(!doEditor&&ed.estaAberto&&ed.estaAberto()&&await ed.fechar()!==true)throw erroEstrutura("Não foi possível fechar o desenho com segurança.");
+  if(!await salvarPendenciasTexto())throw erroEstrutura("Há textos que ainda não puderam ser salvos.");
+  if(FICHAS.pendente&&!fichasGravar())throw erroEstrutura("Há fichas que ainda não puderam ser salvas.");
+}
+function informarFalhaEstrutural(e,confirmada){
+  var concluida=confirmada||!!(e&&e.importado),texto=concluida?(e&&e.editorPendente?"A estrutura foi salva, mas o desenho ainda aberto não pôde ser fechado com segurança. Preserve esta aba e baixe o PNG antes de reabrir a página.":"A alteração foi confirmada, mas a atualização da tela ou a limpeza do aviso não terminou. Reabra a página antes de editar."):e&&e.pendente?"A operação foi interrompida e a recuperação está pendente. Preserve os dados do navegador e tente recuperar novamente.":e&&e.recuperado?"A operação falhou. Os registros anteriores foram recuperados; nenhuma alteração estrutural foi aplicada.":((e&&e.code==="estrutura_incompleta"&&e.message)||"Não foi possível confirmar a operação. Os registros anteriores foram preservados.");
+  estado.textContent=concluida?"alteração confirmada · reabra a página":e&&e.pendente?"recuperação pendente":"alteração não aplicada";
+  if(concluida||(e&&e.pendente)){el("textoRecuperacao").textContent=texto;el("btExportarDesenhoPendente").classList.toggle("oculto",!(window.EditorDesenho&&window.EditorDesenho.estaAberto&&window.EditorDesenho.estaAberto()));mostrarBloqueioImportacao();}aviso(texto);return false;
+}
+async function confirmarPlanoEstrutural(textos,imagens){
+  if(backupNuvemEmCurso)throw erroEstrutura("Aguarde a cópia da nuvem terminar.");
+  var rec=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao;if(!rec)throw erroEstrutura("A recuperação local não está disponível.");
+  clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
+  var resultado=await rec.executar(textos,imagens);if(!resultado||resultado.importado!==true)throw erroEstrutura("A gravação da estrutura não foi confirmada.");
+  COPIA_NUVEM.pendente=null;
+}
+async function executarEstruturaCapitulo(tipo,valor,doEditor){
+  return executarAcaoTexto(async function(){var confirmada=false;try{
+    await prepararAmbienteEstrutural(!!doEditor);if(!doc||!capAtual)throw erroEstrutura("Abra o capítulo antes de alterar a estrutura.");
+    if(doc.paginasSeparadas)throw erroEstrutura("As páginas externas precisam de um backup completo antes de alterar a estrutura.");
+    var alvo=doc,chave=capAtual,preparado=await prepararEdicaoEstrutural(alvo,tipo,valor);
+    var paginasAntes=new Set(),paineisAntes=new Set(),destinos=[];
+    alvo.paginas.forEach(function(pg){paginasAntes.add(String(pg.id));pg.paineis.forEach(function(p){paineisAntes.add(String(p.id));});});
+    preparado.capitulo.paginas.forEach(function(pg){if(!paginasAntes.has(String(pg.id)))destinos.push(idArtePagina(pg));pg.paineis.forEach(function(p){if(!paineisAntes.has(String(p.id)))destinos.push(p.id);});});
+    var refs=destinos.length?await referenciasArtePersistidas(false):new Set(),destinosVistos=new Set();for(var k of destinos){if(destinosVistos.has(k)||refs.has(k)||await bdLer(k)!==null)throw erroEstrutura("Um identificador novo já está em uso. A operação foi cancelada; tente novamente.");destinosVistos.add(k);}
+    if(doc!==alvo||capAtual!==chave)throw erroEstrutura("O capítulo ativo mudou antes da confirmação.");
+    var c=preparado.capitulo;c.atualizadoEm=Date.now();c.nPaineis=contarPaineis(c.paginas);delete c.nPaginas;delete c.paginasSeparadas;
+    var corpo=dadosProfundos(c);delete corpo.id;
+    return await comTravaImportacao(async function(){
+      await confirmarPlanoEstrutural([{chave:"mesa:roteiros/local/capitulos/"+chave,valor:JSON.stringify(corpo)}],preparado.imagens);confirmada=true;
+      preparado.res.confirmada=true;
+      doc=c;doc.id=chave;sujo=false;pgAtual=preparado.res.indice;selPainel=null;
+      await carregarListas();var limpeza=await limparArteSemReferencias(preparado.limpar);
+      if(!doEditor){desenharLateral();desenhar();atualizarPersonagens();}mostrarEstadoTextoSalvo();agendarBackupNuvem();
+      aviso(limpeza.pendentes?"A estrutura foi salva. Alguns pixels sem referência foram preservados porque a limpeza não pôde ser confirmada.":"Alteração salva neste aparelho.");
+      return preparado.res;
+    });
+  }catch(e){return informarFalhaEstrutural(e,confirmada);}});
+}
+async function executarExclusaoObra(obraId){
+  var confirmada=false;try{
+    await prepararAmbienteEstrutural(false);
+    var obra=await colObras().doc(obraId).get();if(!obra.exists)throw erroEstrutura("A obra escolhida não está mais disponível.");validarDocumentoLocal(obra.data());
+    var sc=await colCaps().get(),textos=[],limpar=[];
+    sc.docs.forEach(function(d){var c=validarDocumentoLocal(d.data());if(chaveArteValida(c.obraId)&&String(c.obraId)===String(obraId)){if(c.paginasSeparadas)throw erroEstrutura("As páginas externas precisam de um backup completo antes de excluir esta obra.");textos.push({chave:"mesa:roteiros/local/capitulos/"+d.id,valor:null});chavesArtePaginas(c.paginas,false).forEach(function(k){limpar.push(k);});}});
+    textos.push({chave:"mesa:roteiros/local/obras/"+obraId,valor:null});
+    return await comTravaImportacao(async function(){
+      await confirmarPlanoEstrutural(textos,[]);confirmada=true;
+      if(chaveArteValida(obraAtual)&&String(obraAtual)===String(obraId)){obraAtual=null;capAtual=null;doc=null;notaAtual=null;modoNotas=false;sujo=false;}
+      await carregarListas();var limpeza=await limparArteSemReferencias(limpar);desenharLateral();desenhar();atualizarPersonagens();alternarLateral(false);agendarBackupNuvem();
+      aviso(limpeza.pendentes?"Obra excluída. Alguns pixels sem referência foram preservados porque a limpeza não pôde ser confirmada.":"Obra apagada.");return true;
+    });
+  }catch(e){return informarFalhaEstrutural(e,confirmada);}
+}
 function novoPainel(){
   return {
     id:id("p"), enquadramento:"", distancia:"", plano:"", angulo:"", tamanho:"",
     personagens:[], acao:"", falas:[{quem:"",tipo:"fala",texto:""}], sfx:"", nota:""
   };
-}
-function duplicarPainel(pn){
-  var c={
-    id:id("p"), enquadramento:pn.enquadramento||pn.tipoPainel||"", distancia:pn.distancia||"",
-    plano:pn.plano||"", angulo:pn.angulo||"", tamanho:pn.tamanho||"", personagens:(pn.personagens||[]).slice(),
-    acao:pn.acao||"",
-    falas:(pn.falas||[]).map(function(f){return {quem:f.quem||"",tipo:f.tipo||"fala",texto:f.texto||""};}),
-    sfx:pn.sfx||"", nota:pn.nota||""
-  };
-  if(pn.sobreposto) c.sobreposto=true;
-  if(typeof pn.borda==="number") c.borda=pn.borda;
-  if(formaValida(pn.forma)) c.forma=pn.forma.slice();
-  if(pn.recolhido) c.recolhido=true;
-  if(pn.temDesenho){
-    c.temDesenho=true; c.miniatura=pn.miniatura;
-    window.EditorDesenho.copiar(pn.id,c.id).catch(function(){aviso("Não foi possível confirmar a cópia do desenho. O original foi preservado; confira o painel duplicado antes de continuar.");});
-  }
-  return c;
-}
-/* remove do navegador os desenhos dos painéis apagados */
-function apagarDesenhosDe(paginas){
-  (paginas||[]).forEach(function(pg){
-    (pg.paineis||[]).forEach(function(pn){ window.EditorDesenho.apagar(pn.id); });
-    window.EditorDesenho.apagar(idArtePagina(pg));
-  });
-}
-function duplicarPagina(pg){
-  var c={id:id("pg"),paineis:(pg.paineis||[]).map(duplicarPainel)};
-  if(pg.visual) c.visual=JSON.parse(JSON.stringify(pg.visual));
-  if(pg.layoutPag) c.layoutPag=pg.layoutPag;
-  if(pg.composicaoLivre){
-    c.composicaoLivre={};
-    (pg.paineis||[]).forEach(function(pn,i){
-      if(pg.composicaoLivre[pn.id]) c.composicaoLivre[c.paineis[i].id]=JSON.parse(JSON.stringify(pg.composicaoLivre[pn.id]));
-    });
-  }
-  return c;
 }
 function resumoPainel(pn){
   var t=(pn.acao||"").trim();
@@ -7130,33 +7736,21 @@ async function abrirObra(oid){
 }
 async function abrirCapituloSalvo(cid){
   try{
-    var s;
-    try{ s=await colCaps().doc(cid).get(); }catch(offlineErr){
-      var localCaps=window.__mesaCapsOffline||[], localDoc=null;
-      for(var li=0;li<localCaps.length;li++) if(localCaps[li].id===cid){localDoc=localCaps[li];break;}
-      if(!localDoc) throw offlineErr;
-      s={exists:true,data:function(){return localDoc;}};
-    }
+    var s=await colCaps().doc(cid).get();
     if(!s.exists){ aviso("Capítulo não encontrado."); return; }
-    var aberto=s.data(); aberto.id=cid;
+    var aberto=validarDocumentoLocal(s.data());aberto.id=cid;
     if(aberto.paginasSeparadas&&nuvemAtiva){
-      try{
-        var sp=await colCaps().doc(cid).collection("paginas").orderBy("indice","asc").get();
-        aberto.paginas=sp.docs.map(function(d){ var v=d.data(); return v.pagina||v; });
-      }catch(splitErr){
-        var cached=window.__mesaCapsOffline||[], cachedCap=cached.filter(function(x){return x.id===cid;})[0];
-        if(cachedCap&&Array.isArray(cachedCap.paginas)&&cachedCap.paginas.length) aberto.paginas=cachedCap.paginas; else throw splitErr;
-      }
+      var sp=await colCaps().doc(cid).collection("paginas").orderBy("indice","asc").get();aberto.paginas=sp.docs.map(function(d){var v=d.data();return v.pagina||v;});validarDocumentoLocal(aberto);
     }
-    doc=aberto;modoNotas=false;capAtual=cid;obraAtual=doc.obraId;
-    if(!doc.paginas||!doc.paginas.length) doc.paginas=[novaPagina()];
-    normalizarDocumento(doc);
+    if(!aberto.paginas||!aberto.paginas.length)aberto.paginas=[novaPagina()];normalizarDocumento(aberto);
+    doc=aberto;modoNotas=false;capAtual=cid;obraAtual=aberto.obraId;
     pgAtual=0; selPainel=null;
     estado.textContent=rotuloSalvoTexto();
     desenharLateral(); desenhar(); atualizarPersonagens();
     alternarLateral(false);
     el("tela").scrollTop=0;
-  }catch(e){ aviso("Não foi possível abrir o capítulo."); }
+    limparFalhaLocal("abertura");
+  }catch(e){BIBLIOTECA_TEXTOS_OK=false;registrarFalhaLocal("abertura","A abertura do capítulo não foi concluída. Seus registros foram preservados e a cópia de consulta continua separada.");aviso("Não foi possível abrir o capítulo. A cópia antiga não será aberta para edição.");return false;}
 }
 
 /* ========== desenho do roteiro ========== */
@@ -7728,62 +8322,21 @@ function abrirEditorCapitulo(indice){
       },
       refazerFundoPagina:function(){ return compPagina(pg,1143,true); },
       editarPagina:function(tipo,valor){
-        if(!doc||doc.paginas[ip]!==pg) return false;
-        var atual=doc.paginas.indexOf(pg), lista=pg.paineis||[];
-        if(atual<0) return false;
+        if(!doc||doc.paginas[ip]!==pg)return false;
+        var cfg={paginaId:pg.id,manterUm:true,manterUma:true},lista=pg.paineis||[];
         if(tipo==="painel"){
-          var destino=valor&&parseInt(valor.paginaDestino,10), alvo=pg, quantidade, i, origem;
-          if(destino>=0&&destino<doc.paginas.length) alvo=doc.paginas[destino];
-          lista=alvo.paineis||[];
-          quantidade=Math.max(1,Math.min(24,parseInt(valor&&valor.quantidade,10)||1));
-          if(valor&&valor.duplicarId){
-            origem=acharPainelPorId(valor.duplicarId);
-            if(!origem) return false;
-            lista.push(duplicarPainel(origem));
-          }else for(i=0;i<quantidade;i++) lista.push(novoPainel());
-          if(alvo.composicaoLivre) garantirComposicaoLivre(alvo);
-          marcarSujo();
-          return {indice:atual,recarregar:alvo===pg,atualizarUI:true,
-            mensagem:alvo===pg?"Painel adicionado à página.":"Painéis adicionados à Página "+(destino+1)+"."};
-        }
-        if(tipo==="painel-apagar"){
-          var indiceApagar=valor&&parseInt(valor.indice,10);
-          if(!(indiceApagar>=0&&indiceApagar<lista.length)) indiceApagar=lista.length-1;
-          if(lista.length<2){ aviso("Mantenha pelo menos um painel nesta página."); return false; }
-          var painelRemovido=lista.splice(indiceApagar,1)[0];
-          if(pg.composicaoLivre) delete pg.composicaoLivre[painelRemovido.id];
-          marcarSujo(); return {indice:atual,recarregar:true,painelRemovido:painelRemovido};
-        }
-        if(tipo==="painel-duplicar"){
-          var indiceDuplicar=valor&&parseInt(valor.indice,10);
-          if(!(indiceDuplicar>=0&&indiceDuplicar<lista.length)) return false;
-          lista.splice(indiceDuplicar+1,0,duplicarPainel(lista[indiceDuplicar]));
-          marcarSujo(); return {indice:atual,recarregar:true};
-        }
-        if(tipo==="nova"){
-          var nPaineis=Math.max(1,Math.min(24,parseInt(valor&&valor.quantidade,10)||1));
-          doc.paginas.splice(atual+1,0,novaPagina(nPaineis));
-          marcarSujo(); return {indice:atual,recarregar:true,mensagem:"Nova página criada. Ela está disponível em Páginas."};
-        }
-        if(tipo==="duplicar"){
-          doc.paginas.splice(atual+1,0,duplicarPagina(pg));
-          marcarSujo(); return {indice:atual+1,trocar:true};
-        }
-        if(tipo==="layout"){
-          var novaArvore=arvoreDoLayout(valor);
-          if(!novaArvore||folhasDoLayout(novaArvore)<lista.length) return false;
-          pg.layoutPag=valor; marcarSujo(); return {indice:atual,recarregar:true};
-        }
-        if(tipo==="apagar"){
-          if(doc.paginas.length<2){ aviso("Mantenha pelo menos uma página no capítulo."); return false; }
-          doc.paginas.splice(atual,1);
-          marcarSujo(); return {indice:Math.min(atual,doc.paginas.length-1),trocar:true,removida:pg};
-        }
-        return false;
+          cfg.quantidade=valor&&valor.quantidade;cfg.duplicarId=valor&&valor.duplicarId;
+          var destino=valor&&parseInt(valor.paginaDestino,10);if(destino>=0&&destino<doc.paginas.length)cfg.destinoId=doc.paginas[destino].id;
+        }else if(tipo==="painel-apagar"||tipo==="painel-duplicar"){
+          var indice=valor&&parseInt(valor.indice,10);
+          if(tipo==="painel-apagar"&&!(indice>=0&&indice<lista.length))indice=lista.length-1;
+          if(!(indice>=0&&indice<lista.length))return false;cfg.painelId=lista[indice].id;
+        }else if(tipo==="nova")cfg.quantidade=valor&&valor.quantidade;
+        else if(tipo==="layout")cfg.layout=valor;
+        return executarEstruturaCapitulo(tipo,cfg,true);
       },
-      limparPaginaRemovida:function(removida){ apagarDesenhosDe([removida]); },
-      limparPainelRemovido:function(painel){ window.EditorDesenho.apagar(painel.id); },
       irPagina:function(n){ abrirEditorCapitulo(n); },
+      aoFalharEstrutura:function(){informarFalhaEstrutural({editorPendente:true},true);},
       aviso:aviso,
       falas:function(){ return []; },
       aoMudar:function(){ marcarSujo(); },
@@ -7857,6 +8410,7 @@ async function abrirDesenhoLivre(registro){
   return executarAcaoTexto(function(){return abrirDesenhoLivreSalvo(registro);});
 }
 function abrirDesenhoLivreSalvo(registro){
+  garantirDesenhosLivresLidos();
   if(!window.EditorDesenho) return;
   if(!registro||!registro.id){
     var nome=window.prompt("Nome do desenho livre:","Meu desenho");
@@ -7865,8 +8419,8 @@ function abrirDesenhoLivreSalvo(registro){
     /* Mantém o identificador antigo na primeira abertura para não perder um desenho
        criado em versões anteriores; os próximos recebem uma chave própria. */
     registro={id:desenhosLivres.length? id("livre"):"mesa-desenho-livre-principal",titulo:nome,criadoEm:Date.now()};
-    registrarDesenhoLivre(registro.id,registro.titulo,registro.criadoEm);
-  }else registro=registrarDesenhoLivre(registro.id,registro.titulo,registro.criadoEm)||registro;
+    registro=registrarDesenhoLivre(registro.id,registro.titulo,registro.criadoEm);if(!registro)return false;
+  }else{registro=registrarDesenhoLivre(registro.id,registro.titulo,registro.criadoEm);if(!registro)return false;}
   alternarLateral(false);
   window.EditorDesenho.abrir({
     painel:{id:registro.id,tamanho:"pagina",borda:0},
@@ -8155,8 +8709,7 @@ function aoClicarTela(ev){
       var k=acharPagina(pgId), i;
       if(k<0) return;
       if(dupId){
-        var origem=acharPainelPorId(dupId);
-        if(origem) doc.paginas[k].paineis.push(duplicarPainel(origem));
+        executarEstruturaCapitulo("painel",{paginaId:pgId,duplicarId:dupId});return;
       }else{
         for(i=0;i<n;i++) doc.paginas[k].paineis.push(novoPainel());
       }
@@ -8166,7 +8719,7 @@ function aoClicarTela(ev){
   }
   if(acao==="duplicar-pagina"){
     var jd=acharPagina(b.getAttribute("data-pg"));
-    if(jd>-1){ doc.paginas.splice(jd+1,0,duplicarPagina(doc.paginas[jd])); pgAtual=jd+1; selPainel=null; marcarSujo(); desenhar(); }
+    if(jd>-1)executarEstruturaCapitulo("duplicar",{paginaId:doc.paginas[jd].id});
     return;
   }
   if(acao==="desenhar-painel"){
@@ -8200,10 +8753,7 @@ function aoClicarTela(ev){
   if(acao==="del-pagina"){
     var j=acharPagina(b.getAttribute("data-pg"));
     if(j>-1) confirmarClique(b,"Clique p/ confirmar",function(){
-      apagarDesenhosDe([doc.paginas[j]]);
-      doc.paginas.splice(j,1);
-      if(!doc.paginas.length) doc.paginas=[novaPagina()];
-      marcarSujo(); desenhar();
+      executarEstruturaCapitulo("apagar",{paginaId:b.getAttribute("data-pg")});
     });
     return;
   }
@@ -8231,11 +8781,10 @@ function aoClicarTela(ev){
   }else if(acao==="descer" && loc.ipn<lst.length-1){
     lst.splice(loc.ipn+1,0,lst.splice(loc.ipn,1)[0]); marcarSujo(); desenhar();
   }else if(acao==="duplicar-painel"){
-    lst.splice(loc.ipn+1,0,duplicarPainel(loc.painel)); marcarSujo(); desenhar();
+    executarEstruturaCapitulo("painel-duplicar",{paginaId:loc.pagina.id,painelId:loc.painel.id});
   }else if(acao==="del-painel"){
     confirmarClique(b,"✕ confirmar",function(){
-      window.EditorDesenho.apagar(loc.painel.id);
-      lst.splice(loc.ipn,1); marcarSujo(); desenhar();
+      executarEstruturaCapitulo("painel-apagar",{paginaId:loc.pagina.id,painelId:loc.painel.id});
     });
   }else if(acao==="toggle-personagem"){
     var nome=b.getAttribute("data-nome");
@@ -8590,6 +9139,10 @@ el("btBackup").onclick=function(){ atualizarEstadoBackup(); atualizarPastaBackup
 el("fecharBackup").onclick=function(){ el("dlgBackup").close(); };
 el("btContaNuvem").onclick=function(){ usarContaNuvem(); };
 el("fecharNuvem").onclick=function(){ el("dlgNuvem").close(); };
+el("dlgNuvem").addEventListener("close",function(){el("senhaNuvem").value="";});
+el("btAutorizarBibliotecaNuvem").onclick=autorizarBibliotecaNuvem;
+el("btSairNuvem").onclick=sairContaNuvem;
+window.addEventListener("storage",function(ev){if(ev.key==="mesa:nuvem-vinculo-v1"){invalidarContaNuvem(CONTA_NUVEM.uid);setTimeout(function(){atualizarContaNuvem().catch(function(){});},0);}});
 el("btEntrarNuvem").onclick=function(){ enviarContaNuvem(false); };
 el("btCriarContaNuvem").onclick=function(){ enviarContaNuvem(true); };
 el("btBaixarBackup").onclick=function(){ baixarBackup(); };
@@ -8598,6 +9151,13 @@ el("btEscolherPasta").onclick=async function(){
   catch(e){ if(e&&e.name==="AbortError") return; el("integridadeBackup").textContent="Não foi possível escolher a pasta. Use “Baixar backup” como alternativa."; aviso("A pasta não foi autorizada; seus dados atuais permanecem intactos."); }
 };
 el("btSalvarNaPasta").onclick=function(){ salvarBackupNaPasta(); };
+el("btRelerDadosLocais").onclick=tentarRelerDadosLocais;
+el("btRetomarRecuperacao").onclick=function(){window.location.reload();};
+el("btExportarDesenhoPendente").onclick=function(){try{if(window.EditorDesenho&&window.EditorDesenho.estaAberto()&&window.EditorDesenho.exportarPNG)window.EditorDesenho.exportarPNG();}catch(e){aviso("Não foi possível exportar o desenho. Preserve esta aba e não reabra a página ainda.");}};
+window.addEventListener("storage",function(ev){if(ev.key==="mesa:importacao-pendente-v1"){var r=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao;if(r)r.estado.bloqueada=true;el("textoRecuperacao").textContent="Outra aba iniciou ou concluiu uma operação de armazenamento. Esta aba foi protegida contra novas gravações. Preserve qualquer rascunho e reabra a página depois que a outra aba terminar.";mostrarBloqueioImportacao();}});
+el("btConsultarCacheLocal").onclick=el("btConsultarCacheBackup").onclick=consultarCacheTextos;
+el("btFecharConsultaCache").onclick=function(){el("dlgConsultaCache").close();};
+el("btBaixarConsultaCache").onclick=baixarCacheConsulta;
 el("btRestaurarNuvem").onclick=function(){return restaurarBackupDaNuvem();};
 el("btMaisCopiasNuvem").onclick=function(){return listarCopiasNuvem(true);};
 el("btEnviarCopiaNuvem").onclick=function(){return enviarBackupNuvemAutomatico(true);};
@@ -8627,7 +9187,8 @@ el("btBaixar").onclick=async function(){
 };
 
 window.addEventListener("beforeunload",function(e){
-  if(sujo||notaSuja||salvando||salvandoNota||acaoTextoAtiva||textosVolateis||(window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false&&(obras.length||caps.length||notas.length))||(window.EditorDesenho&&window.EditorDesenho.temAlteracoes&&window.EditorDesenho.temAlteracoes())){ e.preventDefault(); e.returnValue=""; }
+  var rec=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao;if(rec&&(rec.estado.ativa||rec.estado.bloqueada)){e.preventDefault();e.returnValue="";}
+  if(sujo||notaSuja||salvando||salvandoNota||acaoTextoAtiva||textosVolateis||FICHAS.pendente||(window.__mesaArmazenamento&&window.__mesaArmazenamento.temLocalStorage===false&&(obras.length||caps.length||notas.length))||(window.EditorDesenho&&window.EditorDesenho.temAlteracoes&&window.EditorDesenho.temAlteracoes())){ e.preventDefault(); e.returnValue=""; }
 });
 
 /* ========== arranque ========== */
@@ -8636,11 +9197,13 @@ function mostrarEntradaInicial(){
   reiniciarMarcaNota();
   document.body.classList.remove("em-leitura");estado.textContent="";
   desenharLateral();desenhar();atualizarPersonagens();alternarLateral(false);tela.scrollTop=0;
+  if(!BIBLIOTECA_TEXTOS_OK)tela.innerHTML='<div class="centro"><h2>Biblioteca não carregada</h2><p>Não foi possível confirmar a leitura dos textos. Seus registros não foram apagados. Use Tentar ler novamente ou consulte a cópia de textos no aviso acima.</p></div>';
 }
 tela.innerHTML='<div class="centro"><h2>Abrindo a mesa…</h2><p>Buscando suas obras.</p></div>';
 (async function(){
+  try{var rec=window.__mesaArmazenamento.recuperacao;if(rec)await comTravaImportacao(function(){return rec.recuperar();});}catch(e){mostrarBloqueioImportacao();return;}finally{RECUPERACAO_INICIAL=false;}
   await iniciarArmazenamento();
-  carregarDesenhosLivres();
+  try{carregarDesenhosLivres();}catch(e){}
   if(!db){
     tela.innerHTML='<div class="centro"><h2>Sem armazenamento nesta visualização</h2>'+
       '<p>Não foi possível iniciar o armazenamento deste navegador. Tente abrir o arquivo em outra janela ou navegador.</p></div>';

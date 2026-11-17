@@ -1,4 +1,4 @@
-const CACHE = "mesa-de-roteiro-local-v18-leituras-imagens";
+const CACHE = "mesa-de-roteiro-local-v22-autenticacao";
 const APP_SHELL = [
   "./",
   "./index.html",
