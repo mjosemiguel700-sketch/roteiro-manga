@@ -1134,7 +1134,10 @@ function criarMotorImportacao(abrirBanco,obterStorage){
     }catch(e){estado.bloqueada=true;if(e&&e.pendente)throw e;throw pendente(e);}
     finally{estado.ativa=false;}
   }
-  return{estado:estado,executar:executar,recuperar:recuperar,impedirGravacao:impedirGravacao};
+  /* Consulta sem escrita ou abertura do IndexedDB. Erro de leitura nunca
+     equivale a marcador ausente. A recuperação efetiva relê sob a trava. */
+  function temPendente(){var s=storage();return !!s&&lerTexto(s,CHAVE_MARKER)!==null;}
+  return{estado:estado,executar:executar,recuperar:recuperar,temPendente:temPendente,impedirGravacao:impedirGravacao};
 }
 var P="mesa:", mem=Object.create(null), ls=null, falhaAcesso=false;
 /* Uma fonte legível continua válida mesmo quando não há espaço para escrever. */
@@ -6692,13 +6695,31 @@ function prepararPlanoImportacao(pacote,plano){
   return{textos:textos,imagens:imagens};
 }
 function comTravaImportacao(acao){
-  if(navigator.locks&&navigator.locks.request)return navigator.locks.request("mesa-importacao-local-v1",{mode:"exclusive",ifAvailable:true},function(trava){if(!trava)throw new Error("Outra aba está importando ou recuperando dados. Aguarde e tente novamente.");return acao();});
+  if(navigator.locks&&navigator.locks.request)return navigator.locks.request("mesa-importacao-local-v1",{mode:"exclusive",ifAvailable:true},function(trava){if(!trava){var e=new Error("Outra aba está importando ou recuperando dados. Aguarde e tente novamente.");e.code="trava_recuperacao_ocupada";throw e;}return acao();});
   return Promise.resolve().then(acao);
 }
 function mostrarBloqueioImportacao(){
   var r=window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao;if(r)r.estado.bloqueada=true;
   var box=el("avisoRecuperacao"),app=document.querySelector(".app");if(box)box.classList.remove("oculto");if(app)app.inert=true;
   estado.textContent="recuperação pendente";
+}
+function mostrarFalhaRecuperacaoInicial(erro,etapa){
+  var motivo,texto,status;
+  if(etapa==="consulta"){
+    motivo="leitura_recuperacao_indisponivel";status="armazenamento não verificado";
+    texto="Não foi possível verificar o armazenamento deste navegador. A biblioteca foi protegida contra alterações. Isso não confirma uma operação interrompida nem perda de dados. Preserve seus backups e não limpe os dados do navegador.";
+  }else if(etapa==="trava"){
+    var ocupada=erro&&erro.code==="trava_recuperacao_ocupada";
+    motivo=ocupada?"trava_recuperacao_ocupada":"trava_recuperacao_indisponivel";status=ocupada?"aguardando outra aba":"recuperação indisponível";
+    texto=ocupada?"Existe um aviso local de recuperação, mas outra aba está usando a proteção de armazenamento. Aguarde essa operação terminar e tente abrir novamente. Os registros locais não foram alterados por esta tentativa.":"Existe um aviso local de recuperação, mas não foi possível obter a proteção de armazenamento do navegador. A recuperação não foi iniciada. Preserve seus backups e tente abrir novamente, sem limpar os dados do navegador.";
+  }else{
+    motivo="recuperacao_pendente";status="recuperação pendente";
+    texto="Uma operação local ainda precisa ser recuperada antes de editar. Não foi possível concluir a recuperação nesta abertura. Preserve os registros, mantenha seus backups e não limpe os dados do navegador.";
+  }
+  el("textoRecuperacao").textContent=texto;
+  el("btRetomarRecuperacao").textContent="Tentar abrir novamente";
+  el("avisoRecuperacao").dataset.motivo=motivo;
+  mostrarBloqueioImportacao();estado.textContent=status;
 }
 window.__mesaImportarPacote=function(pacote){return importarBackupArquivo({text:async function(){return JSON.stringify(pacote);}});};
 async function importarBackupSalvo(arquivo){
@@ -9201,7 +9222,17 @@ function mostrarEntradaInicial(){
 }
 tela.innerHTML='<div class="centro"><h2>Abrindo a mesa…</h2><p>Buscando suas obras.</p></div>';
 (async function(){
-  try{var rec=window.__mesaArmazenamento.recuperacao;if(rec)await comTravaImportacao(function(){return rec.recuperar();});}catch(e){mostrarBloqueioImportacao();return;}finally{RECUPERACAO_INICIAL=false;}
+  var etapaRecuperacao="consulta";
+  try{
+    var rec=window.__mesaArmazenamento.recuperacao;
+    if(!rec||typeof rec.temPendente!=="function")throw new Error("A verificação local não está disponível.");
+    /* A abertura comum não precisa da trava de uma operação de recuperação.
+       Com marcador presente, preserva a trava e toda a recuperação anterior. */
+    if(rec.temPendente()){
+      etapaRecuperacao="trava";
+      await comTravaImportacao(function(){etapaRecuperacao="recuperacao";return rec.recuperar();});
+    }
+  }catch(e){mostrarFalhaRecuperacaoInicial(e,etapaRecuperacao);return;}finally{RECUPERACAO_INICIAL=false;}
   await iniciarArmazenamento();
   try{carregarDesenhosLivres();}catch(e){}
   if(!db){

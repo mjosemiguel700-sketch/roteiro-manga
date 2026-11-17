@@ -1,4 +1,4 @@
-const CACHE = "mesa-de-roteiro-local-v22-autenticacao";
+const CACHE = "mesa-de-roteiro-local-v23-arranque";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -28,14 +28,34 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
+  const network = fetch(event.request).then((response) => {
+    let copy = null;
+    // A página pode consumir o corpo assim que receber a resposta. Clone antes
+    // de devolvê-la, sem aguardar a abertura assíncrona do cache.
+    try { if (response && response.ok) copy = response.clone(); } catch (_) {}
+    return { response, copy };
+  });
+
+  // A falha de uma cópia opcional não invalida uma resposta válida da rede.
+  // waitUntil é registrado durante o evento e observa também falhas de quota.
+  event.waitUntil(
+    network.then(({ copy }) => {
+      if (copy) return caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+    }).catch(() => {})
+  );
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
-        return response;
-      })
-      .catch(() => caches.match(event.request).then((cached) =>
-        cached || (event.request.mode === "navigate" ? caches.match("./index.html") : Response.error())
-      ))
+    network.then(({ response }) => response).catch(async () => {
+      try {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+      } catch (_) {}
+      if (event.request.mode === "navigate") {
+        try {
+          const shell = await caches.match("./index.html");
+          if (shell) return shell;
+        } catch (_) {}
+      }
+      return Response.error();
+    })
   );
 });
