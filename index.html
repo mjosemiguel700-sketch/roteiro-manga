@@ -713,6 +713,225 @@ body.lateral-em-obra .lateral .lateral-atalho-geral,body.lateral-em-obra #blocoN
 body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lateral-em-notas #blocoPaginas,body.lateral-em-notas #blocoInfo,body.lateral-em-notas #blocoPersonagens{display:none!important}
 .lateral-personagens{margin:14px 8px 6px;border-top:1px solid var(--calha);padding-top:8px}.lateral-personagens>summary{cursor:pointer;font:700 12px var(--gotico);color:var(--fraco);padding:4px 0 8px}.lateral-contexto{margin:2px 8px 7px;font-size:11px;line-height:1.5;color:var(--fraco);overflow-wrap:anywhere}.pagina-info-resumo{margin:0 8px 9px;padding:8px;border:1px solid var(--calha);border-radius:4px;font-size:12px;line-height:1.5}.pagina-info-resumo strong{display:block}.pagina-painel-detalhes>summary{padding:7px 8px;cursor:pointer;font-size:12px;font-weight:700}.pagina-painel-escolha{display:block;margin:0 8px 7px;font-size:11px;color:var(--fraco)}.pagina-painel-escolha select{width:100%;margin-top:4px}
 .leitura{width:max-content;min-width:100%;--leitura-largura:420px;touch-action:pan-x pan-y pinch-zoom}.leitura-cabeca{left:0;width:100vw;box-sizing:border-box;flex-wrap:wrap}.leitura-cabeca h2{min-width:130px}.leitura-zoom{display:flex;align-items:center;gap:5px;margin-left:auto}.leitura-zoom input{width:100px;accent-color:#a6caee}.leitura-zoom output{min-width:40px;font-size:12px;text-align:center}.leitura-zoom .bt{min-width:30px}.leitura-lista{width:max-content;min-width:100%;box-sizing:border-box;align-items:center;padding:18px 16px;gap:26px}.leitura-pagina{width:var(--leitura-largura);max-width:none;flex:0 0 auto}.leitura-pagina img{width:100%;max-width:none}.leitura-pagina .leitura-carregando{width:100%}body.em-leitura .tela{overflow:auto;overscroll-behavior:contain}@media(max-width:600px){.leitura-cabeca{gap:7px}.leitura-cabeca h2{font-size:13px}.leitura-zoom{width:100%;justify-content:center}.leitura-zoom input{width:min(140px,32vw)}.leitura-cabeca>.info{display:none}.leitura-lista{padding:12px 12px;gap:20px}}
+/* Editor ao toque: os controles originais permanecem únicos e são acomodados
+   no painel inferior. A classe é aplicada somente no modo de tela pequena. */
+.ed-mobile-top,.ed-mobile-context,.ed-mobile-bar,.ed-mobile-sheet,.ed-mobile-shade{display:none}
+.ed.ed-mobile-ui{
+  --em-bar-size:68px;--em-radius:12px;
+  height:100%;height:100dvh;max-height:100dvh;box-sizing:border-box;
+  padding-bottom:0;overflow:hidden;background:var(--e-menu);
+}
+.ed.ed-mobile-ui>.ed-menus,.ed.ed-mobile-ui>.ed-cmd,
+.ed.ed-mobile-ui>.ed-acesso-tableta,.ed.ed-mobile-ui .ed-tools,
+.ed.ed-mobile-ui .ed-lat,.ed.ed-mobile-ui .ed-reabrir,
+.ed.ed-mobile-ui .ed-abas{display:none!important}
+.ed-mobile-ui .ed-mobile-top{
+  display:flex;flex:none;align-items:center;gap:5px;min-height:54px;
+  padding:5px max(7px,env(safe-area-inset-right,0px)) 5px max(7px,env(safe-area-inset-left,0px));
+  border-bottom:1px solid var(--e-bd);background:var(--e-menu);box-sizing:border-box;z-index:20;
+}
+.ed-mobile-ui .ed-mobile-top button,
+.ed-mobile-ui .ed-mobile-context>button,
+.ed-mobile-ui .ed-mobile-sheet-head button{
+  min-width:44px;min-height:44px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  padding:8px;border:1px solid transparent;border-radius:9px;background:transparent;
+  color:var(--e-tx);touch-action:manipulation;cursor:pointer;
+}
+.ed-mobile-ui .ed-mobile-top button:hover,
+.ed-mobile-ui .ed-mobile-context>button:hover,
+.ed-mobile-ui .ed-mobile-sheet-head button:hover{background:var(--e-ac)}
+.ed-mobile-ui .ed-mobile-top button:disabled,
+.ed-mobile-ui .ed-mobile-context>button:disabled{opacity:.35;cursor:default}
+.ed-mobile-ui .ed-mobile-top svg,.ed-mobile-ui .ed-mobile-context svg,
+.ed-mobile-ui .ed-mobile-sheet-head svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ed-mobile-ui .ed-mobile-heading{min-width:0;flex:1;display:grid;gap:2px;padding:0 2px}
+.ed-mobile-ui .ed-mobile-heading strong{font-size:15px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
+.ed-mobile-ui .ed-mobile-heading small{font-size:10px;color:var(--e-fr);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.ed-mobile-ui .ed-mobile-context{
+  display:flex;flex:none;align-items:center;gap:3px;min-height:65px;padding:4px 8px;
+  border-bottom:1px solid var(--e-bd);background:var(--e-bg);box-sizing:border-box;z-index:20;
+}
+.ed-mobile-ui .ed-mobile-size{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 6px;margin:0 5px}
+.ed-mobile-ui .ed-mobile-tool-name{
+  display:block;min-height:44px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:2px 0;border:0;background:transparent;color:var(--e-tx);text-align:left;font-size:12px;font-weight:600;
+}
+.ed-mobile-ui .ed-mobile-size output{font-size:11px;color:var(--e-fr);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ed-mobile-ui .ed-mobile-size input[type=range]{grid-column:1/-1;display:block;width:100%;min-width:0;height:32px;margin:0;accent-color:var(--e-acb);touch-action:pan-x}
+.ed-mobile-ui .ed-corpo{flex:1;display:flex;min-width:0;min-height:0;grid-template-columns:none;grid-template-rows:none;width:100%;overflow:hidden}
+.ed-mobile-ui .ed-centro{display:flex;flex:1;grid-column:auto;grid-row:auto;min-width:0;min-height:0;width:100%;height:100%}
+.ed-mobile-ui .ed-palco{flex:1;min-height:0;min-width:0;width:100%}
+.ed-mobile-ui .ed-status{flex:none;gap:7px;min-height:23px;padding:3px max(9px,env(safe-area-inset-right,0px)) 3px max(9px,env(safe-area-inset-left,0px));font-size:10px;background:var(--e-bg);box-sizing:border-box}
+.ed-mobile-ui .ed-status #coord,.ed-mobile-ui .ed-status .ed-dim{display:none}
+.ed-mobile-ui .ed-status .ed-zoom{min-width:32px;text-align:left;font-size:10px}
+.ed-mobile-ui .ed-status .estado{font-size:10px;overflow:hidden;text-overflow:ellipsis}
+.ed-mobile-ui .ed-mobile-bar{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));flex:none;gap:2px;position:relative;z-index:60;
+  height:calc(var(--em-bar-size) + env(safe-area-inset-bottom,0px));box-sizing:border-box;
+  padding:5px max(5px,env(safe-area-inset-right,0px)) calc(5px + env(safe-area-inset-bottom,0px)) max(5px,env(safe-area-inset-left,0px));
+  border-top:1px solid var(--e-bd);background:var(--e-menu);
+}
+.ed-mobile-ui .ed-mobile-bar button{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:54px;
+  padding:5px 2px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--e-tx);
+  font-size:10px;line-height:1.2;touch-action:manipulation;cursor:pointer;
+}
+.ed-mobile-ui .ed-mobile-bar button>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-mobile-ui .ed-mobile-bar svg,.ed-mobile-ui .ed-mobile-choice svg{display:block;width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ed-mobile-ui .ed-mobile-bar button[aria-pressed=true],
+.ed-mobile-ui .ed-mobile-bar button.ativo{background:var(--e-ac);border-color:var(--e-acb);color:var(--e-tx)}
+.ed-mobile-ui .ed-mobile-bar button:disabled{opacity:.38;cursor:default}
+.ed-mobile-ui .ed-mobile-bar button:hover:not(:disabled),.ed-mobile-ui .ed-mobile-choice:hover:not(:disabled){background:var(--e-ac)}
+.ed-mobile-ui .ed-mobile-swatch{display:block;width:20px;height:20px;border-radius:50%;border:1px solid var(--e-fr);box-shadow:inset 0 0 0 2px var(--e-menu);flex:none}
+.ed-mobile-ui[data-mobile-hand=left] .ed-mobile-bar{direction:rtl}
+.ed-mobile-ui[data-mobile-hand=left] .ed-mobile-bar button{direction:ltr}
+.ed-mobile-ui[data-mobile-labels=false] .ed-mobile-bar button>span:not(.ed-mobile-swatch){display:none}
+.ed-mobile-ui .ed-mobile-shade{display:block;position:absolute;inset:0 0 calc(var(--em-bar-size) + env(safe-area-inset-bottom,0px));z-index:40;background:rgba(15,25,40,.17);touch-action:none}
+.ed-mobile-ui .ed-mobile-shade[hidden]{display:none!important}
+.ed-mobile-ui .ed-mobile-sheet{
+  display:flex;flex-direction:column;position:absolute;left:0;right:0;bottom:calc(var(--em-bar-size) + env(safe-area-inset-bottom,0px));
+  z-index:50;min-height:0;max-height:min(62dvh,calc(100% - var(--em-bar-size) - env(safe-area-inset-bottom,0px) - 64px));
+  color:var(--e-tx);background:var(--e-menu);border:1px solid var(--e-bd);border-bottom:0;border-radius:18px 18px 0 0;
+  box-shadow:0 -8px 30px rgba(0,0,0,.16);overflow:hidden;box-sizing:border-box;
+}
+.ed-mobile-ui .ed-mobile-sheet[hidden]{display:none!important}
+.ed-mobile-ui .ed-mobile-sheet-head{display:flex;align-items:center;gap:7px;flex:none;min-height:52px;padding:4px 8px;border-bottom:1px solid var(--e-bd);background:var(--e-menu)}
+.ed-mobile-ui .ed-mobile-sheet-head strong{flex:1;min-width:0;font-size:15px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-mobile-ui .ed-mobile-sheet-head button[hidden]{display:none!important}
+.ed-mobile-ui .ed-mobile-body{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:10px 12px 14px;scroll-padding:12px}
+.ed.ed-mobile-ui .ed-mobile-body>.pn{display:block!important;margin:0 0 10px;border:1px solid var(--e-bd);border-radius:9px;background:var(--e-bg);overflow:hidden}
+.ed.ed-mobile-ui .ed-mobile-body>.pn>.pn-t{min-height:38px;padding:8px 10px;box-sizing:border-box;font-size:12px;gap:5px}
+.ed.ed-mobile-ui .ed-mobile-body>.pn>.pn-t .pn-caret{display:none}
+.ed.ed-mobile-ui .ed-mobile-body>.pn>.pn-c{display:block!important;padding:9px 10px 11px}
+.ed-mobile-ui .ed-mobile-body .ed-lin{font-size:13px;gap:9px;min-height:38px;flex-wrap:wrap}
+.ed-mobile-ui .ed-mobile-body .ed-lin output{font-size:12px;min-width:38px}
+.ed-mobile-ui .ed-mobile-body .bt,
+.ed-mobile-ui .ed-mobile-body button:not(.ed-sub),
+.ed-mobile-ui .ed-mobile-body select{min-height:44px;touch-action:manipulation}
+.ed-mobile-ui .ed-mobile-body .bt{padding:8px 10px;font-size:12px;border-radius:7px}
+.ed-mobile-ui .ed-mobile-body .ed-acoes-cam{gap:7px}
+.ed-mobile-ui .ed-mobile-body .ed-acoes-cam .bt{flex:1 0 auto}
+.ed-mobile-ui .ed-mobile-body input[type=text],
+.ed-mobile-ui .ed-mobile-body input[type=search],
+.ed-mobile-ui .ed-mobile-body input[type=number],
+.ed-mobile-ui .ed-mobile-body textarea,
+.ed-mobile-ui .ed-mobile-body select{max-width:100%;min-width:0;font-size:16px;padding:9px;border-radius:7px;box-sizing:border-box}
+.ed-mobile-ui .ed-mobile-body input[type=checkbox]{width:20px;height:20px;margin:10px 5px 10px 0;flex:none;accent-color:var(--e-acb)}
+.ed-mobile-ui .ed-mobile-body input[type=range]{min-width:80px;height:36px;accent-color:var(--e-acb);touch-action:pan-x}
+.ed-mobile-ui .ed-mobile-body .ed-biblioteca-cab{gap:8px}
+.ed-mobile-ui .ed-mobile-body .ed-sub-lista{max-height:none;overflow:visible}
+.ed-mobile-ui .ed-mobile-body .ed-sub{min-height:53px;margin-bottom:5px;padding:7px 8px;gap:9px;border-radius:7px}
+.ed-mobile-ui .ed-mobile-body .ed-sub span{font-size:13px}
+.ed-mobile-ui .ed-mobile-body .ed-sub small{font-size:10px}
+.ed-mobile-ui .ed-mobile-body .ed-sub kbd{display:none}
+.ed-mobile-ui .ed-mobile-body .ed-traco-previa{height:65px;margin-bottom:9px}
+.ed-mobile-ui .ed-mobile-body .ed-dica{font-size:12px;line-height:1.5;margin-top:8px}
+.ed-mobile-ui .ed-mobile-body .ed-tams{gap:5px}
+.ed-mobile-ui .ed-mobile-body .ed-tm{height:44px}
+.ed-mobile-ui .ed-mobile-body .ed-amostra{width:34px;min-height:34px!important;height:34px;margin:3px;border-radius:50%}
+.ed-mobile-ui .ed-mobile-body .ed-cores{gap:6px}
+.ed-mobile-ui .ed-mobile-body .ed-cores input[type=color]{width:50px;height:44px;padding:3px;border-radius:6px}
+.ed-mobile-ui .ed-mobile-body .ed-hex{width:100px;flex:1;min-height:44px}
+.ed-mobile-ui .ed-mobile-body .ed-camadas{max-height:none;border-radius:7px}
+.ed-mobile-ui .ed-mobile-body .ed-cam{gap:7px;min-height:51px;padding:3px 8px;font-size:13px}
+.ed-mobile-ui .ed-mobile-body .ed-cam-trava{width:44px;height:44px;min-width:44px}
+.ed-mobile-ui .ed-mobile-body .ed-cam input[type=checkbox]{margin-right:7px}
+.ed-mobile-ui .ed-mobile-body .ed-bal-tipos{gap:8px}
+.ed-mobile-ui .ed-mobile-body .ed-bal-t{font-size:12px;padding:6px}
+.ed-mobile-ui .ed-mobile-more{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:0 0 9px}
+.ed-mobile-ui .ed-mobile-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:76px;padding:8px 5px;border:1px solid var(--e-bd);border-radius:10px;background:var(--e-in);color:var(--e-tx);font-size:11px;line-height:1.3;text-align:center;touch-action:manipulation;cursor:pointer}
+.ed-mobile-ui .ed-mobile-choice>span{max-width:100%;overflow-wrap:anywhere}
+.ed-mobile-ui .ed-mobile-choice:disabled{opacity:.4;cursor:default}
+.ed-mobile-ui .ed-mobile-settings{padding:8px 0;display:grid;gap:3px;border-top:1px solid var(--e-bd)}
+.ed-mobile-ui .ed-mobile-settings label{min-height:44px;display:flex;align-items:center;gap:9px;font-size:13px}
+.ed-mobile-ui .ed-mobile-settings p{font-size:12px;line-height:1.5;color:var(--e-fr);margin:5px 0}
+.ed-mobile-ui .ed-mobile-body .ed-menus{display:flex!important;flex-wrap:wrap;align-items:flex-start;gap:7px;overflow:visible;padding:0;border:0;background:transparent;z-index:auto}
+.ed-mobile-ui .ed-mobile-body .ed-menu{flex:1 1 130px;max-width:100%;min-width:0}
+.ed-mobile-ui .ed-mobile-body .ed-mb{display:block;width:100%;min-height:44px;border:1px solid var(--e-bd);border-radius:7px;padding:10px;background:var(--e-bg);text-align:left}
+.ed-mobile-ui .ed-mobile-body .ed-ml{position:static;min-width:0;width:100%;box-sizing:border-box;margin:5px 0 8px;padding:4px 0;box-shadow:none;border-radius:7px;overflow:hidden}
+.ed-mobile-ui .ed-mobile-body .ed-mi{min-height:44px;padding:9px 10px 9px 26px;white-space:normal;flex-wrap:wrap;font-size:12px;line-height:1.4}
+.ed-mobile-ui .ed-mobile-body .ed-mi kbd{font-size:10px;padding-left:0;color:var(--e-fr)}
+.ed-mobile-ui .ed-mobile-body .ed-mi-select{padding-left:10px}
+.ed-mobile-ui .ed-mobile-body .ed-mi-select select{flex:1;max-width:100%}
+.ed-mobile-ui .ed-mobile-body .ed-cmd{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;overflow:visible;padding:10px 0 0;margin-top:10px;border:0;border-top:1px solid var(--e-bd)}
+.ed-mobile-ui .ed-mobile-body .ed-cmd>*{max-width:100%;flex:0 1 auto}
+.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-grupo{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-rot{flex-wrap:wrap;font-size:12px;max-width:100%}
+.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-esp,.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-vsep{display:none}
+.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-pagina-acoes,.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-paginas-ed{max-width:100%;flex-wrap:wrap;overflow:visible}
+.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-add-painel-ed,.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-pagina-acao,.ed-mobile-ui .ed-mobile-body .ed-cmd .ed-pg-ed{min-height:44px;padding:8px;font-size:12px}
+.ed-mobile-ui .ed-mobile-body .ed-nav{height:140px}
+.ed-mobile-ui :is(.ed-mobile-top,.ed-mobile-context,.ed-mobile-bar,.ed-mobile-sheet) button:focus-visible{outline:2px solid var(--e-acb);outline-offset:-2px}
+.ed-mobile-ui .ed-ref-janela,.ed-mobile-ui .ed-pg-janela,.ed-mobile-ui .ed-ajuda{padding:8px;box-sizing:border-box}
+.ed-mobile-ui .ed-ref-dialog,.ed-mobile-ui .ed-pg-dialog,.ed-mobile-ui .ed-ajuda-c{width:100%;max-width:none;max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));padding:12px;border-radius:12px;box-sizing:border-box;overscroll-behavior:contain}
+.ed-mobile-ui .ed-ref-cab,.ed-mobile-ui .ed-pg-cab{gap:8px}
+.ed-mobile-ui .ed-ref-cab h2,.ed-mobile-ui .ed-pg-cab h2{font-size:16px}
+.ed-mobile-ui .ed-ref-cab .bt,.ed-mobile-ui .ed-pg-cab .bt,.ed-mobile-ui .ed-ajuda-c .bt{min-height:44px;min-width:44px;flex:none}
+.ed-mobile-ui .ed-ref-acoes{gap:7px}
+.ed-mobile-ui .ed-ref-acoes .bt{min-height:44px;font-size:12px;padding:8px}
+.ed-mobile-ui .ed-ref-busca{min-width:0;min-height:44px;font-size:16px;box-sizing:border-box}
+.ed-mobile-ui .ed-ref-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ed-mobile-ui .ed-ref-card img{height:115px}
+.ed-mobile-ui .ed-ref-estudo{left:auto;right:8px;top:8px;width:min(280px,72vw);max-height:50dvh;padding:8px}
+.ed-mobile-ui .ed-ref-estudo .bt{min-height:44px;min-width:44px}
+.ed-mobile-ui .ed-ref-estudo img{max-height:28dvh}
+.ed-mobile-ui .ed-pg-janela.edicao{padding:8px;place-items:start center}
+.ed-mobile-ui .ed-pg-janela.edicao .ed-pg-dialog{width:100%;max-height:calc(100dvh - 24px)}
+.ed-mobile-ui .ed-pg-config{grid-template-columns:1fr;gap:8px}
+.ed-mobile-ui .ed-pg-config select,.ed-mobile-ui .ed-pg-dialog .bt{min-height:44px;font-size:14px}
+.ed-mobile-ui .ed-sfx,.ed-mobile-ui .ed-m3d{left:8px;right:8px;top:8px;bottom:calc(var(--em-bar-size) + env(safe-area-inset-bottom,0px) + 8px);width:auto;max-width:none;min-height:0;max-height:none;box-sizing:border-box;border-radius:12px}
+.ed-mobile-ui .ed-sfx header,.ed-mobile-ui .ed-m3d-cab{min-height:48px;padding:6px 8px;flex:none}
+.ed-mobile-ui .ed-sfx header .bt,.ed-mobile-ui .ed-m3d-cab .bt{min-height:44px;min-width:44px}
+.ed-mobile-ui .ed-sfx-corpo,.ed-mobile-ui .ed-m3d-corpo{padding:10px;overscroll-behavior:contain}
+.ed-mobile-ui .ed-sfx textarea,.ed-mobile-ui .ed-sfx select,.ed-mobile-ui .ed-sfx input[type=text],.ed-mobile-ui .ed-sfx input[type=number],.ed-mobile-ui .ed-m3d input[type=text],.ed-mobile-ui .ed-m3d select{font-size:16px;min-height:44px;box-sizing:border-box;max-width:100%}
+.ed-mobile-ui .ed-sfx .bt,.ed-mobile-ui .ed-m3d .bt{min-height:44px;padding:7px 9px}
+.ed-mobile-ui .ed-m3d-cena{height:220px;flex:none}
+.ed-mobile-ui .ed-m3d .ed-lin,.ed-mobile-ui .ed-sfx .ed-lin{min-height:38px;font-size:12px;flex-wrap:wrap}
+.ed-mobile-ui .ed-m3d .ed-dica,.ed-mobile-ui .ed-sfx .ed-dica{font-size:12px}
+.ed-mobile-ui .ed-ajuda-c dl{grid-template-columns:minmax(0,1fr);gap:3px}
+.ed-mobile-ui .ed-ajuda-c dd{margin-bottom:8px}
+.ed.ed-mobile-ui.modo-foco{height:100dvh!important;max-height:100dvh}
+.ed-mobile-ui.modo-foco .ed-mobile-top,.ed-mobile-ui.modo-foco .ed-mobile-context,
+.ed-mobile-ui.modo-foco .ed-mobile-bar,.ed-mobile-ui.modo-foco .ed-mobile-sheet,
+.ed-mobile-ui.modo-foco .ed-mobile-shade{display:none!important}
+.ed-mobile-ui.modo-foco .ed-corpo,.ed-mobile-ui.modo-foco .ed-centro,.ed-mobile-ui.modo-foco .ed-palco{width:100%;height:100%;min-height:0}
+.ed-mobile-ui.modo-foco .ed-foco-rapido{max-width:calc(100vw - 16px);gap:4px;padding:6px;bottom:max(8px,env(safe-area-inset-bottom,0px));border-radius:12px;box-sizing:border-box}
+.ed-mobile-ui.modo-foco .ed-foco-rapido .bt{min-width:44px;min-height:44px;padding:7px 9px;flex:none}
+@media(max-width:900px){
+  body.ed-aberto .fichas-janela{left:8px;right:8px;top:max(8px,env(safe-area-inset-top,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));width:auto;height:auto;min-width:0;max-width:none;max-height:none;border-radius:12px}
+  body.ed-aberto .fichas-cab{min-height:44px;padding:6px 8px;flex:none}
+  body.ed-aberto .fichas-cab button,body.ed-aberto .fichas-janela .bt{min-height:44px;min-width:44px}
+  body.ed-aberto .fichas-janela input,body.ed-aberto .fichas-janela select,body.ed-aberto .fichas-janela textarea{font-size:16px;min-height:44px}
+}
+@media(max-width:360px){
+  .ed-mobile-ui .ed-mobile-top{gap:2px;padding-left:5px;padding-right:5px}
+  .ed-mobile-ui .ed-mobile-heading strong{font-size:14px}
+  .ed-mobile-ui .ed-mobile-context{padding-left:4px;padding-right:4px}
+  .ed-mobile-ui .ed-mobile-size{margin-left:2px;margin-right:2px}
+  .ed-mobile-ui .ed-mobile-bar button{font-size:9.5px}
+  .ed-mobile-ui .ed-mobile-body{padding:8px 9px 11px}
+  .ed-mobile-ui .ed-mobile-more{gap:5px}
+  .ed-mobile-ui .ed-mobile-choice{font-size:10.5px;padding:7px 3px}
+}
+@media(max-width:900px) and (max-height:480px){
+  .ed.ed-mobile-ui{--em-bar-size:58px}
+  .ed-mobile-ui .ed-mobile-top{min-height:46px;padding-top:1px;padding-bottom:1px}
+  .ed-mobile-ui .ed-mobile-heading small{display:none}
+  .ed-mobile-ui .ed-mobile-context{min-height:49px;padding-top:1px;padding-bottom:1px}
+  .ed-mobile-ui .ed-mobile-size{grid-template-columns:minmax(90px,auto) auto minmax(90px,1fr);gap:7px}
+  .ed-mobile-ui .ed-mobile-size input[type=range]{grid-column:auto;height:36px}
+  .ed-mobile-ui .ed-mobile-bar{padding-top:3px;padding-bottom:calc(3px + env(safe-area-inset-bottom,0px))}
+  .ed-mobile-ui .ed-mobile-bar button{min-height:48px;flex-direction:row;gap:7px;padding:3px}
+  .ed-mobile-ui .ed-mobile-bar svg{width:19px;height:19px}
+  .ed-mobile-ui .ed-mobile-sheet{max-height:min(70dvh,calc(100% - var(--em-bar-size) - 48px))}
+  .ed-mobile-ui .ed-mobile-more{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ed-mobile-ui .ed-mobile-choice{min-height:62px}
+  .ed-mobile-ui .ed-mobile-body .ed-sub-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  .ed-mobile-ui .ed-mobile-body .ed-sub{margin-bottom:0}
+  .ed-mobile-ui .ed-ref-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ed-mobile-ui .ed-m3d-cena{height:180px}
+}
+@media(prefers-reduced-motion:reduce){.ed-mobile-ui *{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -2242,17 +2461,128 @@ function aplicarInterfaceEditor(){
   qa('[data-ed="laterais"]').forEach(function(b){b.textContent=INTERFACE_EDITOR.esq||INTERFACE_EDITOR.dir?"Recolher laterais":"Mostrar laterais";b.setAttribute("aria-expanded",String(INTERFACE_EDITOR.esq||INTERFACE_EDITOR.dir));});
   if(S){var sessao=S,cx=(S.pw/2-S.tx)/S.z,cy=(S.ph/2-S.ty)/S.z;S.ajustado=false;requestAnimationFrame(function(){if(S!==sessao)return;ajustarCanvasPalco();S.tx=S.pw/2-cx*S.z;S.ty=S.ph/2-cy*S.z;limitarNavegacao();pedir(true);});}
 }
-function alternarLateralEditor(lado){INTERFACE_EDITOR[lado]=!INTERFACE_EDITOR[lado];guardarInterfaceEditor();aplicarInterfaceEditor();}
+function alternarLateralEditor(lado){if(ED_MOVEL.ativo){abrirPainelMovel(lado==='esq'?'ferr':'camadas');return;}INTERFACE_EDITOR[lado]=!INTERFACE_EDITOR[lado];guardarInterfaceEditor();aplicarInterfaceEditor();}
 function alternarLateraisEditor(){
+  if(ED_MOVEL.ativo){if(ED_MOVEL.painel)fecharPainelMovel(true);else abrirPainelMovel('mais');return;}
   if(window.matchMedia("(max-width:820px)").matches){E.lat.classList.toggle("aberta");return;}
   var abrir=!(INTERFACE_EDITOR.esq||INTERFACE_EDITOR.dir);INTERFACE_EDITOR.esq=abrir;INTERFACE_EDITOR.dir=abrir;guardarInterfaceEditor();aplicarInterfaceEditor();
 }
 function abrirEstudioEditor(abrir){
+  if(ED_MOVEL.ativo){if(abrir===false)fecharPainelMovel(true);else abrirPainelMovel('estudio');return;}
   INTERFACE_EDITOR.estudio=abrir==null?!INTERFACE_EDITOR.estudio:!!abrir;
   if(INTERFACE_EDITOR.estudio){INTERFACE_EDITOR.esq=true;ESTADO_PN.estudio={o:0,f:0};salvarPn();if(window.matchMedia("(max-width:820px)").matches)E.lat.classList.add("aberta");}
   aplicarPaineis();aplicarInterfaceEditor();if(S)atualizarFerr();
 }
 function campoInterfaceEditor(r,t){if(r!=="entornoCor")return false;if(/^#[0-9a-f]{6}$/i.test(t.value)){INTERFACE_EDITOR.entorno=t.value;guardarInterfaceEditor();$ed.style.setProperty("--e-entorno",t.value);pedir(true);}return true;}
+/* Os painéis móveis reutilizam os próprios controles do editor. Os marcadores
+   mantêm a posição original de cada nó ao voltar para a tela do computador. */
+var ED_MOVEL={ativo:false,painel:null,origens:[],ferrAnterior:"caneta",canhoto:false,rotulos:true,enquadramentoTeclado:null,tTeclado:0};
+try{var prefMovel=JSON.parse(localStorage.getItem("mesa.ed.mobile.v1")||"null");if(prefMovel){ED_MOVEL.canhoto=prefMovel.canhoto===true;ED_MOVEL.rotulos=prefMovel.rotulos!==false;}}catch(e){}
+function iconeEditorMovel(nome){
+  var icones={caneta:'<path d="m4 20 4-1L20 7l-3-3L5 16zM14 7l3 3"/>',borracha:'<path d="m4 13 9-9 7 7-9 9H8zM8 9l7 7M11 20h10"/>',cor:'<path d="M12 3s-7 8-7 12a7 7 0 0 0 14 0c0-4-7-12-7-12z"/>',camadas:'<path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',mais:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',voltar:'<path d="m14 5-7 7 7 7M7 12h13"/>',fechar:'<path d="m6 6 12 12M6 18 18 6"/>',foco:'<path d="M9 3H3v6M15 3h6v6M3 15v6h6M15 21h6v-6"/>',desfazer:'<path d="M4 10h10a6 6 0 0 1 0 12M4 10l5-5M4 10l5 5"/>',refazer:'<path d="M20 10H10a6 6 0 0 0 0 12M20 10l-5-5M20 10l-5 5"/>',guia:'<path d="M3 20 12 4l9 16zM7 15h10M9 11h6"/>',formas:'<path d="m3 7 9-4 9 4v10l-9 4-9-4zM3 7l9 5 9-5M12 12v9"/>',balao:'<path d="M4 4h16v12H10l-6 5z"/>',reticula:'<path d="M4 4h16v16H4zM8 4v16M12 4v16M16 4v16M4 8h16M4 12h16M4 16h16"/>',texto:'<path d="M4 5h16M12 5v15M8 20h8"/>',imagem:'<path d="M3 4h18v16H3zM3 16l6-6 5 5 3-3 4 4"/><circle cx="16" cy="8" r="1"/>',pessoa:'<circle cx="12" cy="5" r="3"/><path d="M12 8v7M5 10l7 2 7-2M7 22l5-7 5 7"/>',pagina:'<path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h8"/>',ajustes:'<path d="M5 3v18M12 3v18M19 3v18M2 8h6M9 16h6M16 10h6"/>',salvar:'<path d="M4 3h14l3 3v15H3V3zM7 3v6h10V3M7 21v-8h10v8"/>',girar:'<path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/>',zoom:'<path d="M4 4h6M4 4v6M20 4h-6M20 4v6M4 20h6M4 20v-6M20 20h-6M20 20v-6"/>'};
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(icones[nome]||icones.mais)+'</svg>';
+}
+function htmlEscolhaMovel(painel,icone,texto){return '<button type="button" class="ed-mobile-choice" data-mobile-panel="'+painel+'">'+iconeEditorMovel(icone)+'<span>'+texto+'</span></button>';}
+function montarEditorMovel(){
+  if(E.mobileBar)return;
+  var topo=document.createElement('div');topo.className='ed-mobile-top';
+  topo.innerHTML='<button type="button" class="ed-mobile-back" data-mobile-action="voltar" aria-label="Fechar editor">'+iconeEditorMovel('voltar')+'</button><div class="ed-mobile-heading"><strong data-mobile-title>Desenho</strong><small>Um dedo desenha · dois movem e ampliam</small></div><button type="button" class="ed-mobile-focus" data-mobile-action="foco" aria-label="Entrar no modo foco">'+iconeEditorMovel('foco')+'</button><button type="button" class="ed-mobile-openmenu" data-mobile-panel="mais" aria-label="Mais opções do desenho">'+iconeEditorMovel('mais')+'</button>';
+  var contexto=document.createElement('div');contexto.className='ed-mobile-context';
+  contexto.innerHTML='<button type="button" data-ed="desfazer" aria-label="Desfazer traço">'+iconeEditorMovel('desfazer')+'</button><button type="button" data-ed="refazer" aria-label="Refazer traço">'+iconeEditorMovel('refazer')+'</button><label class="ed-mobile-size"><button type="button" class="ed-mobile-tool-name" data-mobile-panel="prop" aria-label="Ajustar ferramenta atual">Caneta G</button><output data-mobile-size-value>6 px</output><input type="range" min="1" max="200" step="1" data-mobile-size aria-label="Tamanho do traço"></label>';
+  $ed.insertBefore(contexto,$ed.firstChild);$ed.insertBefore(topo,contexto);
+  var barra=document.createElement('div');barra.className='ed-mobile-bar';barra.setAttribute('role','toolbar');barra.setAttribute('aria-label','Ferramentas de desenho para celular');
+  barra.innerHTML='<button type="button" data-mobile-panel="ferr" aria-label="Escolher ferramenta" aria-pressed="false">'+iconeEditorMovel('caneta')+'<span>Ferramenta</span></button><button type="button" data-mobile-action="borracha" aria-label="Alternar borracha e ferramenta de desenho" aria-pressed="false">'+iconeEditorMovel('borracha')+'<span>Borracha</span></button><button type="button" data-mobile-panel="cor" aria-label="Escolher cor" aria-pressed="false"><i class="ed-mobile-swatch" aria-hidden="true"></i><span>Cor</span></button><button type="button" data-mobile-panel="camadas" aria-label="Abrir camadas" aria-pressed="false">'+iconeEditorMovel('camadas')+'<span>Camadas</span></button><button type="button" data-mobile-panel="mais" aria-label="Abrir mais ferramentas" aria-pressed="false">'+iconeEditorMovel('mais')+'<span>Mais</span></button>';
+  var sombra=document.createElement('div');sombra.className='ed-mobile-shade';sombra.hidden=true;sombra.setAttribute('data-mobile-action','fechar');sombra.setAttribute('aria-hidden','true');
+  var painel=document.createElement('section');painel.className='ed-mobile-sheet';painel.id='edMobileSheet';painel.hidden=true;painel.setAttribute('role','dialog');painel.setAttribute('aria-labelledby','edMobileSheetTitle');
+  painel.innerHTML='<header class="ed-mobile-sheet-head"><button type="button" data-mobile-action="voltar-painel" aria-label="Voltar às opções">'+iconeEditorMovel('voltar')+'</button><strong id="edMobileSheetTitle">Ferramentas</strong><button type="button" data-mobile-action="fechar" aria-label="Fechar painel de ferramentas">'+iconeEditorMovel('fechar')+'</button></header><div class="ed-mobile-body"></div>';
+  $ed.appendChild(sombra);$ed.appendChild(painel);$ed.appendChild(barra);
+  var focoRapido=document.createElement('div');focoRapido.className='ed-foco-rapido';focoRapido.setAttribute('role','toolbar');focoRapido.setAttribute('aria-label','Ações no modo foco');
+  focoRapido.innerHTML='<button type="button" class="bt mini" data-ed="desfazer" aria-label="Desfazer no modo foco">↶</button><button type="button" class="bt mini" data-ed="refazer" aria-label="Refazer no modo foco">↷</button><button type="button" class="bt mini" data-ed="foco">Voltar ao editor</button>';$ed.appendChild(focoRapido);
+  E.mobileTop=topo;E.mobileContext=contexto;E.mobileBar=barra;E.mobileSheet=painel;E.mobileBody=painel.querySelector('.ed-mobile-body');E.mobileShade=sombra;
+  Array.prototype.forEach.call($ed.querySelectorAll('.pn,.ed-menus,.ed-cmd'),function(no){var marcador=document.createComment('posição original do editor');no.parentNode.insertBefore(marcador,no);ED_MOVEL.origens.push({no:no,marcador:marcador});});
+  $ed.addEventListener('click',cliqueEditorMovel);
+  $ed.addEventListener('input',function(ev){
+    if(!S||S.carregando)return;var t=ev.target;
+    if(t.hasAttribute('data-mobile-size')){var a=CFG.ajust[S.ferr];if(a){a.tam=clamp(+t.value,1,200);guardarAjustesPinceis();atualizarFerr();pedir(false);}return;}
+    if(t.hasAttribute('data-mobile-pref')){var pref=t.getAttribute('data-mobile-pref');if(pref==='canhoto')ED_MOVEL.canhoto=t.checked;if(pref==='rotulos')ED_MOVEL.rotulos=t.checked;try{localStorage.setItem('mesa.ed.mobile.v1',JSON.stringify({canhoto:ED_MOVEL.canhoto,rotulos:ED_MOVEL.rotulos}));}catch(e){}atualizarEditorMovel();}
+  });
+  $ed.addEventListener('focusin',function(ev){
+    if(!ED_MOVEL.ativo||!S||!campoTecladoMovel(ev.target))return;
+    clearTimeout(ED_MOVEL.tTeclado);if(!ED_MOVEL.enquadramentoTeclado||ED_MOVEL.enquadramentoTeclado.sessao!==S)ED_MOVEL.enquadramentoTeclado={sessao:S,z:S.z,tx:S.tx,ty:S.ty,ajustado:S.ajustado};
+  });
+  $ed.addEventListener('focusout',function(){clearTimeout(ED_MOVEL.tTeclado);ED_MOVEL.tTeclado=setTimeout(function(){if(!campoTecladoMovel(document.activeElement))ED_MOVEL.enquadramentoTeclado=null;},700);});
+  var consulta=window.matchMedia('(max-width:900px)');if(consulta.addEventListener)consulta.addEventListener('change',sincronizarEditorMovel);else if(consulta.addListener)consulta.addListener(sincronizarEditorMovel);
+  sincronizarEditorMovel();
+}
+function campoTecladoMovel(no){return !!(no&&$ed&&$ed.contains(no)&&(no.tagName==='TEXTAREA'||(no.tagName==='INPUT'&&/^(text|search|number|email|url|password)$/.test(no.type))));}
+function restaurarPaineisMoveis(){ED_MOVEL.origens.forEach(function(o){if(o.marcador.parentNode)o.marcador.parentNode.insertBefore(o.no,o.marcador.nextSibling);});}
+function fecharPainelMovel(focar){
+  if(!E.mobileSheet)return;var foco=document.activeElement;if(E.mobileSheet.contains(foco)&&foco.blur)foco.blur();
+  fecharMenus();restaurarPaineisMoveis();E.mobileBody.textContent='';E.mobileSheet.hidden=true;E.mobileShade.hidden=true;ED_MOVEL.painel=null;$ed.classList.remove('mobile-painel-aberto');atualizarEditorMovel();
+  if(focar&&ED_MOVEL.ativo){var b=E.mobileBar.querySelector('[data-mobile-panel="ferr"]');if(b)b.focus({preventScroll:true});}
+}
+function sincronizarEditorMovel(){
+  if(!$ed||!E.mobileBar)return;var ativo=window.matchMedia('(max-width:900px)').matches,mudou=ED_MOVEL.ativo!==ativo;
+  if(mudou)fecharPainelMovel(false);ED_MOVEL.ativo=ativo;$ed.classList.toggle('ed-mobile-ui',ativo);if(!ativo){clearTimeout(ED_MOVEL.tTeclado);ED_MOVEL.enquadramentoTeclado=null;}
+  atualizarEditorMovel();
+  if(mudou&&S)requestAnimationFrame(function(){if(S){ajustarCanvasPalco();if(S.ajustado)ajustar();else{limitarNavegacao();pedir(true);}}});
+}
+function atualizarEditorMovel(){
+  if(!E.mobileBar)return;
+  $ed.setAttribute('data-mobile-hand',ED_MOVEL.canhoto?'left':'right');$ed.setAttribute('data-mobile-labels',String(ED_MOVEL.rotulos));
+  if(!S)return;
+  var n=S.ferr,a=CFG.ajust[n],b=PINCEIS[n],borracha=!!(b&&b.borracha),semCor=n==='selecionar'||n==='balao'||borracha;
+  if(b&&!borracha)ED_MOVEL.ferrAnterior=n;
+  var titulo=E.mobileTop.querySelector('[data-mobile-title]');titulo.textContent=S.opts.titulo||(S.opts.modoLivre?'Desenho livre':'Página');
+  var nome=E.mobileContext.querySelector('.ed-mobile-tool-name');nome.textContent=nomeFerr(n);
+  var tamanho=E.mobileContext.querySelector('[data-mobile-size]'),valor=E.mobileContext.querySelector('[data-mobile-size-value]');tamanho.disabled=!a;tamanho.value=a?a.tam:1;valor.textContent=a?a.tam+' px':'Ajustes';
+  var cor=E.mobileBar.querySelector('[data-mobile-panel="cor"]');cor.disabled=semCor;cor.title=semCor?'A cor fica disponível nas ferramentas de pintura':'Escolher cor';
+  E.mobileBar.querySelector('.ed-mobile-swatch').style.background=CFG.cor;
+  E.mobileBar.querySelector('[data-mobile-action="borracha"]').setAttribute('aria-pressed',String(borracha));
+  Array.prototype.forEach.call(E.mobileBar.querySelectorAll('[data-mobile-panel]'),function(el){var p=el.getAttribute('data-mobile-panel');el.setAttribute('aria-pressed',String(ED_MOVEL.painel===p));el.setAttribute('aria-expanded',String(ED_MOVEL.painel===p));el.setAttribute('aria-controls','edMobileSheet');});
+}
+function moverPainelOriginalMovel(id){var no=$ed.querySelector('[data-pn="'+id+'"]');if(no)E.mobileBody.appendChild(no);}
+function abrirPainelMovel(id){
+  if(!ED_MOVEL.ativo||!S||S.carregando)return;
+  if(id==='cor'&&(S.ferr==='selecionar'||S.ferr==='balao'||(PINCEIS[S.ferr]&&PINCEIS[S.ferr].borracha)))return;
+  fecharPainelMovel(false);
+  var titulos={ferr:'Ferramentas',prop:'Ajustar ferramenta',cor:'Cor do traço',camadas:'Camadas',mais:'Mais ferramentas',guias:'Guias e perspectiva',selecionar:'Seleção e laço',formas:'Figuras e formas 3D',baloes:'Balões',reticulas:'Retículas',estudio:'Estúdio de desenho',navegador:'Navegar na folha',paginas:'Folha e páginas',comandos:'Comandos completos',ajustes:'Preferências de toque'};
+  var paineis={ferr:['ferr'],prop:['prop','tam'],cor:['cor'],camadas:['cam','cprop'],guias:['guias','sim'],selecionar:['prop'],formas:['ferr','prop'],baloes:['mat'],reticulas:['reticulas'],estudio:['estudio'],navegador:['nav']};
+  if(!titulos[id])return;
+  if(id==='selecionar')trocarFerr('selecionar');
+  if(id==='formas'){if(E.buscaFerr)E.buscaFerr.value='';trocarFerr(CFG.ultimo.forma||'cubo');}
+  if(id==='baloes')trocarFerr('balao');
+  ED_MOVEL.painel=id;E.mobileSheet.querySelector('#edMobileSheetTitle').textContent=titulos[id];
+  E.mobileBody.className='ed-mobile-body'+(id==='paginas'?' ed-mobile-page-body':'');
+  (paineis[id]||[]).forEach(moverPainelOriginalMovel);
+  if(id==='mais')E.mobileBody.innerHTML='<div class="ed-mobile-more">'+htmlEscolhaMovel('selecionar','foco','Seleção e laço')+htmlEscolhaMovel('formas','formas','Figuras e 3D')+htmlEscolhaMovel('guias','guia','Guias')+htmlEscolhaMovel('baloes','balao','Balões')+htmlEscolhaMovel('reticulas','reticula','Retículas')+'<button type="button" class="ed-mobile-choice" data-mobile-native="sfx-abrir">'+iconeEditorMovel('texto')+'<span>Onomatopeia</span></button><button type="button" class="ed-mobile-choice" data-mobile-native="referencias">'+iconeEditorMovel('imagem')+'<span>Referências</span></button><button type="button" class="ed-mobile-choice" data-mobile-native="manequim">'+iconeEditorMovel('pessoa')+'<span>Manequim 3D</span></button><button type="button" class="ed-mobile-choice" data-mobile-action="personagens">'+iconeEditorMovel('pessoa')+'<span>Personagens</span></button>'+htmlEscolhaMovel('navegador','zoom','Zoom e posição')+htmlEscolhaMovel('paginas','pagina','Folha e páginas')+htmlEscolhaMovel('estudio','ajustes','Estúdio')+htmlEscolhaMovel('comandos','mais','Comandos')+htmlEscolhaMovel('ajustes','ajustes','Preferências')+'<button type="button" class="ed-mobile-choice" data-mobile-native="salvar">'+iconeEditorMovel('salvar')+'<span>Salvar agora</span></button><button type="button" class="ed-mobile-choice" data-mobile-native="png">'+iconeEditorMovel('pagina')+'<span>Baixar PNG</span></button></div>';
+  if(id==='ajustes')E.mobileBody.innerHTML='<div class="ed-mobile-settings"><label><input type="checkbox" data-mobile-pref="canhoto"'+(ED_MOVEL.canhoto?' checked':'')+'> Controles para canhotos</label><label><input type="checkbox" data-mobile-pref="rotulos"'+(ED_MOVEL.rotulos?' checked':'')+'> Mostrar nomes nos atalhos</label><p>Um dedo desenha. Dois dedos movem e ampliam a folha.</p><button type="button" class="bt" data-mobile-action="foco">Modo foco</button><button type="button" class="bt" data-mobile-native="rotar-folha">Girar a folha</button></div>';
+  if(id==='comandos'){var menus=$ed.querySelector('.ed-menus'),comandos=$ed.querySelector('.ed-cmd');if(menus)E.mobileBody.appendChild(menus);if(comandos)E.mobileBody.appendChild(comandos);}
+  if(id==='paginas'){
+    E.mobileBody.innerHTML='<p class="ed-dica">'+(S.opts.modoLivre?'Folha independente do Desenho Livre.':'Organize as páginas desta obra.')+' · '+S.dim.w+' × '+S.dim.h+' px</p><div class="ed-mobile-more"><button type="button" class="ed-mobile-choice" data-mobile-native="ajustar">'+iconeEditorMovel('zoom')+'<span>Ajustar à tela</span></button><button type="button" class="ed-mobile-choice" data-mobile-native="rotar-folha">'+iconeEditorMovel('girar')+'<span>Girar folha</span></button><button type="button" class="ed-mobile-choice" data-mobile-native="png">'+iconeEditorMovel('pagina')+'<span>Baixar PNG</span></button></div>';
+    if(S.modoPagina)E.mobileBody.insertAdjacentHTML('beforeend','<div class="ed-mobile-more"><button type="button" class="ed-mobile-choice" data-mobile-native="pagina-ant">Página anterior</button><button type="button" class="ed-mobile-choice" data-mobile-native="pagina-prox">Próxima página</button><button type="button" class="ed-mobile-choice" data-mobile-native="pagina-gerenciar">Conjunto de páginas</button><button type="button" class="ed-mobile-choice" data-mobile-native="pagina-opcoes">Editar página</button></div>');
+  }
+  E.mobileSheet.hidden=false;E.mobileShade.hidden=false;$ed.classList.add('mobile-painel-aberto');E.mobileBody.scrollTop=0;atualizarEditorMovel();
+  var voltar=E.mobileSheet.querySelector('[data-mobile-action="voltar-painel"]');voltar.hidden=id==='mais';
+  if(id==='cor')desenharRoda();if(id==='navegador')pedirNav();if(id==='estudio')renderFavoritos();
+  E.mobileSheet.querySelector('[data-mobile-action="fechar"]').focus({preventScroll:true});
+}
+function cliqueEditorMovel(ev){
+  if(!ED_MOVEL.ativo||!S||S.carregando)return;var t=ev.target.closest('[data-mobile-panel],[data-mobile-action],[data-mobile-native]');
+  if(t){
+    if(t.disabled)return;var painel=t.getAttribute('data-mobile-panel'),a=t.getAttribute('data-mobile-action'),n=t.getAttribute('data-mobile-native');
+    if(painel){if(ED_MOVEL.painel===painel&&t.closest('.ed-mobile-bar'))fecharPainelMovel(false);else abrirPainelMovel(painel);return;}
+    if(n){fecharPainelMovel(false);acao(n,t);atualizarEditorMovel();return;}
+    if(a==='fechar'){fecharPainelMovel(true);return;}
+    if(a==='voltar-painel'){abrirPainelMovel('mais');return;}
+    if(a==='voltar'){fecharPainelMovel(false);acao('voltar',t);return;}
+    if(a==='foco'){fecharPainelMovel(false);alternarModoFoco(true,false);return;}
+    if(a==='borracha'){var atual=PINCEIS[S.ferr],era=!!(atual&&atual.borracha);fecharPainelMovel(false);trocarFerr(era?(ED_MOVEL.ferrAnterior||'caneta'):'borracha');atualizarEditorMovel();return;}
+    if(a==='personagens'){fecharPainelMovel(false);var original=$ed.querySelector('.ed-acesso-tableta [data-ficha-personagem]');if(original)original.click();return;}
+  }
+  if(ev.target.closest('[data-ferr],[data-fav]')&&ED_MOVEL.painel==='ferr'){fecharPainelMovel(false);}
+  atualizarEditorMovel();
+}
 PAINEIS.push(["reticulas","Retículas de mangá"]);
 try{ var _pn=JSON.parse(localStorage.getItem("mesa.ed.paineis")||"null"); if(_pn&&typeof _pn==="object") ESTADO_PN=_pn; }catch(e){}
 if(!ESTADO_PN.reticulas)ESTADO_PN.reticulas={f:1};
@@ -2269,6 +2599,7 @@ function fecharPn(id){
   if(id==="nav") pedirNav();
 }
 function alternarPainel(id){
+  if(ED_MOVEL.ativo){var destino={ferr:'ferr',prop:'prop',tam:'prop',cor:'cor',sim:'guias',guias:'guias',mat:'baloes',nav:'navegador',cprop:'camadas',cam:'camadas',estudio:'estudio',reticulas:'reticulas'}[id];if(destino)abrirPainelMovel(destino);return;}
   if(id==="estudio"){abrirEstudioEditor();return;}
   var st=ESTADO_PN[id]||(ESTADO_PN[id]={}); st.o=st.o?0:1; if(!st.o){st.f=0;var pnAlvo=$ed.querySelector('[data-pn="'+id+'"]');if(pnAlvo){if(pnAlvo.closest('.ed-dockL'))INTERFACE_EDITOR.esq=true;else INTERFACE_EDITOR.dir=true;}guardarInterfaceEditor();aplicarInterfaceEditor();} salvarPn(); aplicarPaineis();
   if(id==="nav") pedirNav();
@@ -2703,6 +3034,7 @@ function montarDOM(){
   atualizarReticula();
   ligarEventos();
   ["click","input","change","pointerdown","paste","drop"].forEach(function(tipo){$ed.addEventListener(tipo,bloquearDuranteLeituraDesenho,true);});
+  montarEditorMovel();
   aplicarInterfaceEditor();
 }
 
@@ -2710,6 +3042,7 @@ function montarDOM(){
 function bloquearDuranteLeituraDesenho(e){if(S&&S.carregando){e.preventDefault();e.stopImmediatePropagation();}}
 function falhaAbrirDesenho(s){
   if(S!==s)return;
+  fecharPainelMovel(false);
   clearTimeout(s.tSalvar);cancelAnimationFrame(s.raf);
   document.removeEventListener("keydown",onKey,true);document.removeEventListener("keyup",onKeyUp,true);
   $ed.classList.add("oculto");$ed.removeAttribute("aria-busy");document.body.classList.remove("ed-aberto");
@@ -2720,6 +3053,7 @@ function falhaAbrirDesenho(s){
 function abrir(opts){
   montarDOM();
   if(S) return;
+  fecharPainelMovel(false);sincronizarEditorMovel();
   var painel=opts.painel;
   var chave=TAMANHOS[painel.tamanho]?painel.tamanho:PADRAO_TAM;
   var dim=dimensoes(chave);
@@ -2871,7 +3205,7 @@ function sair(depois,daEdicaoPagina){
     fecharSfx();fecharEdicaoBal();commitFlut();return salvarAgora();
   }).then(function(ok){
     if(!ok||S!==s||s.sujo||interacaoDesenho(s))return false;
-    fecharManequim3D();alternarModoFoco(false);
+    fecharPainelMovel(false);fecharManequim3D();alternarModoFoco(false);
     document.removeEventListener("keydown",onKey,true);
     document.removeEventListener("keyup",onKeyUp,true);
     cancelAnimationFrame(s.raf);
@@ -3192,7 +3526,7 @@ function ajustar(){
   /* Sempre que o editor estiver em Tela cheia, a folha cobre o palco inteiro.
      Isso também é reaplicado depois de o navegador concluir a tela cheia nativa. */
   if($ed&&$ed.classList.contains("modo-foco")){ preencherModoFoco(); return; }
-  var m=28, vd=dimensoesVisuaisFolha(), z=Math.min((S.pw-m*2)/vd.w,(S.ph-m*2)/vd.h);
+  var m=ED_MOVEL.ativo?12:28, vd=dimensoesVisuaisFolha(), z=Math.min((S.pw-m*2)/vd.w,(S.ph-m*2)/vd.h);
   S.z=clamp(z,0.05,1.5); S.tx=(S.pw-S.dim.w*S.z)/2; S.ty=(S.ph-S.dim.h*S.z)/2;
   limitarNavegacao();
   S.ajustado=true; atualizarZoom(); pedir(true);
@@ -3246,6 +3580,7 @@ function reaplicarFolhaInteira(){
 function alternarModoFoco(entrar,usarTelaInteira){
   if(!$ed) return;
   if(typeof entrar!=="boolean") entrar=!$ed.classList.contains("modo-foco");
+  if(entrar)fecharPainelMovel(false);
   var pedido=null;
   if(entrar){
     fecharJanelaPagina();
@@ -4500,6 +4835,7 @@ function atualizarFerr(){
   E.over.style.cursor=n==="mao"?"grab":"crosshair";
   atualizarBal();
   atualizarPreviaPincel();
+  atualizarEditorMovel();
 }
 function definirCor(c,deRoda){
   CFG.cor=c; if(E.cor) E.cor.value=c; if(E.corHex) E.corHex.value=c.toUpperCase();
@@ -4508,6 +4844,7 @@ function definirCor(c,deRoda){
   }
   desenharRoda();
   if(S) atualizarPreviaPincel();
+  atualizarEditorMovel();
 }
 function ajustaTam(dir){
   if(!PINCEIS[S.ferr]&&!FORMAS[S.ferr]) return;
@@ -5410,7 +5747,7 @@ function ligarEventos(){
     if(pt){ alternarPainel(pt.getAttribute("data-pn-tog")); atualizarMenus(); return; }
     if(ev.target.closest(".ed-ml")&&!ev.target.closest("select,input,label")) fecharMenus();
     var th=ev.target.closest(".pn-t");
-    if(th&&!ev.target.closest("button,select,input,label")){ fecharPn(th.getAttribute("data-pn-t")); return; }
+    if(th&&!ev.target.closest("button,select,input,label")){if(ED_MOVEL.ativo&&E.mobileBody.contains(th))return;fecharPn(th.getAttribute("data-pn-t")); return; }
     var gp=ev.target.closest("[data-grp]");
     if(gp){
       if(INTERFACE_EDITOR.estudio)abrirEstudioEditor(false);
@@ -5599,7 +5936,9 @@ function ligarEventos(){
   if(window.ResizeObserver){
     new ResizeObserver(function(){
       if(!S) return;
+      var enquadramento=ED_MOVEL.ativo&&ED_MOVEL.enquadramentoTeclado;
       ajustarCanvasPalco();
+      if(enquadramento&&enquadramento.sessao===S){S.z=enquadramento.z;S.tx=enquadramento.tx;S.ty=enquadramento.ty;S.ajustado=enquadramento.ajustado;pedir(true);return;}
       if(S.ajustado){ if($ed&&$ed.classList.contains("modo-foco")) preencherModoFoco(); else ajustar(); }
       else{ limitarNavegacao(); pedir(true); }
     }).observe(E.palco);
@@ -5615,6 +5954,8 @@ function onKey(e){
   if(!S) return;
   if(e.target&&e.target.closest&&e.target.closest('.fichas-janela')) return;
   var key=e.key||"", code=e.code||"", lower=key.toLowerCase();
+  if(ED_MOVEL.ativo&&ED_MOVEL.painel&&(key==='Escape'||code==='Escape')){e.preventDefault();e.stopPropagation();fecharPainelMovel(true);return;}
+  if(ED_MOVEL.ativo&&(key==='Tab'||code==='Tab')&&e.target&&e.target.closest&&e.target.closest('.ed-mobile-top,.ed-mobile-context,.ed-mobile-bar,.ed-mobile-sheet,.ed-foco-rapido'))return;
   if((key==="Escape"||code==="Escape")&&E.sfxJanela&&!E.sfxJanela.classList.contains("oculto")){e.preventDefault();e.stopPropagation();fecharSfx();$ed.focus();return;}
   if(e.target&&e.target.closest&&e.target.closest('.ed-sfx')) return;
   if((key==="Escape"||code==="Escape")&&E.m3dJanela&&!E.m3dJanela.classList.contains("oculto")){e.preventDefault();e.stopPropagation();fecharManequim3D();return;}
