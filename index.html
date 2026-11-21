@@ -2,6 +2,7 @@
 <html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' https://qtydeqbrouoclyczplhx.supabase.co https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev https://mesa-midia.mesa-roteiro-d90994b6.workers.dev https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mesa de Roteiro</title>
 <meta name="theme-color" content="#FFFFFF">
@@ -933,8 +934,6 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
 }
 @media(prefers-reduced-motion:reduce){.ed-mobile-ui *{scroll-behavior:auto!important}}
 
-/* Ensaio fictício integrado ao backup; escopo limitado a esta seção. */
-#ensaioR2-box{margin-top:16px;border-top:1px solid var(--calha);padding-top:14px}#ensaioR2-box summary{cursor:pointer;padding:8px 0}#ensaioR2-box .ensaio-r2-card{padding:12px 0}#ensaioR2-box .bt{min-height:44px;margin:4px 5px 4px 0}#ensaioR2-status{white-space:pre-wrap;overflow-wrap:anywhere;font-weight:600}#ensaioR2-image{max-width:96px;border:1px solid var(--calha)}#ensaioR2-steps{padding-left:22px}#ensaioR2-steps li{margin:7px 0}@media(max-width:520px){#ensaioR2-box .bt{width:100%;margin:5px 0}}
 </style>
 </head>
 <body>
@@ -1080,16 +1079,6 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
       <button type="button" class="bt mini oculto" id="btMaisCopiasNuvem">Ver versões anteriores</button>
       <p class="nota-meta">A lista indica datas dos arquivos; uma versão mais recente pode conter menos trabalhos. Confira o conteúdo antes de importar. Nenhuma cópia é importada automaticamente.</p>
     </section>
-    <details id="ensaioR2-box" class="ensaio-r2"><summary><strong>Testar o armazenamento R2</strong></summary><p>Este ensaio envia uma obra fictícia com texto, imagem e desenho. As cópias dos seus trabalhos continuam usando o destino atual até a conferência dos resultados.</p><div class="ensaio-r2-card"><p class="nota-meta">Use a conta já conectada ao aplicativo. Se necessário, entre primeiro pelo botão Conectar nuvem.</p><button type="button" class="bt" id="ensaioR2-signin">Usar conta conectada</button><button type="button" class="bt" id="ensaioR2-signout" disabled>Encerrar ensaio</button></div><section class="ensaio-r2-card"><h4>Conferir envio e leitura</h4><p>Comece pelo teste pequeno. Ele confere assinatura, proteção de tamanho, gravação única, histórico, leitura e integridade.</p>
-<button id="ensaioR2-small" type="button" class="bt" disabled>Executar teste pequeno</button>
-<button id="ensaioR2-large" type="button" class="bt" disabled>Executar teste de 60 MB</button>
-<p class="nota-meta">O teste de 60 MB só será liberado após o pequeno passar. Ele verifica somente a transferência de um arquivo grande; a restauração deve ser conferida com o backup pequeno. Leva mais tempo e usa mais memória. Mantenha esta aba aberta durante a transferência.</p>
-<img id="ensaioR2-image" alt="Imagem fictícia gerada pelo teste" hidden>
-<div id="ensaioR2-status" role="status" aria-live="polite">Use a conta conectada para começar o ensaio.</div><ol id="ensaioR2-steps"></ol>
-<button id="ensaioR2-backup" type="button" class="bt" disabled>Baixar backup fictício pequeno</button>
-<button id="ensaioR2-report" type="button" class="bt" disabled>Baixar resultado do teste</button>
-<p class="nota-meta">Para conferir a restauração do arquivo fictício, use um perfil de navegador separado e vazio. Outra aba do mesmo perfil compartilha os dados do aplicativo.</p>
-</section></details>
 
   </div>
   <div class="dlg-pe">
@@ -6127,6 +6116,8 @@ window.EditorDesenho={
   previa:previa,
   compor:compor,
   exportarDados:exportarDadosEditor,
+  blobParaData:blobParaData,
+  dataParaBlob:dataParaBlob,
   exportarPNG:exportar,
   importarDados:function(lista){if(!window.__mesaImportarPacote)throw new Error("O importador ainda não foi iniciado.");return window.__mesaImportarPacote({obras:[],capitulos:[],notas:[],desenhos:lista});},
   bdLer:bdLer,
@@ -6144,6 +6135,7 @@ window.EditorDesenho={
 <script>
 (function(){
 "use strict";
+
 
 /* ========== escolhas de composição ========== */
 var ENQUADRAMENTOS = [
@@ -6182,7 +6174,7 @@ function opcoesTamanho(valor){
 }
 
 /* ========== estado ========== */
-var db=null, dbLocal=null, baixador=null, base="roteiros/local", baseLocal="roteiros/local", contaNuvemPronta=false, nuvemAtiva=false;
+var db=null, dbLocal=null, baixador=null, base="roteiros/local", baseLocal="roteiros/local", contaNuvemPronta=false;
 var obras=[], caps=[], obraAtual=null, capAtual=null, doc=null;
 var pendente=null, salvando=false, sujo=false, revisaoCapitulo=0;
 var notas=[], notaAtual=null, modoNotas=false;
@@ -6439,10 +6431,6 @@ function filaNuvemLer(){ return []; }
 function filaNuvemGravar(){ }
 /* A versão local não cria fila de sincronização nem tenta enviar dados para
    qualquer serviço externo. Os dados ficam no armazenamento deste aparelho. */
-function enfileirarNuvem(){ }
-function enfileirarExclusao(){ }
-function removerFilaNuvem(){ }
-async function processarFilaNuvem(){ return; }
 function salvarCacheOffline(fonteConfirmada){
   if(!BIBLIOTECA_TEXTOS_OK)return false;
   try{
@@ -6460,7 +6448,6 @@ function atualizarEstadoBackup(){
   /* Este modo não usa nuvem; o arquivo de backup é a forma de transportar os dados. */
 }
 function registrarBackup(pacote,destino){ var itens=(pacote.obras||[]).length+(pacote.capitulos||[]).length+(pacote.notas||[]).length; gravarMetaLocal("backup-meta",{em:Date.now(),itens:itens,destino:destino||"download",versao:pacote.versao||"antiga"}); atualizarEstadoBackup(); }
-function registrarSincronizacao(){ if(!nuvemAtiva) return; gravarMetaLocal("sync-meta",{em:Date.now()}); atualizarContaNuvem(); atualizarEstadoBackup(); }
 
 var tAviso;
 function aviso(txt){
@@ -6477,17 +6464,6 @@ function atualizarConexao(){
 
 /* ========== armazenamento e sincronização ========== */
 function dadosProfundos(v){ return JSON.parse(JSON.stringify(v)); }
-function precisaDividirCapitulo(corpo){ try{return JSON.stringify(corpo).length>650000;}catch(e){return false;} }
-function paginasCapitulo(corpo){ return Array.isArray(corpo&&corpo.paginas)?corpo.paginas:[]; }
-async function salvarCapituloNuvem(idCap,corpo){
-  var ref=colCaps().doc(idCap);
-  if(!precisaDividirCapitulo(corpo)){ await ref.set(corpo); return; }
-  var meta=dadosProfundos(corpo), paginas=paginasCapitulo(corpo);
-  meta.paginas=[]; meta.paginasSeparadas=true; meta.nPaginas=paginas.length; meta.nPaineis=contarPaineis(paginas);
-  await ref.set(meta);
-  var sub=ref.collection("paginas");
-  for(var i=0;i<paginas.length;i++) await sub.doc(paginas[i].id||("pg-"+i)).set({indice:i,pagina:paginas[i]});
-}
 async function contarDocumentos(banco,raiz){
   var grupos=["obras","capitulos","notas"], total=0;
   for(var i=0;i<grupos.length;i++){
@@ -6545,7 +6521,7 @@ async function atualizarContaNuvem(){
   try{
     var usuario=await consultarUsuarioNuvem();if(consulta!==CONTA_NUVEM.consultas)return null;
     var uid=usuario&&usuario.id||null;if(uid!==CONTA_NUVEM.uid)invalidarContaNuvem(uid);
-    nuvemAtiva=false;CONTA_NUVEM.autorizada=!!uid&&!CONTA_NUVEM.pausada&&vinculoNuvemPermitido(uid);contaNuvemPronta=CONTA_NUVEM.autorizada;
+    CONTA_NUVEM.autorizada=!!uid&&!CONTA_NUVEM.pausada&&vinculoNuvemPermitido(uid);contaNuvemPronta=CONTA_NUVEM.autorizada;
     if(identidade)identidade.textContent=usuario?"Conta conectada: "+(usuario.email||usuario.id):"Nenhuma conta conectada.";
     if(alvo)alvo.textContent=usuario?(contaNuvemPronta?"Conta conectada · cópias autorizadas":"Conta conectada · autorize esta biblioteca"):"Nuvem desconectada";
     if(botao)botao.textContent=usuario?"Minha conta":"Conectar nuvem";
@@ -6819,6 +6795,130 @@ function nomeVersaoCopia(){
 function backupNuvemTemConteudo(p){
   return [p.obras,p.capitulos,p.notas,p.desenhos,p.desenhosLivres,p.fichasPersonagem&&p.fichasPersonagem.fichas].some(function(a){return Array.isArray(a)&&a.length>0;});
 }
+/* MIDIA-NUVEM-INICIO */
+/* Mídia na nuvem (R2) por conteúdo. Desligada por padrão: só age com ativa:true e api configurada.
+   Cópia na nuvem = backup v4 com referências (sha256). Download da cópia = arquivo v3 autocontido. */
+var MIDIA_NUVEM={ativa:false,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-midia"};
+var MIDIA_LIMITE_BYTES=50*1024*1024, MIDIA_TIMEOUT_MS=30000, MIDIA_EXPIRA_MS=900000;
+var MIDIA_TIPOS=["image/png","image/jpeg","image/webp","image/gif","application/octet-stream"];
+var MIDIA_RE_SHA=/^[a-f0-9]{64}$/;
+function midiaHex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(x){return x.toString(16).padStart(2,"0");}).join("");}
+async function midiaShaBytes(buf){
+  if(!window.crypto||!crypto.subtle)throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 não está disponível. Use um backup local e tente em uma página segura.");
+  return midiaHex(await crypto.subtle.digest("SHA-256",buf));
+}
+function usarMidiaNuvem(c){return !!(MIDIA_NUVEM.ativa&&MIDIA_NUVEM.api&&c&&c.transporte&&c.transporte.provedor==="r2");}
+function midiaTipo(blob){var t=(blob&&blob.type)||"";return MIDIA_TIPOS.indexOf(t)>=0?t:"application/octet-stream";}
+function midiaFetch(url,opcoes){
+  var controle=new AbortController(),timer=setTimeout(function(){controle.abort();},MIDIA_TIMEOUT_MS);
+  return fetch(url,Object.assign({},opcoes,{signal:controle.signal,credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer"}))
+    .catch(function(){throw erroCopiaNuvem("nuvem_envio","Não foi possível falar com a nuvem de mídia. Tente novamente; nenhuma cópia foi confirmada.");})
+    .finally(function(){clearTimeout(timer);});
+}
+async function midiaToken(c){
+  var r=await c.client.auth.getSession(),s=r&&r.data&&r.data.session;
+  if(r&&r.error||!s||!s.user||s.user.id!==c.uid||typeof s.access_token!=="string"||!s.access_token)throw erroCopiaNuvem("nuvem_conta","Entre na sua conta para usar a mídia na nuvem.");
+  return s.access_token;
+}
+/* Confere a autorização antes de usar: host, bucket, prefixo do uid, validade e cabeçalhos exatos. */
+function midiaValidarAutorizacao(a,c,metodo,sha,tipo){
+  var agora=Date.now(),falha=function(m){return erroCopiaNuvem("nuvem_integridade",m);};
+  if(!a||typeof a!=="object"||typeof a.url!=="string"||!Number.isSafeInteger(a.expiresAt)||a.expiresAt<=agora||a.expiresAt>agora+MIDIA_EXPIRA_MS+1000||!a.headers||typeof a.headers!=="object")throw falha("A autorização da mídia é inválida ou expirou.");
+  var u;try{u=new URL(a.url);}catch(e){throw falha("A autorização da mídia contém um endereço inválido.");}
+  if(u.protocol!=="https:"||u.host!==MIDIA_NUVEM.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!=="/"+MIDIA_NUVEM.bucket+"/"+c.uid+"/midia/"+sha)throw falha("O endereço autorizado não corresponde ao destino da mídia.");
+  var q=u.searchParams,nomes=[];q.forEach(function(v,k){nomes.push(k);});
+  var permitidos=["X-Amz-Algorithm","X-Amz-Credential","X-Amz-Date","X-Amz-Expires","X-Amz-SignedHeaders","X-Amz-Signature"];
+  if(nomes.length!==6||nomes.some(function(k){return permitidos.indexOf(k)<0;}))throw falha("A assinatura da mídia contém parâmetros inesperados.");
+  var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date")||"",cred=q.get("X-Amz-Credential")||"";
+  if(q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||!/^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||!/^\d{8}T\d{6}Z$/.test(data)||!/^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||!/^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw falha("A assinatura da mídia não corresponde ao formato esperado.");
+  var esperados=metodo==="PUT"?{"content-type":tipo,"if-none-match":"*","x-amz-meta-sha256":sha}:{};
+  if(metodo==="PUT"&&(q.get("X-Amz-SignedHeaders")||"").indexOf("if-none-match")<0)throw falha("A assinatura da mídia não protege a regra de criação única.");
+  var chaves=Object.keys(a.headers),ok=chaves.length===Object.keys(esperados).length&&chaves.every(function(k){return Object.prototype.hasOwnProperty.call(esperados,k.toLowerCase())&&a.headers[k]===esperados[k.toLowerCase()];});
+  if(!ok)throw falha("Os cabeçalhos da autorização da mídia divergem do envio esperado.");
+  return a;
+}
+async function midiaPedirAutorizacao(c,rota,corpo){
+  var token=await midiaToken(c);
+  var r=await midiaFetch(MIDIA_NUVEM.api+rota,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify(corpo)});
+  if(r.status===401)throw erroCopiaNuvem("nuvem_conta","A sessão expirou. Entre novamente para usar a mídia na nuvem.");
+  if(!r.ok)throw erroCopiaNuvem("nuvem_envio","A nuvem de mídia recusou o pedido. Nenhuma cópia foi confirmada.");
+  try{return await r.json();}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização da mídia veio em formato inválido.");}
+}
+/* Envia um blob pelo endereço pré-assinado. 412 = o mesmo conteúdo (mesmo hash) já existe: é sucesso. */
+async function midiaEnviar(c,m){
+  var a=midiaValidarAutorizacao(await midiaPedirAutorizacao(c,"/v2/midia/uploads",{sha256:m.sha256,bytes:m.tamanho,tipo:m.tipo}),c,"PUT",m.sha256,m.tipo);
+  var r=await midiaFetch(a.url,{method:"PUT",headers:a.headers,body:m.blob});
+  if(r.status===412)return "existente";
+  if(!r.ok)throw erroCopiaNuvem("nuvem_envio","Não foi possível enviar uma imagem à nuvem. Nenhuma cópia foi confirmada.");
+  return "enviada";
+}
+/* Baixa um objeto e confere o hash antes de devolver: nada é usado sem essa conferência. */
+async function midiaBaixar(c,sha,tipo){
+  var a=midiaValidarAutorizacao(await midiaPedirAutorizacao(c,"/v2/midia/downloads",{sha256:sha}),c,"GET",sha,null);
+  var r=await midiaFetch(a.url,{method:"GET"});
+  if(!r.ok)throw erroCopiaNuvem("nuvem_envio","Uma imagem da cópia não está disponível na nuvem. A restauração foi interrompida.");
+  var buf=await r.arrayBuffer();
+  if(buf.byteLength<1||buf.byteLength>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_integridade","Uma imagem da nuvem tem tamanho inválido. A restauração foi interrompida.");
+  if(await midiaShaBytes(buf)!==sha)throw erroCopiaNuvem("nuvem_integridade","Uma imagem da nuvem não confere com o registro. A restauração foi interrompida.");
+  return new Blob([buf],{type:tipo});
+}
+/* v3 (local) -> v4 (nuvem): troca cada imagem por referência. Não envia nada: só calcula hashes.
+   Devolve também a lista de blobs que ainda precisam ser enviados. */
+async function formaNuvemComMidia(pacote,c){
+  var catalogo=Object.create(null),pendentes=[],copia=dadosProfundos(pacote);
+  async function ref(valor){
+    if(valor==null)return null;
+    var blob=typeof valor==="string"?window.EditorDesenho.dataParaBlob(valor):valor;
+    if(!(blob instanceof Blob))throw erroCopiaNuvem("nuvem_integridade","Uma imagem do backup está em formato inválido. Use um backup local.");
+    if(blob.size<1||blob.size>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_tamanho","Uma imagem passa do limite de 50 MB para a nuvem. Use Baixar backup local.");
+    var sha=await midiaShaBytes(await blob.arrayBuffer()),tipo=midiaTipo(blob);
+    if(!catalogo[sha]){catalogo[sha]={sha256:sha,tamanho:blob.size,tipo:tipo};pendentes.push({sha256:sha,tamanho:blob.size,tipo:tipo,blob:blob});}
+    return {sha256:sha,tamanho:blob.size,tipo:tipo};
+  }
+  var notas=Array.isArray(copia.notas)?copia.notas:[];
+  for(var i=0;i<notas.length;i++){var d=notas[i].dados;if(d&&Array.isArray(d.imagensDados)){d.imagensRef=[];for(var j=0;j<d.imagensDados.length;j++){var im=d.imagensDados[j],r=await ref(im.src);d.imagensRef.push({meta:im.meta,sha256:r.sha256,tamanho:r.tamanho,tipo:r.tipo});}delete d.imagensDados;}}
+  var fichas=copia.fichasPersonagem&&Array.isArray(copia.fichasPersonagem.imagens)?copia.fichasPersonagem.imagens:[];
+  for(var f=0;f<fichas.length;f++){var fr=await ref(fichas[f].src);fichas[f]={chave:fichas[f].chave,nome:fichas[f].nome,sha256:fr.sha256,tamanho:fr.tamanho,tipo:fr.tipo};}
+  var desenhos=Array.isArray(copia.desenhos)?copia.desenhos:[];
+  for(var k=0;k<desenhos.length;k++){var camadas=(desenhos[k].rec&&desenhos[k].rec.camadas)||[];for(var q=0;q<camadas.length;q++){var cam=camadas[q];cam.blobRef=await ref(cam.blob);delete cam.blob;cam.originalBlobRef=await ref(cam.originalBlob);delete cam.originalBlob;}}
+  copia.versao=4;copia.modo="referencias";
+  copia.midia=Object.keys(catalogo).sort().map(function(s){return catalogo[s];});
+  return {pacote:copia,pendentes:pendentes};
+}
+/* Valida a forma v4 sem depender de dados embutidos: referências bem formadas e todas no catálogo. */
+function validarFormaNuvemV4(p){
+  var falha=function(m){var e=new Error("Cópia v4: "+m);e.code="backup_formato";return e;};
+  if(p.versao!==4||p.modo!=="referencias"||!Array.isArray(p.midia))throw falha("cabeçalho inválido");
+  var catalogo=Object.create(null);
+  p.midia.forEach(function(m){if(!m||typeof m.sha256!=="string"||!MIDIA_RE_SHA.test(m.sha256)||!Number.isSafeInteger(m.tamanho)||m.tamanho<1||m.tamanho>MIDIA_LIMITE_BYTES||MIDIA_TIPOS.indexOf(m.tipo)<0)throw falha("item do catálogo inválido");catalogo[m.sha256]=true;});
+  function conferir(r){if(!r||typeof r.sha256!=="string"||!catalogo[r.sha256])throw falha("referência fora do catálogo");}
+  (p.notas||[]).forEach(function(n){((n.dados&&n.dados.imagensRef)||[]).forEach(function(r){conferir(r);});});
+  ((p.fichasPersonagem&&p.fichasPersonagem.imagens)||[]).forEach(conferir);
+  (p.desenhos||[]).forEach(function(d){((d.rec&&d.rec.camadas)||[]).forEach(function(cam){if(cam.blob||cam.originalBlob)throw falha("dados embutidos em cópia de referências");conferir(cam.blobRef);if(cam.originalBlobRef)conferir(cam.originalBlobRef);});});
+  return true;
+}
+/* v4 (nuvem) -> v3 (arquivo autocontido): baixa e confere cada imagem, depois reconstrói os dados embutidos. */
+async function hidratarNuvemParaArquivo(pacote,c){
+  validarFormaNuvemV4(pacote);
+  var copia=dadosProfundos(pacote),tamanhos={};
+  (copia.midia||[]).forEach(function(m){tamanhos[m.sha256]=m;});
+  var cache=Object.create(null);
+  async function obter(r){
+    if(r==null)return null;
+    var m=tamanhos[r.sha256];
+    if(!cache[r.sha256])cache[r.sha256]=await midiaBaixar(c,r.sha256,m.tipo);
+    return window.EditorDesenho.blobParaData(cache[r.sha256]);
+  }
+  var notas=copia.notas||[];
+  for(var i=0;i<notas.length;i++){var d=notas[i].dados;if(d&&Array.isArray(d.imagensRef)){d.imagensDados=[];for(var j=0;j<d.imagensRef.length;j++){var r=d.imagensRef[j];d.imagensDados.push({meta:r.meta,src:await obter(r)});}delete d.imagensRef;}}
+  if(copia.fichasPersonagem&&Array.isArray(copia.fichasPersonagem.imagens)){var fs=copia.fichasPersonagem.imagens;for(var f=0;f<fs.length;f++){var fr=fs[f];fs[f]={chave:fr.chave,nome:fr.nome,src:await obter(fr)};}}
+  var desenhos=copia.desenhos||[];
+  for(var k=0;k<desenhos.length;k++){var camadas=(desenhos[k].rec&&desenhos[k].rec.camadas)||[];for(var q=0;q<camadas.length;q++){var cam=camadas[q];cam.blob=await obter(cam.blobRef);delete cam.blobRef;cam.originalBlob=await obter(cam.originalBlobRef);delete cam.originalBlobRef;}}
+  delete copia.midia;delete copia.modo;copia.versao=3;
+  return copia;
+}
+/* MIDIA-NUVEM-FIM */
+
 async function resumoCopiaNuvem(p){
   var copia=dadosProfundos(p);delete copia.criadoEm;delete copia.integridade;
   copia.preferenciasLocal=(copia.preferenciasLocal||[]).filter(function(v){return v.chave!=="mesa:offline-cache"&&!/^mesa:(backup-|sync-meta)/.test(v.chave);}).sort(function(a,b){return a.chave<b.chave?-1:a.chave>b.chave?1:0;});
@@ -6829,6 +6929,7 @@ async function resumoCopiaNuvem(p){
 async function validarTextoCopiaNuvem(texto,estrito){
   var v=await verificarTextoBackup(texto);
   if(!v.ok||(estrito&&v.legado))throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 da cópia falhou ou está ausente.");
+  if(v.pacote&&v.pacote.versao===4){validarFormaNuvemV4(v.pacote);v.plano={avisos:[],total:0};return v;}
   var plano=validarBackupParaImportacao(v.pacote);
   if(estrito&&plano.avisos.length)throw erroCopiaNuvem("nuvem_integridade","A cópia contém referências a imagens ausentes. Preserve seus backups e confira as imagens.");
   v.plano=plano;return v;
@@ -6883,7 +6984,7 @@ async function enviarBackupNuvemAutomatico(forcar){
       var pacote=await criarBackup();
       conferirContextoConta(c);
       if(!backupNuvemTemConteudo(pacote)){if(alvo)alvo.textContent="Nenhum trabalho local · cópias anteriores preservadas";return false;}
-      var resumo=await resumoCopiaNuvem(pacote),anterior=COPIA_NUVEM.ultima;
+      var formaResumo=usarMidiaNuvem(c)?(await formaNuvemComMidia(pacote,c)).pacote:pacote;var resumo=await resumoCopiaNuvem(formaResumo),anterior=COPIA_NUVEM.ultima;
       conferirContextoConta(c);
       if(!anterior)try{anterior=lerMetaLocal("backup-nuvem-versao-v1");}catch(e){anterior=null;}
       if(forcar!==true&&anterior&&anterior.uid===c.uid&&mesmoDestinoCopia(anterior,c)&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
@@ -6895,7 +6996,7 @@ async function enviarBackupNuvemAutomatico(forcar){
         confirmou=true;limparFalhaCopiaNuvem();
         if(alvo)alvo.textContent="Cópia anterior verificada · sem novas alterações";return true;
       }
-      var texto=await prepararBackup(pacote);await validarTextoCopiaNuvem(texto,true);
+      var forma=usarMidiaNuvem(c)?await formaNuvemComMidia(pacote,c):{pacote:pacote,pendentes:[]};for(var pi=0;pi<forma.pendentes.length;pi++){await midiaEnviar(c,forma.pendentes[pi]);conferirContextoConta(c);}var texto=await prepararBackup(forma.pacote);await validarTextoCopiaNuvem(texto,true);
       conferirContextoConta(c);
       p=Object.assign({uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false},referenciaDestinoCopia(c));
       COPIA_NUVEM.pendente=p;
@@ -7013,7 +7114,7 @@ async function baixarCopiaNuvem(indice){
   try{
     if(!baixador)throw erroCopiaNuvem("nuvem_download","Download indisponível neste navegador.");
     alvo.textContent="Baixando e verificando a cópia…";
-    var texto=await lerTextoCopiaNuvem(c,item.caminho,item),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);
+    var texto=await lerTextoCopiaNuvem(c,item.caminho,item),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);if(ver.pacote.versao===4){var arquivoV3=await hidratarNuvemParaArquivo(ver.pacote,c);conferirContextoConta(c);texto=await prepararBackup(arquivoV3);ver=await validarTextoCopiaNuvem(texto,true);}
     conferirContextoConta(c);
     var p=ver.pacote,resumo=(p.obras||[]).length+" obra(s), "+(p.capitulos||[]).length+" capítulo(s), "+(p.notas||[]).length+" nota(s), "+(p.desenhos||[]).length+" desenho(s).";
     await baixador.save({filename:item.legado?"mesa-de-roteiro-copia-antiga.json":"mesa-de-roteiro-"+item.nome,data:texto});
@@ -7045,7 +7146,8 @@ function colNotas(){ return db.collection(base+"/notas"); }
 function preferenciasBackup(){
   var out=[], prefixos=["mesa:","mesa.ed."];
   if(window.__mesaArmazenamento&&window.__mesaArmazenamento.modoMemoria)return out;
-  try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(typeof k!=="string")throw erroLeituraLocal();if(prefixos.some(function(p){return k.indexOf(p)===0;})){var valor=localStorage.getItem(k);if(valor===null)throw erroLeituraLocal();out.push({chave:k,valor:valor});}}}catch(e){throw erroLeituraLocal("Não foi possível ler todas as preferências e bibliotecas locais. O backup completo foi interrompido.");}
+  /* Textos (roteiros/local/...) já vão em obras/capitulos/notas e o cache offline é derivado; não os duplicamos aqui. */
+  try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(typeof k!=="string")throw erroLeituraLocal();if(prefixos.some(function(p){return k.indexOf(p)===0;})&&k.indexOf("mesa:roteiros/")!==0&&k!=="mesa:offline-cache"){var valor=localStorage.getItem(k);if(valor===null)throw erroLeituraLocal();out.push({chave:k,valor:valor});}}}catch(e){throw erroLeituraLocal("Não foi possível ler todas as preferências e bibliotecas locais. O backup completo foi interrompido.");}
   return out;
 }
 async function sha256Texto(texto){
@@ -7090,9 +7192,6 @@ async function criarBackupSalvo(){
   }
   for(var ci=0;ci<pacote.capitulos.length;ci++){
     var cd=pacote.capitulos[ci].dados;
-    if(cd.paginasSeparadas&&nuvemAtiva){
-      try{ var sp=await colCaps().doc(pacote.capitulos[ci].id).collection("paginas").orderBy("indice","asc").get(); cd.paginas=sp.docs.map(function(d){var v=d.data();return v.pagina||v;}); delete cd.paginasSeparadas; delete cd.nPaginas; delete cd.nPaineis; }catch(e){}
-    }
   }
   for(var ni=0;ni<pacote.notas.length;ni++){
     var nd=pacote.notas[ni].dados, refs=Array.isArray(nd.imagens)?nd.imagens:[]; nd.imagensDados=[];
@@ -7245,7 +7344,17 @@ function prepararPlanoImportacao(pacote,plano){
     texto("mesa:fichas-personagem-v1",fichas);
     (pf.imagens||[]).forEach(function(im){imagem(im.chave,{src:im.src,nome:String(im.nome||"Referência")});});
   }
-  if(Array.isArray(pacote.desenhosLivres))texto("mesa:desenhos-livres",dadosProfundos(pacote.desenhosLivres));
+  /* Mescla por id: desenhos livres que existem só neste aparelho continuam listados.
+     Em caso de mesmo id, vale o registro com atualização mais recente. Uma lista local ilegível interrompe a importação (lerListaEssencial lança erro). */
+  if(Array.isArray(pacote.desenhosLivres)){
+    var porId=Object.create(null);
+    lerListaEssencial("desenhos-livres").concat(pacote.desenhosLivres).forEach(function(v){
+      var k=String(v.id), antes=porId[k];
+      if(!antes||(Number(v.atualizadoEm)||0)>=(Number(antes.atualizadoEm)||0))porId[k]=v;
+    });
+    var livresMesclados=Object.keys(porId).map(function(k){return porId[k];}).sort(function(a,b){return (Number(b.atualizadoEm)||0)-(Number(a.atualizadoEm)||0);});
+    texto("mesa:desenhos-livres",dadosProfundos(livresMesclados));
+  }
   ["obras","capitulos","notas"].forEach(function(grupo){pacote[grupo].forEach(function(item){
     var dadosItem=dadosProfundos(item.dados);
     if(Array.isArray(dadosItem.imagensDados)){
@@ -7290,8 +7399,9 @@ async function importarBackupSalvo(arquivo){
   try{
     var ver=await verificarTextoBackup(await arquivo.text()), pacote=ver.pacote;
     if(!ver.ok) throw new Error("A verificação SHA-256 falhou; a importação foi cancelada.");
+    if(ver.pacote&&ver.pacote.versao===4) throw new Error("Esta é uma cópia da nuvem com mídia guardada na nuvem. Use Baixar cópia da nuvem e importe o arquivo baixado.");
     var plano=validarBackupParaImportacao(pacote), mensagem="Importar "+plano.total+" item(ns)? Itens com o mesmo identificador serão substituídos.";
-    if(Array.isArray(pacote.desenhosLivres))mensagem+=" A lista de desenhos livres deste aparelho será substituída pela lista do arquivo.";
+    if(Array.isArray(pacote.desenhosLivres))mensagem+=" A lista de desenhos livres será combinada com a do arquivo; nenhum desenho livre deste aparelho será removido da lista.";
     if(plano.avisos.length)mensagem+="\n\nAtenção: "+plano.avisos.join("; ")+". As referências serão preservadas, mas as imagens ausentes não podem ser recuperadas deste arquivo.";
     mensagem+="\n\nFeche outras abas da Mesa de Roteiro antes de continuar. Se houver falha, será tentada a recuperação dos registros anteriores.";
     if(!window.confirm(mensagem)) return false;
@@ -7337,11 +7447,6 @@ async function carregarListas(){
     var sn=await colNotas().orderBy("atualizadoEm","desc").get();
     var novasObras=so.docs.map(function(d){var v=validarDocumentoLocal(d.data());v.id=d.id;v.personagens=v.personagens||[];return v;});
     var capsBrutos=sc.docs.map(function(d){var v=validarDocumentoLocal(d.data());v.id=d.id;return v;});
-    if(nuvemAtiva){
-      for(var cbi=0;cbi<capsBrutos.length;cbi++) if(capsBrutos[cbi].paginasSeparadas){
-        var cps=await colCaps().doc(capsBrutos[cbi].id).collection("paginas").orderBy("indice","asc").get();capsBrutos[cbi].paginas=cps.docs.map(function(d){var pv=d.data();return pv.pagina||pv;});validarDocumentoLocal(capsBrutos[cbi]);
-      }
-    }
     var novosCaps=capsBrutos.map(function(v){
       return {id:v.id,obraId:v.obraId,numero:v.numero,titulo:v.titulo,
         nPaineis:v.nPaineis||contarPaineis(v.paginas),paginas:v.nPaginas||((v.paginas||[]).length),status:statusCapitulo(v.status),progresso:progressoCapitulo(v.progresso),atualizadoEm:v.atualizadoEm||0};
@@ -7425,18 +7530,8 @@ function falhaSalvarTexto(e,nota){
     : "Não foi possível salvar "+(nota?"a nota":"o capítulo")+". As alterações continuam nesta aba. Use Tentar salvar e não feche a página.");
 }
 async function gravarTexto(grupo,chave,corpo){
-  try{
-    if(grupo==="capitulos"&&nuvemAtiva)await salvarCapituloNuvem(chave,corpo);
-    else await db.collection(base+"/"+grupo).doc(chave).set(corpo);
-  }catch(e){
-    /* No modo local não repetimos a mesma escrita que acabou de falhar. */
-    if(db===dbLocal||!dbLocal)throw e;
-    await dbLocal.collection(baseLocal+"/"+grupo).doc(chave).set(corpo);
-    enfileirarNuvem(grupo,chave,corpo);
-    return;
-  }
-  if(db!==dbLocal&&dbLocal)await dbLocal.collection(baseLocal+"/"+grupo).doc(chave).set(corpo);
-  if(nuvemAtiva)removerFilaNuvem(grupo,chave);
+  /* A biblioteca usada é sempre a local deste aparelho (db === dbLocal). Falhas de escrita são repassadas ao chamador. */
+  await db.collection(base+"/"+grupo).doc(chave).set(corpo);
 }
 async function salvarPendenciasTexto(){
   clearTimeout(pendente); clearTimeout(pendenteNota);
@@ -7500,7 +7595,7 @@ async function salvar(){
       }while(sujo);
     }catch(e){sujo=true;falhaSalvarTexto(e,false);return false;}
     mostrarEstadoTextoSalvo();
-    try{salvarCacheOffline();registrarSincronizacao();desenharLateral();agendarBackupNuvem();}catch(e){}
+    try{salvarCacheOffline();desenharLateral();agendarBackupNuvem();}catch(e){}
     return true;
   })();
   salvando=tarefa; atualizarTentativaTexto();
@@ -7693,7 +7788,7 @@ async function salvarNota(){
       }while(notaSuja);
     }catch(e){notaSuja=true;falhaSalvarTexto(e,true);return false;}
     mostrarEstadoTextoSalvo();
-    try{salvarCacheOffline();registrarSincronizacao();notas.sort(function(a,b){return(b.atualizadoEm||0)-(a.atualizadoEm||0);});desenharNotasLateral();agendarBackupNuvem();}catch(e){}
+    try{salvarCacheOffline();notas.sort(function(a,b){return(b.atualizadoEm||0)-(a.atualizadoEm||0);});desenharNotasLateral();agendarBackupNuvem();}catch(e){}
     return true;
   })();
   salvandoNota=tarefa;atualizarTentativaTexto();
@@ -7714,11 +7809,11 @@ async function criarNota(opcoes){
 async function criarNotaSalva(opcoes){
   var cfg=opcoes||{}, agora=Date.now(), somenteImagens=cfg.tipo==="imagens", n={titulo:cfg.titulo||"Sem título",texto:somenteImagens?"":(cfg.texto||""),tags:somenteImagens?["imagens"]:(Array.isArray(cfg.tags)?cfg.tags:[]),tipo:somenteImagens?"imagens":"texto",imagens:[],criadoEm:agora,atualizadoEm:agora};
   var ref=colNotas().doc(id("n"));
-  try{ await ref.set(n); registrarSincronizacao(); }
+  try{ await ref.set(n); }
   catch(e){
     var idNotaLocal=ref.path.split("/").pop();
     try{ await dbLocal.collection(baseLocal+"/notas").doc(idNotaLocal).set(n); }catch(localErr){ aviso("Não foi possível criar a nota neste aparelho."); return; }
-    enfileirarNuvem("notas",idNotaLocal,n); aviso("Nota criada e guardada neste aparelho.");
+    aviso("Nota criada e guardada neste aparelho.");
   }
   n.id=ref.path.split("/").pop(); notas.unshift(n);
   modoNotas=true; notaAtual=n.id; notaSuja=false;
@@ -7753,8 +7848,8 @@ async function apagarNota(idNota){
 }
 async function apagarNotaSalva(idNota){
   var notaApagada=notaObj(idNota);
-  try{ await colNotas().doc(idNota).delete(); registrarSincronizacao(); }
-  catch(e){ try{ await dbLocal.collection(baseLocal+"/notas").doc(idNota).delete(); }catch(localErr){ aviso("Não foi possível apagar a nota neste aparelho."); return; } enfileirarExclusao("notas",idNota); }
+  try{ await colNotas().doc(idNota).delete(); }
+  catch(e){ try{ await dbLocal.collection(baseLocal+"/notas").doc(idNota).delete(); }catch(localErr){ aviso("Não foi possível apagar a nota neste aparelho."); return; } }
   for(var ii=0;ii<((notaApagada&&notaApagada.imagens)||[]).length;ii++){ await apagarImagemNotaNuvem(notaApagada,notaApagada.imagens[ii].id); await bdApagar(notaImagemChave(idNota,notaApagada.imagens[ii].id)); }
   notas=notas.filter(function(n){ return n.id!==idNota; }); salvarCacheOffline();
   if(notaAtual===idNota){notaAtual=notas.length?notas[0].id:null;reiniciarMarcaNota();}
@@ -7981,7 +8076,7 @@ async function criarObraSalva(t){
   catch(e){
     var idObraLocal=ref.path.split("/").pop();
     try{ await dbLocal.collection(baseLocal+"/obras").doc(idObraLocal).set(o); }catch(localErr){ aviso("Não deu para criar a obra neste aparelho."); return; }
-    enfileirarNuvem("obras",idObraLocal,o); aviso("Obra criada e guardada neste aparelho.");
+    aviso("Obra criada e guardada neste aparelho.");
   }
   o.id=ref.path.split("/").pop(); try{ await dbLocal.collection(baseLocal+"/obras").doc(o.id).set(o); }catch(localErr){} obras.push(o);
   modoNotas=false;obraAtual=o.id; capAtual=null; doc=null;
@@ -8000,7 +8095,7 @@ async function renomearObra(obraId){
   if(novo===alvo.titulo) return;
   var anterior=alvo.titulo;
   try{ await colObras().doc(obraId).update({titulo:novo}); }
-  catch(e){ try{ alvo.titulo=novo; await dbLocal.collection(baseLocal+"/obras").doc(obraId).set(alvo); }catch(localErr){ aviso("Não foi possível renomear a obra neste aparelho."); return; } enfileirarNuvem("obras",obraId,alvo); }
+  catch(e){ try{ alvo.titulo=novo; await dbLocal.collection(baseLocal+"/obras").doc(obraId).set(alvo); }catch(localErr){ aviso("Não foi possível renomear a obra neste aparelho."); return; } }
   alvo.titulo=novo;
   desenharLateral();
   if(doc && obraAtual===obraId) desenhar();
@@ -8020,7 +8115,7 @@ async function adicionarPersonagem(nome){
   if(o.personagens.indexOf(nome)>-1){ aviso("Esse personagem já existe."); return; }
   o.personagens.push(nome);
   try{ await colObras().doc(o.id).update({personagens:o.personagens}); }
-  catch(e){ try{ await dbLocal.collection(baseLocal+"/obras").doc(o.id).set(o); }catch(localErr){ o.personagens.pop(); aviso("Não foi possível salvar o personagem neste aparelho."); return; } enfileirarNuvem("obras",o.id,o); }
+  catch(e){ try{ await dbLocal.collection(baseLocal+"/obras").doc(o.id).set(o); }catch(localErr){ o.personagens.pop(); aviso("Não foi possível salvar o personagem neste aparelho."); return; } }
   desenharLateral(); desenhar(); atualizarPersonagens();
 }
 
@@ -8029,7 +8124,7 @@ async function removerPersonagem(nome){
   var anterior=o.personagens||[];
   o.personagens=anterior.filter(function(n){return n!==nome;});
   try{ await colObras().doc(o.id).update({personagens:o.personagens}); }
-  catch(e){ try{ await dbLocal.collection(baseLocal+"/obras").doc(o.id).set(o); }catch(localErr){ o.personagens=anterior; aviso("Não foi possível remover o personagem neste aparelho."); return; } enfileirarNuvem("obras",o.id,o); }
+  catch(e){ try{ await dbLocal.collection(baseLocal+"/obras").doc(o.id).set(o); }catch(localErr){ o.personagens=anterior; aviso("Não foi possível remover o personagem neste aparelho."); return; } }
   desenharLateral(); desenhar(); atualizarPersonagens();
 }
 
@@ -8048,10 +8143,10 @@ async function criarCapituloSalvo(){
   catch(e){
     var idCapLocal=ref.path.split("/").pop();
     try{ await dbLocal.collection(baseLocal+"/capitulos").doc(idCapLocal).set(novo); }catch(localErr){ aviso("Não deu para criar o capítulo neste aparelho."); return; }
-    enfileirarNuvem("capitulos",idCapLocal,novo); aviso("Capítulo criado e guardado neste aparelho.");
+    aviso("Capítulo criado e guardado neste aparelho.");
   }
   novo.id=ref.path.split("/").pop(); try{ await dbLocal.collection(baseLocal+"/capitulos").doc(novo.id).set(novo); }catch(localErr){}
-  caps.push({id:novo.id,obraId:obraAtual,numero:novo.numero,titulo:"",nPaineis:1,paginas:1,status:"roteiro",progresso:0,atualizadoEm:novo.atualizadoEm}); registrarSincronizacao();
+  caps.push({id:novo.id,obraId:obraAtual,numero:novo.numero,titulo:"",nPaineis:1,paginas:1,status:"roteiro",progresso:0,atualizadoEm:novo.atualizadoEm});
   modoNotas=false;doc=novo; capAtual=novo.id;
   desenharLateral(); desenhar();
 }
@@ -8155,7 +8250,7 @@ async function prepararEdicaoEstrutural(origem,tipo,valor){
   validarIdsEstrutura(c);return{capitulo:c,imagens:imagens,limpar:limpar,res:res};
 }
 async function prepararAmbienteEstrutural(doEditor){
-  if(db!==dbLocal||nuvemAtiva)throw erroEstrutura("A operação protegida requer a biblioteca local deste aparelho.");
+  if(db!==dbLocal)throw erroEstrutura("A operação protegida requer a biblioteca local deste aparelho.");
   if(backupNuvemEmCurso||FICHAS.importando)throw erroEstrutura("Aguarde a cópia da nuvem ou a gravação de referências terminar.");
   var ed=window.EditorDesenho;if(!ed)throw erroEstrutura("O armazenamento de desenhos não está disponível.");
   if(ed.aguardarOperacoes&&await ed.aguardarOperacoes()!==true)throw erroEstrutura("Salve o desenho aberto antes de alterar a estrutura.");
@@ -8323,9 +8418,6 @@ async function abrirCapituloSalvo(cid){
     var s=await colCaps().doc(cid).get();
     if(!s.exists){ aviso("Capítulo não encontrado."); return; }
     var aberto=validarDocumentoLocal(s.data());aberto.id=cid;
-    if(aberto.paginasSeparadas&&nuvemAtiva){
-      var sp=await colCaps().doc(cid).collection("paginas").orderBy("indice","asc").get();aberto.paginas=sp.docs.map(function(d){var v=d.data();return v.pagina||v;});validarDocumentoLocal(aberto);
-    }
     if(!aberto.paginas||!aberto.paginas.length)aberto.paginas=[novaPagina()];normalizarDocumento(aberto);
     doc=aberto;modoNotas=false;capAtual=cid;obraAtual=aberto.obraId;
     pgAtual=0; selPainel=null;
@@ -9715,7 +9807,7 @@ el("btInstalar").onclick=async function(){
   if(!conviteInstalacao){ aviso("Use o menu do navegador e escolha 'Instalar app' ou 'Adicionar à tela inicial'."); return; }
   conviteInstalacao.prompt(); try{ await conviteInstalacao.userChoice; }catch(e){} conviteInstalacao=null; el("btInstalar").classList.remove("visivel");
 };
-window.addEventListener("online",async function(){ atualizarConexao(); agendarBackupNuvem(); await processarFilaNuvem(); /* Reconectar não deve substituir notas editadas na memória. */ });
+window.addEventListener("online",async function(){ atualizarConexao(); agendarBackupNuvem(); /* Reconectar não deve substituir notas editadas na memória. */ });
 window.addEventListener("offline",atualizarConexao);
 atualizarConexao();
 
@@ -9818,61 +9910,6 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 
-<script id="mesa-r2-ensaio">
-(() => {
-'use strict';
-const ORIGIN='https://mjosemiguel700-sketch.github.io';
-const API='https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev';
-const ACCOUNT='d90994b604856f19411d68d5fedfc888',BUCKET='mesa-roteiro-backups';
-const el=id=>document.getElementById('ensaioR2-'+id);
-const state={session:null,generation:0,busy:false,smallPassed:false,client:null,binding:null,subscription:null,controllers:new Set(),lastBackup:null,lastReport:null};
-const messages={offline:'Não foi possível completar a conexão. Confira a internet e tente novamente.',login:'Conecte sua conta pelo botão Conectar nuvem do aplicativo e depois volte a este ensaio.',expired:'A sessão deste teste terminou. Entre novamente.',config:'A API ainda não está pronta para testes. Avise no chat; não altere as chaves por tentativa.',denied:'Esta conta ou a credencial R2 não está autorizada. Avise no chat.',auth:'A API não confirmou sua conta. Entre novamente e tente outra vez.',limit:'Aguarde um minuto antes de repetir o teste.',size:'A proteção do tamanho não foi confirmada. O R2 deve permanecer desligado no site.',overwrite:'A proteção contra sobrescrita não foi confirmada. O R2 deve permanecer desligado no site.',integrity:'O conteúdo lido divergiu do teste. O R2 deve permanecer desligado no site.',listing:'Não foi possível confirmar esta versão no histórico. O teste não foi aprovado.',format:'O pacote fictício não passou pela validação.',sign:'A autorização temporária não passou pela conferência de segurança.',image:'Não foi possível gerar e decodificar a imagem de teste.',cancel:'Operação encerrada. Entre novamente para fazer outro teste.'};
-function ensaioR2_stop(code){const error=new Error(messages[code]||messages.offline);error.testCode=code;throw error;}
-function ensaioR2_status(text){el('status').textContent=text;}
-function ensaioR2_step(text){const li=document.createElement('li');li.textContent=text;el('steps').appendChild(li);}
-function ensaioR2_update(){const logged=!!state.session;el('signin').disabled=logged||state.busy;el('signout').disabled=!logged&&!state.busy;el('small').disabled=!logged||state.busy;el('large').disabled=!logged||state.busy||!state.smallPassed;el('backup').disabled=state.busy||!state.lastBackup;el('report').disabled=state.busy||!state.lastReport;}
-function ensaioR2_context(){if(!state.session||!state.binding)ensaioR2_stop('expired');const c={uid:state.session.uid,generation:state.generation,binding:state.binding,transporte:{accountId:ACCOUNT,bucket:BUCKET}};ensaioR2_conferirOperacaoR2(c);return c;}
-function ensaioR2_conferirOperacaoR2(c){if(!state.session||c.generation!==state.generation||c.uid!==state.session.uid||c.binding!==state.binding)ensaioR2_stop('cancel');}
-function ensaioR2_erroCopiaNuvem(){const error=new Error(messages.sign);error.testCode='sign';return error;}
-function ensaioR2_caminhoVersaoCopia(path,uid){return typeof path==='string'&&path.startsWith(uid+'/sincronizacao/versoes/')&&/^\d{17}-[a-f0-9]{32}\.json$/.test(path.slice((uid+'/sincronizacao/versoes/').length));}
-function ensaioR2_validarUrlAssinadaR2(c,res,metodo,nome,hash){
-  ensaioR2_conferirOperacaoR2(c);var t=c.transporte,u,agora=Date.now();
-  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||res.expiresAt<=agora||res.expiresAt>agora+900000||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 é inválida ou expirou.");
-  try{u=new URL(res.url);}catch(e){throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A autorização R2 contém um endereço inválido.");}
-  var caminho="/"+t.bucket+"/"+c.uid+"/sincronizacao/versoes/"+nome;
-  if(!ensaioR2_caminhoVersaoCopia(c.uid+"/sincronizacao/versoes/"+nome,c.uid)||u.protocol!=="https:"||u.host!==t.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!==caminho)throw ensaioR2_erroCopiaNuvem("nuvem_integridade","O endereço autorizado não corresponde ao destino e à conta esperados.");
-  var q=u.searchParams,permitidos=["X-Amz-Algorithm","X-Amz-Credential","X-Amz-Date","X-Amz-Expires","X-Amz-SignedHeaders","X-Amz-Signature"],vistos=new Set();
-  q.forEach(function(v,k){if(permitidos.indexOf(k)<0||vistos.has(k))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A assinatura R2 contém parâmetros inesperados.");vistos.add(k);});
-  var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date"),cred=q.get("X-Amz-Credential")||"";
-  if(vistos.size!==6||q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||! /^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||! /^\d{8}T\d{6}Z$/.test(data||"")||! /^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||! /^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A assinatura R2 não corresponde ao formato esperado.");
-  var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z"),fim=instante+(+exp)*1000;
-  if(!isFinite(instante)||fim<=agora||fim>agora+900000||Math.abs(fim-res.expiresAt)>1500||cred.split("/")[1]!==data.slice(0,8))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A validade da assinatura R2 não pôde ser confirmada.");
-  var headers=Object.create(null),esperados=metodo==="PUT"?{"content-type":"application/json","if-none-match":"*","x-amz-meta-write-id":nome,"x-amz-meta-sha256":hash}:{};
-  if(metodo!=="PUT"&&metodo!=="GET")throw ensaioR2_erroCopiaNuvem("nuvem_integridade","O método de transferência R2 é inválido.");
-  Object.keys(res.headers).forEach(function(k){var chave=k.toLowerCase(),v=res.headers[k];if(Object.prototype.hasOwnProperty.call(headers,chave)||!Object.prototype.hasOwnProperty.call(esperados,chave)||typeof v!=="string"||v!==esperados[chave])throw ensaioR2_erroCopiaNuvem("nuvem_integridade","Os cabeçalhos da autorização R2 divergem do envio esperado.");headers[chave]=v;});
-  if(Object.keys(headers).length!==Object.keys(esperados).length)throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A autorização R2 está incompleta.");
-  var assinados=metodo==="PUT"?"content-length;content-type;host;if-none-match;x-amz-meta-sha256;x-amz-meta-write-id":"host";
-  if(q.get("X-Amz-SignedHeaders")!==assinados)throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A assinatura R2 não protege os cabeçalhos obrigatórios.");
-  return{url:u.href,headers:headers};
-}
-const responses=new WeakMap();
-function ensaioR2_finishResponse(response){responses.get(response)?.();responses.delete(response);}
-async function ensaioR2_discard(response){try{await response.body?.cancel();}finally{ensaioR2_finishResponse(response);}}
-async function ensaioR2_request(url,options,timeout=30000){const ctrl=new AbortController();state.controllers.add(ctrl);let done=false;const close=()=>{if(done)return;done=true;clearTimeout(timer);state.controllers.delete(ctrl);};const timer=setTimeout(()=>{ctrl.abort();close();},timeout);try{const response=await fetch(url,{...options,signal:ctrl.signal,credentials:'omit',redirect:'error',cache:'no-store',referrerPolicy:'no-referrer'});responses.set(response,close);return response;}catch{close();ensaioR2_stop('offline');}}
-async function ensaioR2_readText(response,max){if(!response.body)ensaioR2_stop('offline');const reader=response.body.getReader(),chunks=[];let size=0;try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>max){await reader.cancel();ensaioR2_stop('integrity');}chunks.push(part.value);}const out=new Uint8Array(size);let pos=0;for(const chunk of chunks){out.set(chunk,pos);pos+=chunk.byteLength;}return new TextDecoder('utf-8',{fatal:true}).decode(out);}catch(error){if(error.testCode)throw error;ensaioR2_stop('offline');}finally{reader.releaseLock();ensaioR2_finishResponse(response);}}
-async function ensaioR2_api(c,route,body){ensaioR2_conferirOperacaoR2(c);if(!['/v1/uploads','/v1/downloads','/v1/versions/list'].includes(route))ensaioR2_stop('sign');const current=await c.binding.client.auth.getSession();ensaioR2_conferirOperacaoR2(c);const session=current?.data?.session;if(current?.error||!session||session.user?.id!==c.uid||typeof session.access_token!=='string'||!session.access_token||/[\r\n]/.test(session.access_token))ensaioR2_stop('auth');const response=await ensaioR2_request(API+route,{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});const text=await ensaioR2_readText(response,131072);ensaioR2_conferirOperacaoR2(c);let value;try{value=JSON.parse(text);}catch{ensaioR2_stop('offline');}return{response,value};}
-function ensaioR2_requireOK(result){if(result.response.ok)return result.value;const code=result.value?.error?.code;if(code==='not_configured')ensaioR2_stop('config');if(code==='auth_required'||code==='auth_unavailable')ensaioR2_stop('auth');if(code==='user_not_allowed')ensaioR2_stop('denied');if(code==='rate_limited')ensaioR2_stop('limit');ensaioR2_stop('offline');}
-async function ensaioR2_sha(text){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
-function ensaioR2_versionName(){return new Date().toISOString().replace(/[-:.TZ]/g,'')+'-'+crypto.randomUUID().replace(/-/g,'')+'.json';}
-async function ensaioR2_makeFixture(large=false){const suffix=crypto.randomUUID().replace(/-/g,''),id='teste_r2_'+suffix,now=Date.now();const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d');if(!ctx)ensaioR2_stop('image');ctx.fillStyle='#f0dba5';ctx.fillRect(0,0,64,64);ctx.fillStyle='#264e79';ctx.fillRect(8,8,48,48);ctx.fillStyle='#ffffff';ctx.fillRect(25,18,14,28);const png=canvas.toDataURL('image/png');const image=new Image();image.src=png;try{await image.decode();}catch{ensaioR2_stop('image');}if(image.naturalWidth!==64||image.naturalHeight!==64)ensaioR2_stop('image');const meta={id:id+'_imagem',nome:'Imagem fictícia R2.png',tipo:'image/png',tamanho:Math.floor((png.split(',')[1]||'').length*3/4),criadoEm:now};const panel=id+'_painel',layer=id+'_camada';const noteText='Nota fictícia com imagem. Texto com acentos: mangá, São Paulo, balão 🖌️.';const packet={versao:3,formato:'mesa-de-roteiro-backup',criadoEm:now,obras:[{id,dados:{titulo:'TESTE R2 — obra fictícia',personagens:['Personagem de teste'],criadoEm:now}}],capitulos:[{id:id+'_capitulo',dados:{obraId:id,titulo:'Capítulo fictício',numero:1,status:'rascunho',paginas:[{id:id+'_pagina',layoutPag:'livre',paineis:[{id:panel,tamanho:'quadrado',acao:'Desenho fictício para conferir a recuperação.',personagens:[],falas:[{id:id+'_fala',quem:'Personagem de teste',tipo:'fala',texto:'Balão fictício do teste R2.'}],temDesenho:true}]}]}}],notas:[{id:id+'_nota',dados:{obraId:id,titulo:'Nota fictícia R2',texto:noteText,tipo:'referencia',tags:['teste-r2'],imagens:[meta],imagensDados:[{meta,src:png}]}}],desenhos:[{id:panel,rec:{v:1,w:64,h:64,ativa:layer,baloes:[],camadas:[{id:layer,nome:'Camada fictícia',vis:true,op:100,modo:'normal',blob:png,originalBlob:null}]}}]};if(large)packet.testeTransporte={tipo:"somente-transporte",dados:"T".repeat(60*1024*1024)};const compact=JSON.stringify(packet);packet.integridade={algoritmo:'SHA-256',conteudo:await ensaioR2_sha(compact),tamanho:compact.length};const text=JSON.stringify(packet,null,2);return {text,png};}
-async function ensaioR2_validateFixture(text){let p;try{p=JSON.parse(text);}catch{ensaioR2_stop('format');}const integrity=p.integridade,copy={};for(const key of Object.keys(p))if(key!=='integridade')copy[key]=p[key];if(!integrity||integrity.algoritmo!=='SHA-256'||await ensaioR2_sha(JSON.stringify(copy))!==integrity.conteudo)ensaioR2_stop('integrity');if(p.versao!==3||p.formato!=='mesa-de-roteiro-backup'||p.obras.length!==1||p.capitulos.length!==1||p.notas.length!==1||p.desenhos.length!==1||Object.hasOwn(p,'desenhosLivres')||Object.hasOwn(p,'preferenciasLocal'))ensaioR2_stop('format');return p;}
-async function ensaioR2_run(large){const c=ensaioR2_context();state.busy=true;if(!large)state.lastBackup=null;state.lastReport=null;el('steps').replaceChildren();ensaioR2_status('Preparando dados fictícios…');ensaioR2_update();const started=Date.now(),report={versao:1,tipo:'ensaio-r2-dados-ficticios',criadoEm:new Date().toISOString(),grande:large,escopo:large?'somente-transporte-grande':'transporte-e-pacote-pequeno',restauracaoNoAplicativoValidada:false,aprovado:false,checks:[]};try{const fixture=await ensaioR2_makeFixture(large);ensaioR2_conferirOperacaoR2(c);await ensaioR2_validateFixture(fixture.text);ensaioR2_conferirOperacaoR2(c);const body=new Blob([fixture.text],{type:'application/json'}),digest=await ensaioR2_sha(fixture.text),name=ensaioR2_versionName();ensaioR2_conferirOperacaoR2(c);report.bytes=body.size;report.sha256=digest;el('image').src=fixture.png;el('image').hidden=false;ensaioR2_step('Pacote fictício com texto, imagem, desenho e integridade preparado.');ensaioR2_status('Conferindo a proteção de tamanho…');let authorization=ensaioR2_requireOK(await ensaioR2_api(c,'/v1/uploads',{name,bytes:body.size,sha256:digest}));ensaioR2_conferirOperacaoR2(c);let upload=ensaioR2_validarUrlAssinadaR2(c,authorization,'PUT',name,digest);const wrong=new Blob([body,'X'],{type:'application/json'});let response=await ensaioR2_request(upload.url,{method:'PUT',headers:upload.headers,body:wrong},900000);ensaioR2_conferirOperacaoR2(c);if(response.ok||![400,403].includes(response.status))ensaioR2_stop('size');report.checks.push({nome:'tamanho-divergente-recusado',status:response.status});await ensaioR2_discard(response);ensaioR2_conferirOperacaoR2(c);const missing=await ensaioR2_api(c,'/v1/downloads',{name});ensaioR2_conferirOperacaoR2(c);if(missing.response.status!==404||missing.value?.error?.code!=='version_missing')ensaioR2_stop('size');report.checks.push({nome:'arquivo-ausente-apos-recusa',status:404});ensaioR2_step('Tamanho incorreto recusado; nenhuma versão foi criada por essa tentativa.');ensaioR2_status('Enviando o arquivo fictício correto…');response=await ensaioR2_request(upload.url,{method:'PUT',headers:upload.headers,body},900000);ensaioR2_conferirOperacaoR2(c);if(!response.ok){if(response.status===401||response.status===403)ensaioR2_stop('denied');ensaioR2_stop('offline');}report.checks.push({nome:'envio-correto',status:response.status});await ensaioR2_discard(response);ensaioR2_conferirOperacaoR2(c);ensaioR2_step('Arquivo fictício enviado ao bucket privado.');ensaioR2_status('Conferindo a proteção contra sobrescrita…');response=await ensaioR2_request(upload.url,{method:'PUT',headers:upload.headers,body},900000);ensaioR2_conferirOperacaoR2(c);if(![409,412].includes(response.status))ensaioR2_stop('overwrite');report.checks.push({nome:'sobrescrita-recusada',status:response.status});await ensaioR2_discard(response);ensaioR2_conferirOperacaoR2(c);ensaioR2_step('Repetição no mesmo nome recusada.');ensaioR2_status('Conferindo o histórico…');let cursor=null,found=false;const seen=new Set();for(let page=0;page<20;page++){const result=ensaioR2_requireOK(await ensaioR2_api(c,'/v1/versions/list',{cursor}));ensaioR2_conferirOperacaoR2(c);if(!Array.isArray(result.versions)||result.versions.length>50||!(result.cursor===null||typeof result.cursor==='string'))ensaioR2_stop('listing');const version=result.versions.find(v=>v.name===name);if(version){if(version.bytes!==body.size)ensaioR2_stop('integrity');found=true;break;}if(result.cursor===null)break;if(!result.cursor||seen.has(result.cursor))ensaioR2_stop('listing');seen.add(result.cursor);cursor=result.cursor;}if(!found)ensaioR2_stop('listing');report.checks.push({nome:'versao-localizada',confirmado:true});ensaioR2_step('Esta versão fictícia foi localizada no histórico da conta.');ensaioR2_status('Baixando e comparando o conteúdo…');authorization=ensaioR2_requireOK(await ensaioR2_api(c,'/v1/downloads',{name}));ensaioR2_conferirOperacaoR2(c);const download=ensaioR2_validarUrlAssinadaR2(c,authorization,'GET',name);response=await ensaioR2_request(download.url,{method:'GET',headers:download.headers},900000);ensaioR2_conferirOperacaoR2(c);if(!response.ok)ensaioR2_stop('offline');const returned=await ensaioR2_readText(response,body.size+1024);ensaioR2_conferirOperacaoR2(c);const returnedDigest=await ensaioR2_sha(returned);ensaioR2_conferirOperacaoR2(c);if(returned!==fixture.text||returnedDigest!==digest)ensaioR2_stop('integrity');await ensaioR2_validateFixture(returned);ensaioR2_conferirOperacaoR2(c);report.checks.push({nome:'releitura-e-sha256',confirmado:true});if(!large)state.lastBackup=new Blob([returned],{type:'application/json'});report.aprovado=true;if(!large)state.smallPassed=true;ensaioR2_step('O conteúdo completo e os dois hashes foram confirmados.');ensaioR2_status(large?'Transferência de 60 MB aprovada. Esse ensaio não valida a restauração de imagens grandes. Baixe o resultado.':'Teste pequeno aprovado. Você pode baixar o resultado e depois executar o teste de 60 MB.');}catch(error){if(c.generation!==state.generation)return;report.erro=error.testCode||'offline';ensaioR2_status(messages[report.erro]||messages.offline);}finally{if(c.generation===state.generation){report.duracaoMs=Date.now()-started;state.lastReport=report;state.busy=false;ensaioR2_update();}}}
-function ensaioR2_save(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.rel='noopener';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function ensaioR2_closeSession(){state.generation++;for(const ctrl of state.controllers)ctrl.abort();state.controllers.clear();const sub=state.subscription;state.subscription=null;if(sub){try{sub.unsubscribe();}catch{}}state.session=null;state.binding=null;state.client=null;state.busy=false;state.smallPassed=false;state.lastBackup=null;state.lastReport=null;el('image').removeAttribute('src');el('image').hidden=true;ensaioR2_update();ensaioR2_status('Ensaio encerrado.');}
-el('signin').addEventListener('click',async()=>{if(state.busy||state.session)return;state.busy=true;ensaioR2_update();ensaioR2_status('Conferindo a conta conectada…');const generation=state.generation;try{if(location.origin!==ORIGIN||location.protocol!=='https:'||!crypto.subtle)ensaioR2_stop('config');const cfg=window.MesaNuvem;if(!cfg||!cfg.client)ensaioR2_stop('login');const current=await cfg.client.auth.getSession();if(generation!==state.generation)return;const session=current?.data?.session;if(current?.error||!session||typeof session.access_token!=='string'||!session.access_token||/[\r\n]/.test(session.access_token)||typeof session.user?.id!=='string'||!/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i.test(session.user.id))ensaioR2_stop('login');const binding={cfg,client:cfg.client,uid:session.user.id,geracao:generation,exigirEnvio:false,assinaturaDestino:null};state.binding=binding;state.client=cfg.client;state.session={uid:session.user.id};if(cfg.client.auth.onAuthStateChange){const watched=cfg.client.auth.onAuthStateChange((event,next)=>{if(state.binding!==binding)return;if(event==='SIGNED_OUT'||event==='PASSWORD_RECOVERY'||next?.user?.id!==session.user.id)ensaioR2_closeSession();});const sub=watched?.data?.subscription||null;if(generation!==state.generation||state.binding!==binding){try{sub?.unsubscribe();}catch{}return;}state.subscription=sub;}ensaioR2_status('Conta confirmada para o ensaio. Execute o teste pequeno.');}catch(error){if(generation===state.generation){const dlg=document.getElementById('dlgNuvem');if(error.testCode==='login'||error.code==='nuvem_conta'){if(dlg&&!dlg.open)dlg.showModal();ensaioR2_status(messages.login);}else ensaioR2_status(messages[error.testCode]||messages.login);}}finally{if(generation===state.generation){state.busy=false;ensaioR2_update();}}});
-async function ensaioR2_launch(large){try{await ensaioR2_run(large);}catch(error){state.busy=false;ensaioR2_update();ensaioR2_status(messages[error.testCode]||messages.offline);}}
-el('small').addEventListener('click',()=>{if(!state.busy&&state.session)void ensaioR2_launch(false);});el('large').addEventListener('click',()=>{if(!state.busy&&state.session&&state.smallPassed)void ensaioR2_launch(true);});el('signout').addEventListener('click',ensaioR2_closeSession);el('backup').addEventListener('click',()=>{if(state.lastBackup&&!state.busy)ensaioR2_save(state.lastBackup,'mesa-backup-ficticio-r2.json');});el('report').addEventListener('click',()=>{if(state.lastReport&&!state.busy)ensaioR2_save(new Blob([JSON.stringify(state.lastReport,null,2)],{type:'application/json'}),'resultado-teste-r2.json');});addEventListener('pagehide',ensaioR2_closeSession);document.getElementById('dlgBackup').addEventListener('close',ensaioR2_closeSession);document.getElementById('ensaioR2-box').addEventListener('toggle',()=>{if(!document.getElementById('ensaioR2-box').open)ensaioR2_closeSession();});if(location.origin!==ORIGIN){ensaioR2_status('Publique este index.html no seu GitHub Pages para executar o ensaio com a conta conectada.');el('signin').disabled=true;}
-})();
-</script>
 </body>
 </html>
+
