@@ -932,6 +932,9 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
   .ed-mobile-ui .ed-m3d-cena{height:180px}
 }
 @media(prefers-reduced-motion:reduce){.ed-mobile-ui *{scroll-behavior:auto!important}}
+
+/* Ensaio fictício integrado ao backup; escopo limitado a esta seção. */
+#ensaioR2-box{margin-top:16px;border-top:1px solid var(--calha);padding-top:14px}#ensaioR2-box summary{cursor:pointer;padding:8px 0}#ensaioR2-box .ensaio-r2-card{padding:12px 0}#ensaioR2-box .bt{min-height:44px;margin:4px 5px 4px 0}#ensaioR2-status{white-space:pre-wrap;overflow-wrap:anywhere;font-weight:600}#ensaioR2-image{max-width:96px;border:1px solid var(--calha)}#ensaioR2-steps{padding-left:22px}#ensaioR2-steps li{margin:7px 0}@media(max-width:520px){#ensaioR2-box .bt{width:100%;margin:5px 0}}
 </style>
 </head>
 <body>
@@ -1068,6 +1071,7 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
     <p>As imagens das notas e os desenhos são guardados no aparelho e entram no backup quando disponíveis. O espaço real depende do armazenamento livre.</p>
     <p class="nota-meta" id="estadoBackup" aria-live="polite">Último backup: ainda não registrado neste aparelho.</p>
     <p class="nota-meta" id="integridadeBackup" aria-live="polite">Os novos backups serão verificados antes de serem salvos.</p>
+    <p class="nota-meta oculto" id="falhaCopiaNuvem" role="status" aria-live="polite"></p>
     <p class="nota-meta" id="pastaBackup" aria-live="polite">Pasta de backup: não escolhida. A escolha é opcional e depende do suporte do navegador.</p>
     <p class="nota-meta">A nuvem guarda versões separadas, sem apagar as anteriores. Isso ocupa espaço adicional. Para recuperar: baixe uma cópia, preserve um backup local e use Importar backup quando decidir.</p>
     <section aria-label="Cópias na nuvem">
@@ -1076,6 +1080,17 @@ body.lateral-em-notas #blocoObras,body.lateral-em-notas #blocoCapitulos,body.lat
       <button type="button" class="bt mini oculto" id="btMaisCopiasNuvem">Ver versões anteriores</button>
       <p class="nota-meta">A lista indica datas dos arquivos; uma versão mais recente pode conter menos trabalhos. Confira o conteúdo antes de importar. Nenhuma cópia é importada automaticamente.</p>
     </section>
+    <details id="ensaioR2-box" class="ensaio-r2"><summary><strong>Testar o armazenamento R2</strong></summary><p>Este ensaio envia uma obra fictícia com texto, imagem e desenho. As cópias dos seus trabalhos continuam usando o destino atual até a conferência dos resultados.</p><div class="ensaio-r2-card"><p class="nota-meta">Use a conta já conectada ao aplicativo. Se necessário, entre primeiro pelo botão Conectar nuvem.</p><button type="button" class="bt" id="ensaioR2-signin">Usar conta conectada</button><button type="button" class="bt" id="ensaioR2-signout" disabled>Encerrar ensaio</button></div><section class="ensaio-r2-card"><h4>Conferir envio e leitura</h4><p>Comece pelo teste pequeno. Ele confere assinatura, proteção de tamanho, gravação única, histórico, leitura e integridade.</p>
+<button id="ensaioR2-small" type="button" class="bt" disabled>Executar teste pequeno</button>
+<button id="ensaioR2-large" type="button" class="bt" disabled>Executar teste de 60 MB</button>
+<p class="nota-meta">O teste de 60 MB só será liberado após o pequeno passar. Ele verifica somente a transferência de um arquivo grande; a restauração deve ser conferida com o backup pequeno. Leva mais tempo e usa mais memória. Mantenha esta aba aberta durante a transferência.</p>
+<img id="ensaioR2-image" alt="Imagem fictícia gerada pelo teste" hidden>
+<div id="ensaioR2-status" role="status" aria-live="polite">Use a conta conectada para começar o ensaio.</div><ol id="ensaioR2-steps"></ol>
+<button id="ensaioR2-backup" type="button" class="bt" disabled>Baixar backup fictício pequeno</button>
+<button id="ensaioR2-report" type="button" class="bt" disabled>Baixar resultado do teste</button>
+<p class="nota-meta">Para conferir a restauração do arquivo fictício, use um perfil de navegador separado e vazio. Outra aba do mesmo perfil compartilha os dados do aplicativo.</p>
+</section></details>
+
   </div>
   <div class="dlg-pe">
     <button class="bt" id="btBaixarBackup">Baixar backup</button>
@@ -1492,7 +1507,8 @@ var dbLocal={
 window.MesaNuvem={
   url:"https://qtydeqbrouoclyczplhx.supabase.co",
   publishableKey:"sb_publishable_nTbFjJ4kfbBeB2v34qIbKQ_R6luHnge",
-  client:null
+  client:null,
+  r2:{ativo:false,url:"",accountId:"",bucket:""}
 };
 </script>
 <script>
@@ -6493,7 +6509,7 @@ var CONTA_NUVEM={uid:null,geracao:0,autorizada:false,pausada:false,operando:fals
 function invalidarContaNuvem(uid){
   CONTA_NUVEM.uid=uid||null;CONTA_NUVEM.geracao++;CONTA_NUVEM.consultas++;CONTA_NUVEM.autorizada=false;contaNuvemPronta=false;
   clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
-  COPIA_NUVEM.pendente=null;COPIA_NUVEM.ultima=null;COPIA_NUVEM.lista=[];COPIA_NUVEM.contextoLista=null;COPIA_NUVEM.offset=0;
+  COPIA_NUVEM.pendente=null;COPIA_NUVEM.ultima=null;COPIA_NUVEM.lista=[];COPIA_NUVEM.contextoLista=null;COPIA_NUVEM.offset=0;COPIA_NUVEM.cursorR2=null;COPIA_NUVEM.fimR2=false;COPIA_NUVEM.fimSupabase=false;COPIA_NUVEM.bloqueio=null;limparFalhaCopiaNuvem();
   var lista=el("listaCopiasNuvem");if(lista)lista.replaceChildren();var mais=el("btMaisCopiasNuvem");if(mais)mais.classList.add("oculto");
   var st=el("estadoCopiasNuvem");if(st)st.textContent="A sessão mudou. Atualize a lista para consultar esta conta.";
 }
@@ -6502,6 +6518,7 @@ function vinculoNuvemPermitido(uid){
 }
 function conferirContextoConta(c){
   var cfg=window.MesaNuvem;if(!c||!cfg||c.cfg!==cfg||c.client!==cfg.client||c.uid!==CONTA_NUVEM.uid||c.geracao!==CONTA_NUVEM.geracao)throw erroCopiaNuvem("nuvem_conta","A sessão mudou. Atualize a conta e tente novamente.");
+  if(c.assinaturaDestino&&!destinoCopiaVigente(c))throw erroCopiaNuvem("nuvem_destino_alterado","O destino da cópia mudou. Atualize a conta e a lista antes de tentar novamente.");
   if(c.exigirEnvio&&(CONTA_NUVEM.pausada||!vinculoNuvemPermitido(c.uid)))throw erroCopiaNuvem("nuvem_autorizacao","Autorize esta biblioteca para esta conta antes de enviar trabalhos.");
 }
 function atualizarControlesConta(){
@@ -6593,8 +6610,179 @@ async function enviarContaNuvem(criar){
   finally{senha="";el("senhaNuvem").value="";CONTA_NUVEM.operando=false;atualizarControlesConta();}
 }
 var temporizadorBackupNuvem=null, backupNuvemEmCurso=false;
-var COPIA_NUVEM={revisao:0,tentativas:0,pendente:null,ultima:null,lista:[],contextoLista:null,offset:0,consultando:false,baixando:false};
+var COPIA_NUVEM={revisao:0,tentativas:0,pendente:null,ultima:null,lista:[],contextoLista:null,offset:0,cursorR2:null,fimR2:false,fimSupabase:false,consultando:false,baixando:false,bloqueio:null};
 function erroCopiaNuvem(codigo,mensagem){var e=new Error(mensagem);e.code=codigo;return e;}
+/* Transporte opcional apenas para o JSON completo. Nenhuma URL assinada é
+   persistida: a identidade usa projeto/API, conta e bucket públicos fixos. */
+function destinoCopiaConfigurado(){
+  var cfg=window.MesaNuvem,r=cfg&&cfg.r2;
+  if(!r||r.ativo!==true)return{provedor:"supabase",destino:cfg&&cfg.url||""};
+  var u;try{u=new URL(r.url);}catch(e){throw erroCopiaNuvem("nuvem_configuracao","A configuração R2 está incompleta. Preserve o backup local e confira o destino.");}
+  if(u.protocol!=="https:"||u.username||u.password||u.hash||u.search||u.pathname!=="/"||u.port||! /^[a-f0-9]{32}$/.test(r.accountId||"")||! /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(r.bucket||""))throw erroCopiaNuvem("nuvem_configuracao","A configuração R2 não pôde ser validada. Preserve o backup local e confira o destino.");
+  return{provedor:"r2",destino:u.origin,accountId:r.accountId,bucket:r.bucket};
+}
+function assinaturaDestinoCopia(){
+  var cfg=window.MesaNuvem;return JSON.stringify({projeto:cfg&&cfg.url||"",transporte:destinoCopiaConfigurado()});
+}
+function destinoCopiaVigente(c){try{return !c.assinaturaDestino||c.assinaturaDestino===assinaturaDestinoCopia();}catch(e){return false;}}
+function referenciaDestinoCopia(c){
+  var t=c.transporte||{provedor:"supabase",destino:c.cfg.url},r={provedor:t.provedor,destino:t.destino};
+  if(t.provedor==="r2"){r.accountId=t.accountId;r.bucket=t.bucket;}return r;
+}
+function mesmoDestinoCopia(ref,c){
+  if(!ref)return false;var t=referenciaDestinoCopia(c),provedor=ref.provedor||"supabase",destino=ref.destino||c.cfg.url;
+  return provedor===t.provedor&&destino===t.destino&&(provedor!=="r2"||(ref.accountId===t.accountId&&ref.bucket===t.bucket));
+}
+function contextoLeituraCopia(c,origem){
+  if(!origem)return c;
+  var provedor=origem.provedor||"supabase",destino=origem.destino||c.cfg.url,t;
+  if(provedor==="supabase"&&destino===c.cfg.url)t={provedor:"supabase",destino:destino};
+  else if(provedor==="r2"&&c.transporte&&c.transporte.provedor==="r2"&&mesmoDestinoCopia(origem,c))t=c.transporte;
+  else throw erroCopiaNuvem("nuvem_destino_alterado","A referência pertence a outro destino. Atualize a lista antes de baixar.");
+  return Object.assign({},c,{transporte:t});
+}
+function conferirOperacaoR2(c){
+  conferirContextoConta(c);
+  if(!c.transporte||c.transporte.provedor!=="r2"||! /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(c.uid))throw erroCopiaNuvem("nuvem_configuracao","A conta ou o destino R2 não pôde ser validado.");
+  if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
+}
+async function requisicaoR2(c,url,opcoes,tempo,ler){
+  conferirOperacaoR2(c);
+  if(typeof AbortController!=="function"||typeof fetch!=="function")throw erroCopiaNuvem("nuvem_configuracao","Este navegador não oferece a transferência segura da cópia.");
+  var controle=new AbortController(),timer;
+  try{
+    var limite=new Promise(function(resolve,reject){timer=setTimeout(function(){controle.abort();reject(erroCopiaNuvem("nuvem_tempo","A transferência não terminou no prazo. Preserve o backup local e tente novamente."));},tempo);});
+    var pedido=Promise.resolve().then(function(){return fetch(url,Object.assign({},opcoes,{signal:controle.signal,credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer"}));}).then(async function(r){conferirOperacaoR2(c);var dado=await ler(r);conferirOperacaoR2(c);return dado;});
+    return await Promise.race([pedido,limite]);
+  }finally{clearTimeout(timer);}
+}
+function erroRespostaR2(status,codigo){
+  var e=erroCopiaNuvem("nuvem_envio","A operação R2 não foi confirmada. Confira a conta, a conexão e a configuração do destino.");
+  e.status=status;
+  if(codigo==="too_large")e.code="EntityTooLarge";
+  else if(codigo==="invalid_request")e.code="InvalidRequest";
+  else if(codigo==="auth_required")e.code="InvalidJWT";
+  else if(codigo==="version_missing")e.code="NoSuchKey";
+  else if(codigo==="user_not_allowed"||codigo==="origin_denied")e.code="AccessDenied";
+  return e;
+}
+async function chamarApiR2(c,rota,corpo){
+  conferirOperacaoR2(c);
+  if(["/v1/uploads","/v1/downloads","/v1/versions/list"].indexOf(rota)<0)throw erroCopiaNuvem("nuvem_caminho","A operação R2 não é permitida.");
+  var r=await esperarCopiaNuvem(c.client.auth.getSession());conferirOperacaoR2(c);
+  var s=r&&r.data&&r.data.session;
+  if(r&&r.error||!s||!s.user||s.user.id!==c.uid||typeof s.access_token!=="string"||!s.access_token||/[\r\n]/.test(s.access_token))throw erroCopiaNuvem("nuvem_conta","A sessão não pôde ser confirmada para esta operação.");
+  return requisicaoR2(c,c.transporte.destino+rota,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+s.access_token},body:JSON.stringify(corpo)},15000,async function(res){
+    var texto=await res.text();if(texto.length>65536)throw erroCopiaNuvem("nuvem_integridade","A resposta de controle R2 excedeu o tamanho esperado.");
+    var dado;try{dado=JSON.parse(texto);}catch(e){throw erroCopiaNuvem("nuvem_integridade","A API R2 não retornou a resposta esperada.");}
+    if(!res.ok)throw erroRespostaR2(res.status,dado&&dado.error&&dado.error.code);
+    return dado;
+  });
+}
+function validarUrlAssinadaR2(c,res,metodo,nome,hash){
+  conferirOperacaoR2(c);var t=c.transporte,u,agora=Date.now();
+  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||res.expiresAt<=agora||res.expiresAt>agora+900000||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 é inválida ou expirou.");
+  try{u=new URL(res.url);}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização R2 contém um endereço inválido.");}
+  var caminho="/"+t.bucket+"/"+c.uid+"/sincronizacao/versoes/"+nome;
+  if(!caminhoVersaoCopia(c.uid+"/sincronizacao/versoes/"+nome,c.uid)||u.protocol!=="https:"||u.host!==t.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!==caminho)throw erroCopiaNuvem("nuvem_integridade","O endereço autorizado não corresponde ao destino e à conta esperados.");
+  var q=u.searchParams,permitidos=["X-Amz-Algorithm","X-Amz-Credential","X-Amz-Date","X-Amz-Expires","X-Amz-SignedHeaders","X-Amz-Signature"],vistos=new Set();
+  q.forEach(function(v,k){if(permitidos.indexOf(k)<0||vistos.has(k))throw erroCopiaNuvem("nuvem_integridade","A assinatura R2 contém parâmetros inesperados.");vistos.add(k);});
+  var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date"),cred=q.get("X-Amz-Credential")||"";
+  if(vistos.size!==6||q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||! /^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||! /^\d{8}T\d{6}Z$/.test(data||"")||! /^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||! /^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw erroCopiaNuvem("nuvem_integridade","A assinatura R2 não corresponde ao formato esperado.");
+  var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z"),fim=instante+(+exp)*1000;
+  if(!isFinite(instante)||fim<=agora||fim>agora+900000||Math.abs(fim-res.expiresAt)>1500||cred.split("/")[1]!==data.slice(0,8))throw erroCopiaNuvem("nuvem_integridade","A validade da assinatura R2 não pôde ser confirmada.");
+  var headers=Object.create(null),esperados=metodo==="PUT"?{"content-type":"application/json","if-none-match":"*","x-amz-meta-write-id":nome,"x-amz-meta-sha256":hash}:{};
+  if(metodo!=="PUT"&&metodo!=="GET")throw erroCopiaNuvem("nuvem_integridade","O método de transferência R2 é inválido.");
+  Object.keys(res.headers).forEach(function(k){var chave=k.toLowerCase(),v=res.headers[k];if(Object.prototype.hasOwnProperty.call(headers,chave)||!Object.prototype.hasOwnProperty.call(esperados,chave)||typeof v!=="string"||v!==esperados[chave])throw erroCopiaNuvem("nuvem_integridade","Os cabeçalhos da autorização R2 divergem do envio esperado.");headers[chave]=v;});
+  if(Object.keys(headers).length!==Object.keys(esperados).length)throw erroCopiaNuvem("nuvem_integridade","A autorização R2 está incompleta.");
+  var assinados=metodo==="PUT"?"content-length;content-type;host;if-none-match;x-amz-meta-sha256;x-amz-meta-write-id":"host";
+  if(q.get("X-Amz-SignedHeaders")!==assinados)throw erroCopiaNuvem("nuvem_integridade","A assinatura R2 não protege os cabeçalhos obrigatórios.");
+  return{url:u.href,headers:headers};
+}
+async function enviarArquivoCopiaNuvem(c,p,arquivo){
+  if(!c.transporte||c.transporte.provedor!=="r2")return esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").upload(p.caminho,arquivo,{upsert:false,cacheControl:"0",contentType:"application/json"}));
+  var nome=p.caminho.slice((c.uid+"/sincronizacao/versoes/").length),hash=await sha256Texto(p.texto);conferirOperacaoR2(c);
+  if(!hash)throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 não está disponível.");
+  var res=await chamarApiR2(c,"/v1/uploads",{name:nome,bytes:arquivo.size,sha256:hash}),aut=validarUrlAssinadaR2(c,res,"PUT",nome,hash);
+  return requisicaoR2(c,aut.url,{method:"PUT",headers:aut.headers,body:arquivo},900000,async function(r){if(!r.ok)throw erroRespostaR2(r.status);return{error:null};});
+}
+async function lerArquivoCopiaR2(c,caminho){
+  var nome=caminho.slice((c.uid+"/sincronizacao/versoes/").length);
+  if(!caminhoVersaoCopia(caminho,c.uid))throw erroCopiaNuvem("nuvem_caminho","O caminho R2 não pertence à conta atual.");
+  var res=await chamarApiR2(c,"/v1/downloads",{name:nome}),aut=validarUrlAssinadaR2(c,res,"GET",nome);
+  return requisicaoR2(c,aut.url,{method:"GET",headers:aut.headers},900000,async function(r){if(!r.ok)throw erroRespostaR2(r.status);return r.text();});
+}
+async function listarPaginaR2(c,cursor){
+  var r=await chamarApiR2(c,"/v1/versions/list",{cursor:cursor});
+  if(!r||!Array.isArray(r.versions)||r.versions.length>50||!(r.cursor===null||typeof r.cursor==="string"&&r.cursor.length>0&&r.cursor.length<=2048)||r.cursor!==null&&r.cursor===cursor)throw erroCopiaNuvem("nuvem_integridade","A página do histórico R2 não pôde ser confirmada.");
+  var vistos=new Set();r.versions.forEach(function(v){if(!v||!caminhoVersaoCopia(c.uid+"/sincronizacao/versoes/"+v.name,c.uid)||!Number.isSafeInteger(v.bytes)||v.bytes<=0||typeof v.uploaded!=="string"||!isFinite(Date.parse(v.uploaded))||vistos.has(v.name))throw erroCopiaNuvem("nuvem_integridade","O histórico R2 contém uma referência inválida.");vistos.add(v.name);});
+  return r;
+}
+async function listarCopiasR2ComLegado(c,alvo,botao){
+  var r2=conferirPaginaR2(),sb=conferirPaginaSupabase();
+  function conferirPaginaR2(){return COPIA_NUVEM.fimR2?Promise.resolve(null):listarPaginaR2(c,COPIA_NUVEM.cursorR2||null);}
+  function conferirPaginaSupabase(){return COPIA_NUVEM.fimSupabase?Promise.resolve(null):esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").list(c.uid+"/sincronizacao/versoes",{limit:50,offset:COPIA_NUVEM.offset,sortBy:{column:"name",order:"desc"}})).then(function(v){if(v.error)throw v.error;if(!Array.isArray(v.data))throw erroCopiaNuvem("nuvem_integridade","A lista Supabase está incompleta.");return v.data;});}
+  var resultados=await Promise.allSettled([r2,sb]);await confirmarContaCopia(c);conferirOperacaoR2(c);
+  var falhas=0,confirmadas=0;
+  resultados.forEach(function(r,i){if(r.status!=="fulfilled"){falhas++;return;}confirmadas++;if(r.value===null)return;
+    var origem=i===0?referenciaDestinoCopia(c):{provedor:"supabase",destino:c.cfg.url};
+    var itens=i===0?r.value.versions:r.value;
+    itens.forEach(function(v){var caminho=c.uid+"/sincronizacao/versoes/"+v.name;if(caminhoVersaoCopia(caminho,c.uid)&&!COPIA_NUVEM.lista.some(function(a){return a.caminho===caminho&&(a.provedor||"supabase")===origem.provedor&&a.destino===origem.destino;}))COPIA_NUVEM.lista.push(Object.assign({caminho:caminho,nome:v.name,data:i===0?v.uploaded:v.created_at||"",legado:false},origem));});
+    if(i===0){COPIA_NUVEM.cursorR2=r.value.cursor;COPIA_NUVEM.fimR2=r.value.cursor===null;}else{COPIA_NUVEM.offset+=itens.length;COPIA_NUVEM.fimSupabase=itens.length<50;}
+  });
+  if(!confirmadas)throw erroCopiaNuvem("nuvem_envio","Os históricos não puderam ser consultados.");
+  if(!COPIA_NUVEM.lista.some(function(v){return v.legado;}))COPIA_NUVEM.lista.push({provedor:"supabase",destino:c.cfg.url,caminho:c.uid+"/sincronizacao/atual.json",nome:"Cópia antiga Supabase (se disponível)",legado:true});
+  botao.classList.toggle("oculto",COPIA_NUVEM.fimR2&&COPIA_NUVEM.fimSupabase);renderCopiasNuvem();
+  alvo.textContent=falhas?"Parte do histórico não pôde ser confirmada. Use Mais cópias para tentar novamente; uma lista parcial não comprova ausência de backups.":"Selecione uma cópia para baixar e verificar. O download não altera os trabalhos locais.";return true;
+}
+function normalizarErroEnvioNuvem(original,tamanhoBytes){
+  /* O SDK admite statusCode simbólico e numérico, inclusive nas respostas
+     legadas. Textos remotos ajudam a reconhecer casos antigos, mas nunca são
+     reproduzidos na interface nem usados como códigos internos confiáveis. */
+  var e=original||{}, codigos=[e.code,e.statusCode,e.error].filter(function(v){return typeof v==="string";}).map(function(v){return v.slice(0,100).toLowerCase().replace(/[^a-z0-9]/g,"");});
+  var status=[e.status,e.statusCode,e.httpStatusCode].filter(function(v){return typeof v==="number"?Number.isInteger(v)&&v>=100&&v<=599:typeof v==="string"&&/^[1-5][0-9]{2}$/.test(v);}).map(Number);
+  var mensagem=typeof e.message==="string"?e.message.slice(0,512).toLowerCase():"";
+  function tem(lista){return codigos.some(function(v){return lista.indexOf(v)>=0;});}
+  var codigo="nuvem_envio", texto="O envio não foi confirmado. Confira a conexão e tente novamente; a verificação usará o mesmo arquivo.", permanente=false;
+  if(tem(["entitytoolarge","payloadtoolarge","requestentitytoolarge"])||status.indexOf(413)>=0||/maximum allowed size|payload too large|entity too large/.test(mensagem)){
+    codigo="nuvem_tamanho";permanente=true;
+    var tamanho=typeof tamanhoBytes==="number"&&isFinite(tamanhoBytes)&&tamanhoBytes>0?" ("+(tamanhoBytes<1000000?tamanhoBytes+" bytes":(tamanhoBytes/1000000).toFixed(1).replace(".",",")+" MB")+")":"";
+    texto="O arquivo de backup"+tamanho+" ultrapassa o limite de envio da nuvem. Baixe um backup local. É necessário ajustar o destino ou o formato antes de tentar novamente.";
+  }else if(tem(["invalidjwt","jwtexpired"])||/jwt (?:expired|is expired)/.test(mensagem)||(status.indexOf(401)>=0&&tem(["unauthorized"]))){
+    codigo="nuvem_sessao";permanente=true;texto="A sessão não foi aceita pela nuvem. Confira a conta e use Enviar cópia agora para validar a sessão novamente.";
+  }else if(tem(["accessdenied","unauthorized","invalidsignature","signaturedoesnotmatch"])||/new row violates row.level security policy/.test(mensagem)){
+    codigo="nuvem_permissao";permanente=true;texto="A nuvem recusou a permissão de envio. Confira a conta e as permissões do armazenamento antes de tentar novamente.";
+  }else if(tem(["nosuchbucket","tenantnotfound"])||/bucket not found|bucket does not exist/.test(mensagem)){
+    codigo="nuvem_destino";permanente=true;texto="O destino da cópia não foi encontrado ou está inacessível. Confira a configuração e as permissões da nuvem.";
+  }else if(tem(["invalidrequest","invalidbucketname","invalidkey","invalidmimetype","missingcontentlength","missingparameter","invalidchecksum"])){
+    codigo="nuvem_pedido";permanente=true;texto="A nuvem recusou o formato ou a configuração do envio. Preserve o backup local e confira a configuração antes de tentar novamente.";
+  }else if(tem(["internalerror","databasetimeout","databaseerror","resourcelocked","locktimeout","slowdown","toomanyrequests","alreadyexists","resourcealreadyexists","keyalreadyexists"])){
+    /* Conflitos e falhas transitórias ainda podem esconder um envio concluído. */
+  }else if(status.indexOf(401)>=0){
+    codigo="nuvem_sessao";permanente=true;texto="A sessão não foi aceita pela nuvem. Confira a conta e use Enviar cópia agora para validar a sessão novamente.";
+  }else if(status.indexOf(403)>=0){
+    codigo="nuvem_permissao";permanente=true;texto="A nuvem recusou a permissão de envio. Confira a conta e as permissões do armazenamento antes de tentar novamente.";
+  }else if(status.indexOf(404)>=0){
+    codigo="nuvem_destino";permanente=true;texto="O destino da cópia não foi encontrado ou está inacessível. Confira a configuração e as permissões da nuvem.";
+  }else if(status.indexOf(400)>=0||status.indexOf(411)>=0||status.indexOf(415)>=0||status.indexOf(422)>=0){
+    codigo="nuvem_pedido";permanente=true;texto="A nuvem recusou o formato ou a configuração do envio. Preserve o backup local e confira a configuração antes de tentar novamente.";
+  }else if(e.code==="nuvem_tempo"){
+    codigo="nuvem_tempo";texto="A nuvem demorou a responder. O envio pode ter concluído; a próxima tentativa verificará o mesmo arquivo.";
+  }
+  var falha=erroCopiaNuvem(codigo,texto);falha.permanente=permanente;falha.cause=original;
+  if(typeof tamanhoBytes==="number"&&isFinite(tamanhoBytes)&&tamanhoBytes>=0)falha.tamanhoBytes=tamanhoBytes;
+  return falha;
+}
+function bloqueioCopiaNuvemAtivo(){
+  var b=COPIA_NUVEM.bloqueio;if(!b||b.uid!==CONTA_NUVEM.uid||b.geracao!==CONTA_NUVEM.geracao)return false;
+  if(b.assinaturaDestino){try{return b.assinaturaDestino===assinaturaDestinoCopia();}catch(e){return false;}}return true;
+}
+function registrarFalhaCopiaNuvem(mensagem){
+  var alvo=el("falhaCopiaNuvem");if(alvo){alvo.textContent=mensagem;alvo.classList.remove("oculto");}
+}
+function limparFalhaCopiaNuvem(){
+  var alvo=el("falhaCopiaNuvem");if(alvo){alvo.textContent="";alvo.classList.add("oculto");}
+}
 function esperarCopiaNuvem(promessa){
   return new Promise(function(resolve,reject){
     var t=setTimeout(function(){reject(erroCopiaNuvem("nuvem_tempo","A nuvem demorou a responder."));},60000);
@@ -6603,12 +6791,14 @@ function esperarCopiaNuvem(promessa){
 }
 async function contextoCopiaNuvem(exigirEnvio){
   var cfg=window.MesaNuvem;if(!cfg||!cfg.client)throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
+  var transporte=destinoCopiaConfigurado(),assinatura=assinaturaDestinoCopia();
   var geracao=CONTA_NUVEM.geracao,uidInicial=CONTA_NUVEM.uid,u=await consultarUsuarioNuvem();
   if(geracao!==CONTA_NUVEM.geracao)throw erroCopiaNuvem("nuvem_conta","A sessão mudou durante a operação. Tente novamente.");
   if(!u)throw erroCopiaNuvem("nuvem_conta","Conecte sua conta da nuvem.");
   if(u.id!==CONTA_NUVEM.uid){invalidarContaNuvem(u.id);if(uidInicial)throw erroCopiaNuvem("nuvem_conta","A conta mudou. Confira a conta antes de continuar.");}
   if(exigirEnvio&&(CONTA_NUVEM.pausada||!vinculoNuvemPermitido(u.id)))throw erroCopiaNuvem("nuvem_autorizacao","Autorize esta biblioteca na janela Minha conta antes de enviar trabalhos para esta conta.");
-  return {cfg:cfg,client:cfg.client,uid:u.id,geracao:CONTA_NUVEM.geracao,exigirEnvio:!!exigirEnvio};
+  var contexto={cfg:cfg,client:cfg.client,uid:u.id,geracao:CONTA_NUVEM.geracao,exigirEnvio:!!exigirEnvio,transporte:transporte,assinaturaDestino:assinatura};
+  conferirContextoConta(contexto);return contexto;
 }
 async function confirmarContaCopia(c){
   conferirContextoConta(c);
@@ -6643,10 +6833,14 @@ async function validarTextoCopiaNuvem(texto,estrito){
   if(estrito&&plano.avisos.length)throw erroCopiaNuvem("nuvem_integridade","A cópia contém referências a imagens ausentes. Preserve seus backups e confira as imagens.");
   v.plano=plano;return v;
 }
-async function lerTextoCopiaNuvem(c,caminho){
+async function lerTextoCopiaNuvem(c,caminho,origem){
   if(caminho!==c.uid+"/sincronizacao/atual.json"&&!caminhoVersaoCopia(caminho,c.uid))throw erroCopiaNuvem("nuvem_caminho","O caminho da cópia não pertence à conta atual.");
   await confirmarContaCopia(c);
   conferirContextoConta(c);
+  var leitura=contextoLeituraCopia(c,origem);
+  if(leitura.transporte&&leitura.transporte.provedor==="r2"){
+    var textoR2=await lerArquivoCopiaR2(leitura,caminho);await confirmarContaCopia(c);conferirOperacaoR2(leitura);return textoR2;
+  }
   var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").download(caminho));if(r.error)throw r.error;
   if(!r.data||typeof r.data.text!=="function")throw erroCopiaNuvem("nuvem_integridade","A nuvem não retornou o arquivo esperado.");
   var texto=await esperarCopiaNuvem(r.data.text());await confirmarContaCopia(c);conferirContextoConta(c);return texto;
@@ -6656,7 +6850,13 @@ function programarCopiaNuvem(atraso){
   temporizadorBackupNuvem=setTimeout(function(){temporizadorBackupNuvem=null;enviarBackupNuvemAutomatico();},atraso);
 }
 function agendarBackupNuvem(){
-  COPIA_NUVEM.revisao++;COPIA_NUVEM.tentativas=0;
+  COPIA_NUVEM.revisao++;
+  if(bloqueioCopiaNuvemAtivo()){
+    clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
+    var pausado=el("estadoNuvem");if(pausado)pausado.textContent="Cópia não confirmada · "+COPIA_NUVEM.bloqueio.mensagem+" Envios automáticos pausados; confira Backup.";
+    return;
+  }
+  COPIA_NUVEM.tentativas=0;
   if(!contaNuvemPronta) return;
   programarCopiaNuvem(120000);
 }
@@ -6666,16 +6866,17 @@ async function enviarBackupNuvemAutomatico(forcar){
   try{if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();}catch(e){var pend=el("estadoNuvem");if(pend)pend.textContent="Importação em recuperação · cópia adiada";return false;}
   if(backupNuvemEmCurso)return false;
   var alvo=el("estadoNuvem");
+  if(forcar!==true&&bloqueioCopiaNuvemAtivo())return false;
   if(!navigator.onLine){if(alvo)alvo.textContent="Sem internet · cópia pendente";return false;}
   if(!contaNuvemPronta&&forcar!==true)return false;
   clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
-  if(forcar===true){COPIA_NUVEM.tentativas=0;COPIA_NUVEM.pendente=null;}
+  if(forcar===true){COPIA_NUVEM.tentativas=0;COPIA_NUVEM.pendente=null;COPIA_NUVEM.bloqueio=null;limparFalhaCopiaNuvem();}
   backupNuvemEmCurso=true;
   var revisao=COPIA_NUVEM.revisao,geracaoEnvio=CONTA_NUVEM.geracao,adiar=false,falhou=false,confirmou=false;
   try{
     var c=await contextoCopiaNuvem(true),p=COPIA_NUVEM.pendente;
     conferirContextoConta(c);
-    if(p&&p.uid!==c.uid){COPIA_NUVEM.pendente=null;p=null;}
+    if(p&&(p.uid!==c.uid||!mesmoDestinoCopia(p,c))){COPIA_NUVEM.pendente=null;p=null;}
     if(p)revisao=p.revisao;
     if(!p){
       if(alvo)alvo.textContent="Preparando versão da nuvem…";
@@ -6685,18 +6886,18 @@ async function enviarBackupNuvemAutomatico(forcar){
       var resumo=await resumoCopiaNuvem(pacote),anterior=COPIA_NUVEM.ultima;
       conferirContextoConta(c);
       if(!anterior)try{anterior=lerMetaLocal("backup-nuvem-versao-v1");}catch(e){anterior=null;}
-      if(forcar!==true&&anterior&&anterior.uid===c.uid&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
+      if(forcar!==true&&anterior&&anterior.uid===c.uid&&mesmoDestinoCopia(anterior,c)&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
         var antiga=await validarTextoCopiaNuvem(await lerTextoCopiaNuvem(c,anterior.caminho),true);
         var resumoAnterior=await resumoCopiaNuvem(antiga.pacote);conferirContextoConta(c);
         if(resumoAnterior!==resumo)throw erroCopiaNuvem("nuvem_integridade","A cópia anterior não corresponde aos trabalhos locais. Use Enviar cópia agora para criar outra versão.");
         if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
         COPIA_NUVEM.ultima=anterior;COPIA_NUVEM.tentativas=0;
-        confirmou=true;
+        confirmou=true;limparFalhaCopiaNuvem();
         if(alvo)alvo.textContent="Cópia anterior verificada · sem novas alterações";return true;
       }
       var texto=await prepararBackup(pacote);await validarTextoCopiaNuvem(texto,true);
       conferirContextoConta(c);
-      p={uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false};
+      p=Object.assign({uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false},referenciaDestinoCopia(c));
       COPIA_NUVEM.pendente=p;
     }
     await confirmarContaCopia(c);
@@ -6704,11 +6905,24 @@ async function enviarBackupNuvemAutomatico(forcar){
     if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
     if(!p.enviada){
       if(alvo)alvo.textContent="Enviando nova versão da nuvem…";
-      var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").upload(p.caminho,new Blob([p.texto],{type:"application/json"}),{upsert:false,cacheControl:"0",contentType:"application/json"}));
+      var arquivoEnvio=new Blob([p.texto],{type:"application/json"}), falhaEnvio=null;
+      try{
+        var r=await enviarArquivoCopiaNuvem(c,p,arquivoEnvio);
+        if(r.error)falhaEnvio=r.error;
+      }catch(erroEnvio){falhaEnvio=erroEnvio;}
       conferirContextoConta(c);
-      if(r.error){
+      if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
+      if(falhaEnvio){
+        var causaEnvio=normalizarErroEnvioNuvem(falhaEnvio,arquivoEnvio.size);
+        if(causaEnvio.permanente)throw causaEnvio;
         /* Uma resposta perdida pode esconder um upload já concluído. Não troque o caminho. */
-        var existente=await lerTextoCopiaNuvem(c,p.caminho);
+        var existente;
+        try{existente=await lerTextoCopiaNuvem(c,p.caminho);}catch(erroReleitura){
+          conferirContextoConta(c);
+          if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
+          if(erroReleitura&&(erroReleitura.code==="nuvem_conta"||erroReleitura.pendente))throw erroReleitura;
+          causaEnvio.falhaReleitura=erroReleitura;throw causaEnvio;
+        }
         if(existente!==p.texto)throw erroCopiaNuvem("nuvem_integridade","O arquivo remoto não corresponde ao envio. Nenhuma cópia foi substituída.");
       }
       conferirContextoConta(c);p.enviada=true;
@@ -6720,27 +6934,34 @@ async function enviarBackupNuvemAutomatico(forcar){
     await validarTextoCopiaNuvem(relido,true);await confirmarContaCopia(c);
     conferirContextoConta(c);
     if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
-    var meta={uid:c.uid,resumo:p.resumo,caminho:p.caminho,em:Date.now()};
+    var meta=Object.assign({uid:c.uid,resumo:p.resumo,caminho:p.caminho,em:Date.now()},referenciaDestinoCopia(c));
     COPIA_NUVEM.ultima=meta;COPIA_NUVEM.pendente=null;COPIA_NUVEM.tentativas=0;
     gravarMetaLocal("backup-nuvem-versao-v1",meta);
-    confirmou=true;
+    confirmou=true;limparFalhaCopiaNuvem();
     if(alvo)alvo.textContent="Versão na nuvem verificada · "+horaCurta(meta.em);
     return true;
   }catch(e){
     if((c?c.geracao:geracaoEnvio)!==CONTA_NUVEM.geracao)return false;
+    if(e&&e.code==="nuvem_destino_alterado"||c&&!destinoCopiaVigente(c)){COPIA_NUVEM.pendente=null;if(alvo)alvo.textContent="O destino mudou. Atualize a conta e a lista antes de tentar novamente.";return false;}
     if(e&&e.code==="nuvem_conta"){if(alvo)alvo.textContent="Conta não confirmada · confira a sessão antes de tentar novamente";return false;}
     if(e&&e.pendente){COPIA_NUVEM.pendente=null;adiar=true;if(alvo)alvo.textContent="Importação em recuperação · cópia adiada";return false;}
     if(e&&e.code==="backup_ocupado"){adiar=true;if(alvo)alvo.textContent="Cópia adiada · operação local em andamento";return false;}
     falhou=true;COPIA_NUVEM.tentativas++;
     var leituraLocal=e&&/^(leitura_local|leitura_imagem|registro_imagem|desenho_ausente)$/.test(e.code||"");
     var detalhe=e&&(leituraLocal||/^(nuvem_|backup_)/.test(e.code||""))?e.message:"Confira conexão, conta, espaço e permissões do bucket mesa-arquivos.";
+    if(e&&e.permanente===true){
+      COPIA_NUVEM.pendente=null;
+      COPIA_NUVEM.bloqueio={uid:c.uid,geracao:c.geracao,mensagem:detalhe,assinaturaDestino:c.assinaturaDestino};
+    }
     if(alvo)alvo.textContent="Cópia não confirmada · "+(leituraLocal?"falha na leitura local: ":"")+detalhe;
+    registrarFalhaCopiaNuvem("Cópia não confirmada. "+detalhe+(bloqueioCopiaNuvemAtivo()?" Envios automáticos pausados. Após corrigir o problema, use Enviar cópia agora.":" As versões anteriores permanecem preservadas."));
     aviso("A nova cópia na nuvem não foi confirmada. As versões anteriores permanecem preservadas. Use Backup para tentar novamente.");return false;
   }finally{
     backupNuvemEmCurso=false;
-    if((c?c.geracao:geracaoEnvio)===CONTA_NUVEM.geracao){
+    if((c?c.geracao:geracaoEnvio)===CONTA_NUVEM.geracao&&(!c||destinoCopiaVigente(c))){
     if(confirmou&&COPIA_NUVEM.revisao!==revisao&&alvo)alvo.textContent="Versão verificada · novas alterações aguardando cópia";
-    if(contaNuvemPronta&&adiar)programarCopiaNuvem(120000);
+    if(bloqueioCopiaNuvemAtivo()){clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;if(alvo)alvo.textContent+=" Envios automáticos pausados; confira Backup.";}
+    else if(contaNuvemPronta&&adiar)programarCopiaNuvem(120000);
     else if(contaNuvemPronta&&falhou&&COPIA_NUVEM.tentativas<5)programarCopiaNuvem(Math.min(120000*Math.pow(2,COPIA_NUVEM.tentativas-1),900000));
     else if(falhou){clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;if(alvo)alvo.textContent+=" Tentativas automáticas pausadas; use Enviar cópia agora.";}
     else if(contaNuvemPronta&&COPIA_NUVEM.revisao!==revisao)programarCopiaNuvem(120000);
@@ -6758,16 +6979,17 @@ async function listarCopiasNuvem(mais){
     alvo.textContent="Consultando cópias da conta…";
     var c=await contextoCopiaNuvem();
     conferirContextoConta(c);
-    if(!mais||!COPIA_NUVEM.contextoLista||COPIA_NUVEM.contextoLista.uid!==c.uid||COPIA_NUVEM.contextoLista.client!==c.client||COPIA_NUVEM.contextoLista.cfg!==c.cfg){COPIA_NUVEM.lista=[];COPIA_NUVEM.offset=0;COPIA_NUVEM.contextoLista=c;}
+    if(!mais||!COPIA_NUVEM.contextoLista||COPIA_NUVEM.contextoLista.uid!==c.uid||COPIA_NUVEM.contextoLista.client!==c.client||COPIA_NUVEM.contextoLista.cfg!==c.cfg||COPIA_NUVEM.contextoLista.assinaturaDestino!==c.assinaturaDestino){COPIA_NUVEM.lista=[];COPIA_NUVEM.offset=0;COPIA_NUVEM.cursorR2=null;COPIA_NUVEM.fimR2=false;COPIA_NUVEM.fimSupabase=false;COPIA_NUVEM.contextoLista=c;}
+    if(c.transporte.provedor==="r2")return await listarCopiasR2ComLegado(c,alvo,botao);
     var r=await esperarCopiaNuvem(c.client.storage.from("mesa-arquivos").list(c.uid+"/sincronizacao/versoes",{limit:50,offset:COPIA_NUVEM.offset,sortBy:{column:"name",order:"desc"}}));if(r.error)throw r.error;
     if(!Array.isArray(r.data))throw erroCopiaNuvem("nuvem_integridade","A listagem da nuvem está incompleta.");
     await confirmarContaCopia(c);
     conferirContextoConta(c);
-    r.data.forEach(function(v){var caminho=c.uid+"/sincronizacao/versoes/"+v.name;if(caminhoVersaoCopia(caminho,c.uid)&&!COPIA_NUVEM.lista.some(function(a){return a.caminho===caminho;}))COPIA_NUVEM.lista.push({caminho:caminho,nome:v.name,data:v.created_at||"",legado:false});});
+    r.data.forEach(function(v){var caminho=c.uid+"/sincronizacao/versoes/"+v.name;if(caminhoVersaoCopia(caminho,c.uid)&&!COPIA_NUVEM.lista.some(function(a){return a.caminho===caminho;}))COPIA_NUVEM.lista.push({provedor:"supabase",destino:c.cfg.url,caminho:caminho,nome:v.name,data:v.created_at||"",legado:false});});
     COPIA_NUVEM.offset+=r.data.length;
     botao.classList.toggle("oculto",r.data.length<50);
     /* O arquivo usado pelas versões antigas permanece disponível, sem ser regravado. */
-    if(!COPIA_NUVEM.lista.some(function(v){return v.legado;}))COPIA_NUVEM.lista.push({caminho:c.uid+"/sincronizacao/atual.json",nome:"Cópia antiga (se disponível)",legado:true});
+    if(!COPIA_NUVEM.lista.some(function(v){return v.legado;}))COPIA_NUVEM.lista.push({provedor:"supabase",destino:c.cfg.url,caminho:c.uid+"/sincronizacao/atual.json",nome:"Cópia antiga (se disponível)",legado:true});
     renderCopiasNuvem();alvo.textContent="Selecione uma cópia para baixar e verificar. O download não altera os trabalhos locais.";return true;
   }catch(e){
     if((c?c.geracao:geracaoLista)!==CONTA_NUVEM.geracao)return false;
@@ -6779,7 +7001,7 @@ function renderCopiasNuvem(){
   var lista=el("listaCopiasNuvem");lista.replaceChildren();
   COPIA_NUVEM.lista.forEach(function(v,i){
     var linha=document.createElement("p"),texto=document.createElement("span"),bt=document.createElement("button");
-    texto.textContent=v.legado?v.nome:("Versão "+(v.data?dataNota(v.data,true):v.nome));
+    texto.textContent=v.legado?v.nome:((v.provedor==="r2"?"R2 · ":COPIA_NUVEM.contextoLista&&COPIA_NUVEM.contextoLista.transporte&&COPIA_NUVEM.contextoLista.transporte.provedor==="r2"?"Supabase · ":"")+"Versão "+(v.data?dataNota(v.data,true):v.nome));
     bt.type="button";bt.className="bt mini";bt.textContent="Baixar e verificar";
     bt.onclick=function(){return baixarCopiaNuvem(i);};linha.append(texto,document.createTextNode(" "),bt);lista.appendChild(linha);
   });
@@ -6791,7 +7013,7 @@ async function baixarCopiaNuvem(indice){
   try{
     if(!baixador)throw erroCopiaNuvem("nuvem_download","Download indisponível neste navegador.");
     alvo.textContent="Baixando e verificando a cópia…";
-    var texto=await lerTextoCopiaNuvem(c,item.caminho),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);
+    var texto=await lerTextoCopiaNuvem(c,item.caminho,item),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);
     conferirContextoConta(c);
     var p=ver.pacote,resumo=(p.obras||[]).length+" obra(s), "+(p.capitulos||[]).length+" capítulo(s), "+(p.notas||[]).length+" nota(s), "+(p.desenhos||[]).length+" desenho(s).";
     await baixador.save({filename:item.legado?"mesa-de-roteiro-copia-antiga.json":"mesa-de-roteiro-"+item.nome,data:texto});
@@ -9596,5 +9818,61 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 
+<script id="mesa-r2-ensaio">
+(() => {
+'use strict';
+const ORIGIN='https://mjosemiguel700-sketch.github.io';
+const API='https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev';
+const ACCOUNT='d90994b604856f19411d68d5fedfc888',BUCKET='mesa-roteiro-backups';
+const el=id=>document.getElementById('ensaioR2-'+id);
+const state={session:null,generation:0,busy:false,smallPassed:false,client:null,binding:null,subscription:null,controllers:new Set(),lastBackup:null,lastReport:null};
+const messages={offline:'Não foi possível completar a conexão. Confira a internet e tente novamente.',login:'Conecte sua conta pelo botão Conectar nuvem do aplicativo e depois volte a este ensaio.',expired:'A sessão deste teste terminou. Entre novamente.',config:'A API ainda não está pronta para testes. Avise no chat; não altere as chaves por tentativa.',denied:'Esta conta ou a credencial R2 não está autorizada. Avise no chat.',auth:'A API não confirmou sua conta. Entre novamente e tente outra vez.',limit:'Aguarde um minuto antes de repetir o teste.',size:'A proteção do tamanho não foi confirmada. O R2 deve permanecer desligado no site.',overwrite:'A proteção contra sobrescrita não foi confirmada. O R2 deve permanecer desligado no site.',integrity:'O conteúdo lido divergiu do teste. O R2 deve permanecer desligado no site.',listing:'Não foi possível confirmar esta versão no histórico. O teste não foi aprovado.',format:'O pacote fictício não passou pela validação.',sign:'A autorização temporária não passou pela conferência de segurança.',image:'Não foi possível gerar e decodificar a imagem de teste.',cancel:'Operação encerrada. Entre novamente para fazer outro teste.'};
+function ensaioR2_stop(code){const error=new Error(messages[code]||messages.offline);error.testCode=code;throw error;}
+function ensaioR2_status(text){el('status').textContent=text;}
+function ensaioR2_step(text){const li=document.createElement('li');li.textContent=text;el('steps').appendChild(li);}
+function ensaioR2_update(){const logged=!!state.session;el('signin').disabled=logged||state.busy;el('signout').disabled=!logged&&!state.busy;el('small').disabled=!logged||state.busy;el('large').disabled=!logged||state.busy||!state.smallPassed;el('backup').disabled=state.busy||!state.lastBackup;el('report').disabled=state.busy||!state.lastReport;}
+function ensaioR2_context(){if(!state.session||!state.binding)ensaioR2_stop('expired');const c={uid:state.session.uid,generation:state.generation,binding:state.binding,transporte:{accountId:ACCOUNT,bucket:BUCKET}};ensaioR2_conferirOperacaoR2(c);return c;}
+function ensaioR2_conferirOperacaoR2(c){if(!state.session||c.generation!==state.generation||c.uid!==state.session.uid||c.binding!==state.binding)ensaioR2_stop('cancel');try{conferirContextoConta(c.binding);}catch{ensaioR2_closeSession();ensaioR2_stop('cancel');}}
+function ensaioR2_erroCopiaNuvem(){const error=new Error(messages.sign);error.testCode='sign';return error;}
+function ensaioR2_caminhoVersaoCopia(path,uid){return typeof path==='string'&&path.startsWith(uid+'/sincronizacao/versoes/')&&/^\d{17}-[a-f0-9]{32}\.json$/.test(path.slice((uid+'/sincronizacao/versoes/').length));}
+function ensaioR2_validarUrlAssinadaR2(c,res,metodo,nome,hash){
+  ensaioR2_conferirOperacaoR2(c);var t=c.transporte,u,agora=Date.now();
+  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||res.expiresAt<=agora||res.expiresAt>agora+900000||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 é inválida ou expirou.");
+  try{u=new URL(res.url);}catch(e){throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A autorização R2 contém um endereço inválido.");}
+  var caminho="/"+t.bucket+"/"+c.uid+"/sincronizacao/versoes/"+nome;
+  if(!ensaioR2_caminhoVersaoCopia(c.uid+"/sincronizacao/versoes/"+nome,c.uid)||u.protocol!=="https:"||u.host!==t.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!==caminho)throw ensaioR2_erroCopiaNuvem("nuvem_integridade","O endereço autorizado não corresponde ao destino e à conta esperados.");
+  var q=u.searchParams,permitidos=["X-Amz-Algorithm","X-Amz-Credential","X-Amz-Date","X-Amz-Expires","X-Amz-SignedHeaders","X-Amz-Signature"],vistos=new Set();
+  q.forEach(function(v,k){if(permitidos.indexOf(k)<0||vistos.has(k))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A assinatura R2 contém parâmetros inesperados.");vistos.add(k);});
+  var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date"),cred=q.get("X-Amz-Credential")||"";
+  if(vistos.size!==6||q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||! /^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||! /^\d{8}T\d{6}Z$/.test(data||"")||! /^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||! /^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A assinatura R2 não corresponde ao formato esperado.");
+  var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z"),fim=instante+(+exp)*1000;
+  if(!isFinite(instante)||fim<=agora||fim>agora+900000||Math.abs(fim-res.expiresAt)>1500||cred.split("/")[1]!==data.slice(0,8))throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A validade da assinatura R2 não pôde ser confirmada.");
+  var headers=Object.create(null),esperados=metodo==="PUT"?{"content-type":"application/json","if-none-match":"*","x-amz-meta-write-id":nome,"x-amz-meta-sha256":hash}:{};
+  if(metodo!=="PUT"&&metodo!=="GET")throw ensaioR2_erroCopiaNuvem("nuvem_integridade","O método de transferência R2 é inválido.");
+  Object.keys(res.headers).forEach(function(k){var chave=k.toLowerCase(),v=res.headers[k];if(Object.prototype.hasOwnProperty.call(headers,chave)||!Object.prototype.hasOwnProperty.call(esperados,chave)||typeof v!=="string"||v!==esperados[chave])throw ensaioR2_erroCopiaNuvem("nuvem_integridade","Os cabeçalhos da autorização R2 divergem do envio esperado.");headers[chave]=v;});
+  if(Object.keys(headers).length!==Object.keys(esperados).length)throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A autorização R2 está incompleta.");
+  var assinados=metodo==="PUT"?"content-length;content-type;host;if-none-match;x-amz-meta-sha256;x-amz-meta-write-id":"host";
+  if(q.get("X-Amz-SignedHeaders")!==assinados)throw ensaioR2_erroCopiaNuvem("nuvem_integridade","A assinatura R2 não protege os cabeçalhos obrigatórios.");
+  return{url:u.href,headers:headers};
+}
+const responses=new WeakMap();
+function ensaioR2_finishResponse(response){responses.get(response)?.();responses.delete(response);}
+async function ensaioR2_discard(response){try{await response.body?.cancel();}finally{ensaioR2_finishResponse(response);}}
+async function ensaioR2_request(url,options,timeout=30000){const ctrl=new AbortController();state.controllers.add(ctrl);let done=false;const close=()=>{if(done)return;done=true;clearTimeout(timer);state.controllers.delete(ctrl);};const timer=setTimeout(()=>{ctrl.abort();close();},timeout);try{const response=await fetch(url,{...options,signal:ctrl.signal,credentials:'omit',redirect:'error',cache:'no-store',referrerPolicy:'no-referrer'});responses.set(response,close);return response;}catch{close();ensaioR2_stop('offline');}}
+async function ensaioR2_readText(response,max){if(!response.body)ensaioR2_stop('offline');const reader=response.body.getReader(),chunks=[];let size=0;try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>max){await reader.cancel();ensaioR2_stop('integrity');}chunks.push(part.value);}const out=new Uint8Array(size);let pos=0;for(const chunk of chunks){out.set(chunk,pos);pos+=chunk.byteLength;}return new TextDecoder('utf-8',{fatal:true}).decode(out);}catch(error){if(error.testCode)throw error;ensaioR2_stop('offline');}finally{reader.releaseLock();ensaioR2_finishResponse(response);}}
+async function ensaioR2_api(c,route,body){ensaioR2_conferirOperacaoR2(c);if(!['/v1/uploads','/v1/downloads','/v1/versions/list'].includes(route))ensaioR2_stop('sign');const current=await c.binding.client.auth.getSession();ensaioR2_conferirOperacaoR2(c);const session=current?.data?.session;if(current?.error||!session||session.user?.id!==c.uid||typeof session.access_token!=='string'||!session.access_token||/[\r\n]/.test(session.access_token))ensaioR2_stop('auth');const response=await ensaioR2_request(API+route,{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});const text=await ensaioR2_readText(response,131072);ensaioR2_conferirOperacaoR2(c);let value;try{value=JSON.parse(text);}catch{ensaioR2_stop('offline');}return{response,value};}
+function ensaioR2_requireOK(result){if(result.response.ok)return result.value;const code=result.value?.error?.code;if(code==='not_configured')ensaioR2_stop('config');if(code==='auth_required'||code==='auth_unavailable')ensaioR2_stop('auth');if(code==='user_not_allowed')ensaioR2_stop('denied');if(code==='rate_limited')ensaioR2_stop('limit');ensaioR2_stop('offline');}
+async function ensaioR2_sha(text){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function ensaioR2_versionName(){return new Date().toISOString().replace(/[-:.TZ]/g,'')+'-'+crypto.randomUUID().replace(/-/g,'')+'.json';}
+async function ensaioR2_makeFixture(large=false){const suffix=crypto.randomUUID().replace(/-/g,''),id='teste_r2_'+suffix,now=Date.now();const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d');if(!ctx)ensaioR2_stop('image');ctx.fillStyle='#f0dba5';ctx.fillRect(0,0,64,64);ctx.fillStyle='#264e79';ctx.fillRect(8,8,48,48);ctx.fillStyle='#ffffff';ctx.fillRect(25,18,14,28);const png=canvas.toDataURL('image/png');const image=new Image();image.src=png;try{await image.decode();}catch{ensaioR2_stop('image');}if(image.naturalWidth!==64||image.naturalHeight!==64)ensaioR2_stop('image');const meta={id:id+'_imagem',nome:'Imagem fictícia R2.png',tipo:'image/png',tamanho:Math.floor((png.split(',')[1]||'').length*3/4),criadoEm:now};const panel=id+'_painel',layer=id+'_camada';const noteText='Nota fictícia com imagem. Texto com acentos: mangá, São Paulo, balão 🖌️.';const packet={versao:3,formato:'mesa-de-roteiro-backup',criadoEm:now,obras:[{id,dados:{titulo:'TESTE R2 — obra fictícia',personagens:['Personagem de teste'],criadoEm:now}}],capitulos:[{id:id+'_capitulo',dados:{obraId:id,titulo:'Capítulo fictício',numero:1,status:'rascunho',paginas:[{id:id+'_pagina',layoutPag:'livre',paineis:[{id:panel,tamanho:'quadrado',acao:'Desenho fictício para conferir a recuperação.',personagens:[],falas:[{id:id+'_fala',quem:'Personagem de teste',tipo:'fala',texto:'Balão fictício do teste R2.'}],temDesenho:true}]}]}}],notas:[{id:id+'_nota',dados:{obraId:id,titulo:'Nota fictícia R2',texto:noteText,tipo:'referencia',tags:['teste-r2'],imagens:[meta],imagensDados:[{meta,src:png}]}}],desenhos:[{id:panel,rec:{v:1,w:64,h:64,ativa:layer,baloes:[],camadas:[{id:layer,nome:'Camada fictícia',vis:true,op:100,modo:'normal',blob:png,originalBlob:null}]}}]};if(large)packet.testeTransporte={tipo:"somente-transporte",dados:"T".repeat(60*1024*1024)};const compact=JSON.stringify(packet);packet.integridade={algoritmo:'SHA-256',conteudo:await ensaioR2_sha(compact),tamanho:compact.length};const text=JSON.stringify(packet,null,2);return {text,png};}
+async function ensaioR2_validateFixture(text){let p;try{p=JSON.parse(text);}catch{ensaioR2_stop('format');}const integrity=p.integridade,copy={};for(const key of Object.keys(p))if(key!=='integridade')copy[key]=p[key];if(!integrity||integrity.algoritmo!=='SHA-256'||await ensaioR2_sha(JSON.stringify(copy))!==integrity.conteudo)ensaioR2_stop('integrity');if(p.versao!==3||p.formato!=='mesa-de-roteiro-backup'||p.obras.length!==1||p.capitulos.length!==1||p.notas.length!==1||p.desenhos.length!==1||Object.hasOwn(p,'desenhosLivres')||Object.hasOwn(p,'preferenciasLocal'))ensaioR2_stop('format');return p;}
+async function ensaioR2_run(large){const c=ensaioR2_context();state.busy=true;if(!large)state.lastBackup=null;state.lastReport=null;el('steps').replaceChildren();ensaioR2_status('Preparando dados fictícios…');ensaioR2_update();const started=Date.now(),report={versao:1,tipo:'ensaio-r2-dados-ficticios',criadoEm:new Date().toISOString(),grande:large,escopo:large?'somente-transporte-grande':'transporte-e-pacote-pequeno',restauracaoNoAplicativoValidada:false,aprovado:false,checks:[]};try{const fixture=await ensaioR2_makeFixture(large);ensaioR2_conferirOperacaoR2(c);await ensaioR2_validateFixture(fixture.text);ensaioR2_conferirOperacaoR2(c);const body=new Blob([fixture.text],{type:'application/json'}),digest=await ensaioR2_sha(fixture.text),name=ensaioR2_versionName();ensaioR2_conferirOperacaoR2(c);report.bytes=body.size;report.sha256=digest;el('image').src=fixture.png;el('image').hidden=false;ensaioR2_step('Pacote fictício com texto, imagem, desenho e integridade preparado.');ensaioR2_status('Conferindo a proteção de tamanho…');let authorization=ensaioR2_requireOK(await ensaioR2_api(c,'/v1/uploads',{name,bytes:body.size,sha256:digest}));ensaioR2_conferirOperacaoR2(c);let upload=ensaioR2_validarUrlAssinadaR2(c,authorization,'PUT',name,digest);const wrong=new Blob([body,'X'],{type:'application/json'});let response=await ensaioR2_request(upload.url,{method:'PUT',headers:upload.headers,body:wrong},900000);ensaioR2_conferirOperacaoR2(c);if(response.ok||![400,403].includes(response.status))ensaioR2_stop('size');report.checks.push({nome:'tamanho-divergente-recusado',status:response.status});await ensaioR2_discard(response);ensaioR2_conferirOperacaoR2(c);const missing=await ensaioR2_api(c,'/v1/downloads',{name});ensaioR2_conferirOperacaoR2(c);if(missing.response.status!==404||missing.value?.error?.code!=='version_missing')ensaioR2_stop('size');report.checks.push({nome:'arquivo-ausente-apos-recusa',status:404});ensaioR2_step('Tamanho incorreto recusado; nenhuma versão foi criada por essa tentativa.');ensaioR2_status('Enviando o arquivo fictício correto…');response=await ensaioR2_request(upload.url,{method:'PUT',headers:upload.headers,body},900000);ensaioR2_conferirOperacaoR2(c);if(!response.ok){if(response.status===401||response.status===403)ensaioR2_stop('denied');ensaioR2_stop('offline');}report.checks.push({nome:'envio-correto',status:response.status});await ensaioR2_discard(response);ensaioR2_conferirOperacaoR2(c);ensaioR2_step('Arquivo fictício enviado ao bucket privado.');ensaioR2_status('Conferindo a proteção contra sobrescrita…');response=await ensaioR2_request(upload.url,{method:'PUT',headers:upload.headers,body},900000);ensaioR2_conferirOperacaoR2(c);if(![409,412].includes(response.status))ensaioR2_stop('overwrite');report.checks.push({nome:'sobrescrita-recusada',status:response.status});await ensaioR2_discard(response);ensaioR2_conferirOperacaoR2(c);ensaioR2_step('Repetição no mesmo nome recusada.');ensaioR2_status('Conferindo o histórico…');let cursor=null,found=false;const seen=new Set();for(let page=0;page<20;page++){const result=ensaioR2_requireOK(await ensaioR2_api(c,'/v1/versions/list',{cursor}));ensaioR2_conferirOperacaoR2(c);if(!Array.isArray(result.versions)||result.versions.length>50||!(result.cursor===null||typeof result.cursor==='string'))ensaioR2_stop('listing');const version=result.versions.find(v=>v.name===name);if(version){if(version.bytes!==body.size)ensaioR2_stop('integrity');found=true;break;}if(result.cursor===null)break;if(!result.cursor||seen.has(result.cursor))ensaioR2_stop('listing');seen.add(result.cursor);cursor=result.cursor;}if(!found)ensaioR2_stop('listing');report.checks.push({nome:'versao-localizada',confirmado:true});ensaioR2_step('Esta versão fictícia foi localizada no histórico da conta.');ensaioR2_status('Baixando e comparando o conteúdo…');authorization=ensaioR2_requireOK(await ensaioR2_api(c,'/v1/downloads',{name}));ensaioR2_conferirOperacaoR2(c);const download=ensaioR2_validarUrlAssinadaR2(c,authorization,'GET',name);response=await ensaioR2_request(download.url,{method:'GET',headers:download.headers},900000);ensaioR2_conferirOperacaoR2(c);if(!response.ok)ensaioR2_stop('offline');const returned=await ensaioR2_readText(response,body.size+1024);ensaioR2_conferirOperacaoR2(c);const returnedDigest=await ensaioR2_sha(returned);ensaioR2_conferirOperacaoR2(c);if(returned!==fixture.text||returnedDigest!==digest)ensaioR2_stop('integrity');await ensaioR2_validateFixture(returned);ensaioR2_conferirOperacaoR2(c);report.checks.push({nome:'releitura-e-sha256',confirmado:true});if(!large)state.lastBackup=new Blob([returned],{type:'application/json'});report.aprovado=true;if(!large)state.smallPassed=true;ensaioR2_step('O conteúdo completo e os dois hashes foram confirmados.');ensaioR2_status(large?'Transferência de 60 MB aprovada. Esse ensaio não valida a restauração de imagens grandes. Baixe o resultado.':'Teste pequeno aprovado. Você pode baixar o resultado e depois executar o teste de 60 MB.');}catch(error){if(c.generation!==state.generation)return;report.erro=error.testCode||'offline';ensaioR2_status(messages[report.erro]||messages.offline);}finally{if(c.generation===state.generation){report.duracaoMs=Date.now()-started;state.lastReport=report;state.busy=false;ensaioR2_update();}}}
+function ensaioR2_save(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.rel='noopener';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function ensaioR2_closeSession(){state.generation++;for(const ctrl of state.controllers)ctrl.abort();state.controllers.clear();const sub=state.subscription;state.subscription=null;if(sub){try{sub.unsubscribe();}catch{}}state.session=null;state.binding=null;state.client=null;state.busy=false;state.smallPassed=false;state.lastBackup=null;state.lastReport=null;el('image').removeAttribute('src');el('image').hidden=true;ensaioR2_update();ensaioR2_status('Ensaio encerrado.');}
+el('signin').addEventListener('click',async()=>{if(state.busy||state.session)return;state.busy=true;ensaioR2_update();ensaioR2_status('Conferindo a conta conectada…');const generation=state.generation;try{if(location.origin!==ORIGIN||location.protocol!=='https:'||!crypto.subtle)ensaioR2_stop('config');const binding=await contextoCopiaNuvem(false);if(generation!==state.generation)return;const current=await binding.client.auth.getSession();if(generation!==state.generation)return;conferirContextoConta(binding);const session=current?.data?.session;if(current?.error||!session||session.user?.id!==binding.uid||typeof session.access_token!=='string'||!session.access_token||/[\r\n]/.test(session.access_token)||!/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i.test(binding.uid))ensaioR2_stop('login');state.binding=binding;state.client=binding.client;state.session={uid:binding.uid};if(binding.client.auth.onAuthStateChange){const watched=binding.client.auth.onAuthStateChange((event,next)=>{if(state.binding!==binding)return;if(event==='SIGNED_OUT'||event==='PASSWORD_RECOVERY'||next?.user?.id!==binding.uid)ensaioR2_closeSession();});const sub=watched?.data?.subscription||null;if(generation!==state.generation||state.binding!==binding){try{sub?.unsubscribe();}catch{}return;}state.subscription=sub;}ensaioR2_status('Conta confirmada para o ensaio. Execute o teste pequeno.');}catch(error){if(generation===state.generation)ensaioR2_status(error.code==='nuvem_conta'?messages.login:messages[error.testCode]||messages.login);}finally{if(generation===state.generation){state.busy=false;ensaioR2_update();}}});
+async function ensaioR2_launch(large){try{await ensaioR2_run(large);}catch(error){state.busy=false;ensaioR2_update();ensaioR2_status(messages[error.testCode]||messages.offline);}}
+el('small').addEventListener('click',()=>{if(!state.busy&&state.session)void ensaioR2_launch(false);});el('large').addEventListener('click',()=>{if(!state.busy&&state.session&&state.smallPassed)void ensaioR2_launch(true);});el('signout').addEventListener('click',ensaioR2_closeSession);el('backup').addEventListener('click',()=>{if(state.lastBackup&&!state.busy)ensaioR2_save(state.lastBackup,'mesa-backup-ficticio-r2.json');});el('report').addEventListener('click',()=>{if(state.lastReport&&!state.busy)ensaioR2_save(new Blob([JSON.stringify(state.lastReport,null,2)],{type:'application/json'}),'resultado-teste-r2.json');});addEventListener('pagehide',ensaioR2_closeSession);document.getElementById('dlgBackup').addEventListener('close',ensaioR2_closeSession);document.getElementById('ensaioR2-box').addEventListener('toggle',()=>{if(!document.getElementById('ensaioR2-box').open)ensaioR2_closeSession();});if(location.origin!==ORIGIN){ensaioR2_status('Publique este index.html no seu GitHub Pages para executar o ensaio com a conta conectada.');el('signin').disabled=true;}
+})();
+</script>
 </body>
 </html>

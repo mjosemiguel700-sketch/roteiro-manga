@@ -1,4 +1,4 @@
-const CACHE = "mesa-de-roteiro-local-v24-editor-celular";
+const CACHE = "mesa-de-roteiro-local-v27-r2-integrado";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -25,6 +25,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  if (event.request.cache === "no-store" || event.request.headers.has("Authorization")) return;
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
