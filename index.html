@@ -6610,7 +6610,7 @@ async function enviarContaNuvem(criar){
 }
 var temporizadorBackupNuvem=null, backupNuvemEmCurso=false;
 var COPIA_NUVEM={revisao:0,tentativas:0,pendente:null,ultima:null,lista:[],contextoLista:null,offset:0,cursorR2:null,fimR2:false,fimSupabase:false,consultando:false,baixando:false,bloqueio:null};
-function erroCopiaNuvem(codigo,mensagem){var e=new Error(mensagem);e.code=codigo;return e;}
+function erroCopiaNuvem(codigo,mensagem){var e=new Error(mensagem);e.code=codigo;e.__mesaLocal=true;return e;}
 /* Transporte opcional apenas para o JSON completo. Nenhuma URL assinada é
    persistida: a identidade usa projeto/API, conta e bucket públicos fixos. */
 function destinoCopiaConfigurado(){
@@ -6680,7 +6680,7 @@ async function chamarApiR2(c,rota,corpo){
 }
 function validarUrlAssinadaR2(c,res,metodo,nome,hash){
   conferirOperacaoR2(c);var t=c.transporte,u,agora=Date.now();
-  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||res.expiresAt<=agora||res.expiresAt>agora+900000||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 é inválida ou expirou.");
+  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 veio incompleta.");
   try{u=new URL(res.url);}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização R2 contém um endereço inválido.");}
   var caminho="/"+t.bucket+"/"+c.uid+"/sincronizacao/versoes/"+nome;
   if(!caminhoVersaoCopia(c.uid+"/sincronizacao/versoes/"+nome,c.uid)||u.protocol!=="https:"||u.host!==t.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!==caminho)throw erroCopiaNuvem("nuvem_integridade","O endereço autorizado não corresponde ao destino e à conta esperados.");
@@ -6689,7 +6689,9 @@ function validarUrlAssinadaR2(c,res,metodo,nome,hash){
   var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date"),cred=q.get("X-Amz-Credential")||"";
   if(vistos.size!==6||q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||! /^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||! /^\d{8}T\d{6}Z$/.test(data||"")||! /^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||! /^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw erroCopiaNuvem("nuvem_integridade","A assinatura R2 não corresponde ao formato esperado.");
   var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z"),fim=instante+(+exp)*1000;
-  if(!isFinite(instante)||fim<=agora||fim>agora+900000||Math.abs(fim-res.expiresAt)>1500||cred.split("/")[1]!==data.slice(0,8))throw erroCopiaNuvem("nuvem_integridade","A validade da assinatura R2 não pôde ser confirmada.");
+  if(!Number.isFinite(instante)||!Number.isSafeInteger(fim)||Math.abs(fim-res.expiresAt)>5000||cred.split("/")[1]!==data.slice(0,8))throw erroCopiaNuvem("nuvem_integridade","O prazo informado pelo Worker não confere com a assinatura R2.");
+  if(fim<=agora)throw erroCopiaNuvem("nuvem_integridade","A autorização R2 expirou ou o relógio do dispositivo está adiantado. Confira a data e hora automáticas.");
+  if(instante>agora+120000)throw erroCopiaNuvem("nuvem_integridade","O relógio do dispositivo parece atrasado mais de 2 minutos. Ative a data e hora automáticas.");
   var headers=Object.create(null),esperados=metodo==="PUT"?{"content-type":"application/json","if-none-match":"*","x-amz-meta-write-id":nome,"x-amz-meta-sha256":hash}:{};
   if(metodo!=="PUT"&&metodo!=="GET")throw erroCopiaNuvem("nuvem_integridade","O método de transferência R2 é inválido.");
   Object.keys(res.headers).forEach(function(k){var chave=k.toLowerCase(),v=res.headers[k];if(Object.prototype.hasOwnProperty.call(headers,chave)||!Object.prototype.hasOwnProperty.call(esperados,chave)||typeof v!=="string"||v!==esperados[chave])throw erroCopiaNuvem("nuvem_integridade","Os cabeçalhos da autorização R2 divergem do envio esperado.");headers[chave]=v;});
@@ -6703,7 +6705,10 @@ async function enviarArquivoCopiaNuvem(c,p,arquivo){
   var nome=p.caminho.slice((c.uid+"/sincronizacao/versoes/").length),hash=await sha256Texto(p.texto);conferirOperacaoR2(c);
   if(!hash)throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 não está disponível.");
   var res=await chamarApiR2(c,"/v1/uploads",{name:nome,bytes:arquivo.size,sha256:hash}),aut=validarUrlAssinadaR2(c,res,"PUT",nome,hash);
-  return requisicaoR2(c,aut.url,{method:"PUT",headers:aut.headers,body:arquivo},900000,async function(r){if(!r.ok)throw erroRespostaR2(r.status);return{error:null};});
+  return requisicaoR2(c,aut.url,{method:"PUT",headers:aut.headers,body:arquivo},900000,async function(r){if(!r.ok)throw erroRespostaR2(r.status);return{error:null};}).catch(function(e){
+    if(e&&e.name==="TypeError")throw erroCopiaNuvem("nuvem_rede","O navegador não conseguiu enviar o arquivo ao R2. Confira a política CORS do bucket mesa-roteiro-backups e a conexão.");
+    throw e;
+  });
 }
 async function lerArquivoCopiaR2(c,caminho){
   var nome=caminho.slice((c.uid+"/sincronizacao/versoes/").length);
@@ -6738,6 +6743,7 @@ function normalizarErroEnvioNuvem(original,tamanhoBytes){
   /* O SDK admite statusCode simbólico e numérico, inclusive nas respostas
      legadas. Textos remotos ajudam a reconhecer casos antigos, mas nunca são
      reproduzidos na interface nem usados como códigos internos confiáveis. */
+  if(original&&original.__mesaLocal===true&&/^(nuvem_integridade|nuvem_configuracao|nuvem_caminho|nuvem_rede)$/.test(original.code||""))return original;
   var e=original||{}, codigos=[e.code,e.statusCode,e.error].filter(function(v){return typeof v==="string";}).map(function(v){return v.slice(0,100).toLowerCase().replace(/[^a-z0-9]/g,"");});
   var status=[e.status,e.statusCode,e.httpStatusCode].filter(function(v){return typeof v==="number"?Number.isInteger(v)&&v>=100&&v<=599:typeof v==="string"&&/^[1-5][0-9]{2}$/.test(v);}).map(Number);
   var mensagem=typeof e.message==="string"?e.message.slice(0,512).toLowerCase():"";
