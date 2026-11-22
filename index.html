@@ -6798,7 +6798,7 @@ function backupNuvemTemConteudo(p){
 /* MIDIA-NUVEM-INICIO */
 /* Mídia na nuvem (R2) por conteúdo. Desligada por padrão: só age com ativa:true e api configurada.
    Cópia na nuvem = backup v4 com referências (sha256). Download da cópia = arquivo v3 autocontido. */
-var MIDIA_NUVEM={ativa:false,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-midia"};
+var MIDIA_NUVEM={ativa:true,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-midia"};
 var MIDIA_LIMITE_BYTES=50*1024*1024, MIDIA_TIMEOUT_MS=30000, MIDIA_EXPIRA_MS=900000;
 var MIDIA_TIPOS=["image/png","image/jpeg","image/webp","image/gif","application/octet-stream"];
 var MIDIA_RE_SHA=/^[a-f0-9]{64}$/;
