@@ -850,7 +850,7 @@ async function enviarBackupNuvemAutomatico(forcar){
       var pacote=await criarBackup();
       conferirContextoConta(c);
       if(!backupNuvemTemConteudo(pacote)){if(alvo)alvo.textContent="Nenhum trabalho local · cópias anteriores preservadas";return false;}
-      var formaResumo=usarMidiaNuvem(c)?(await formaNuvemComMidia(pacote,c)).pacote:pacote;var resumo=await resumoCopiaNuvem(formaResumo),anterior=COPIA_NUVEM.ultima;
+      var forma=usarMidiaNuvem(c)?await formaNuvemComMidia(pacote,c):{pacote:pacote,pendentes:[]};var resumo=await resumoCopiaNuvem(forma.pacote),anterior=COPIA_NUVEM.ultima;
       conferirContextoConta(c);
       if(!anterior)try{anterior=lerMetaLocal("backup-nuvem-versao-v1");}catch(e){anterior=null;}
       if(forcar!==true&&anterior&&anterior.uid===c.uid&&mesmoDestinoCopia(anterior,c)&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
@@ -862,7 +862,7 @@ async function enviarBackupNuvemAutomatico(forcar){
         confirmou=true;limparFalhaCopiaNuvem();
         if(alvo)alvo.textContent="Cópia anterior verificada · sem novas alterações";return true;
       }
-      var forma=usarMidiaNuvem(c)?await formaNuvemComMidia(pacote,c):{pacote:pacote,pendentes:[]};for(var pi=0;pi<forma.pendentes.length;pi++){await midiaEnviar(c,forma.pendentes[pi]);conferirContextoConta(c);}var texto=await prepararBackup(forma.pacote);await validarTextoCopiaNuvem(texto,true);
+      for(var pi=0;pi<forma.pendentes.length;pi++){await midiaEnviar(c,forma.pendentes[pi]);conferirContextoConta(c);}var texto=await prepararBackup(forma.pacote);await validarTextoCopiaNuvem(texto,true);
       conferirContextoConta(c);
       p=Object.assign({uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false},referenciaDestinoCopia(c));
       COPIA_NUVEM.pendente=p;
