@@ -1,7 +1,8 @@
-const CACHE = "mesa-de-roteiro-local-v27-r2-integrado";
+const CACHE = "mesa-de-roteiro-local-v28-css-externo";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./styles/app.css",
   "./manifest.webmanifest",
   "./icon-192-192-1.png",
   "./icon-512.png"
