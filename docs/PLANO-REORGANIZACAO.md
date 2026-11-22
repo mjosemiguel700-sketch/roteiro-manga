@@ -46,11 +46,11 @@
 
 Extrair **um bloco por vez**, preservando os scripts clássicos e sua ordem até remover dependências globais com segurança:
 
-- [ ] `js/armazenamento-local.js`: adaptadores locais, controle de falhas e recuperação.
-- [ ] `js/config-nuvem.js`: configuração pública (sem segredos).
+- [x] `js/armazenamento-local.js`: bloco de armazenamento local extraído literalmente, sem alterar seu conteúdo.
+- [x] `js/config-nuvem.js`: bloco de configuração pública extraído literalmente, sem alterar seu conteúdo.
 - [ ] `js/editor-desenho.js`: implementação do editor e `window.EditorDesenho`.
 - [ ] `js/app.js`: obras, capítulos, páginas, notas, interface e inicialização.
-- [ ] Manter o SDK Supabase carregado antes dos trechos que dependem dele.
+- [x] Manter o SDK Supabase carregado antes dos trechos que dependem dele. Ordem original preservada.
 - [ ] Atualizar app shell/caches do service worker a cada extração e validar abertura offline.
 
 **Critério de saída:** mesmos recursos e mesma ordem de execução; sem erros de JavaScript no console.
@@ -113,3 +113,12 @@ Executar a **Etapa 0**, depois fazer **apenas a extração do CSS** em um commit
 - O antigo `style.css` foi mantido intocado para evitar perda de estilos; ainda não é utilizado pelo HTML.
 - **Pendente:** testes de navegador, comparação visual, reabertura offline, atualização de PWA e regressão das telas principais. Não fazer merge na `main` até isso ser confirmado.
 - **Observação:** a Etapa 0 (backup dos dados reais no dispositivo do usuário e linha de base visual) ainda depende de validação no ambiente do usuário; essa tarefa não deve ser marcada como concluída.
+
+## Registro de execução — continuação da Etapa 2 (22/11/2026)
+
+- Criados `js/armazenamento-local.js` (~24,6 mil caracteres) e `js/config-nuvem.js` (~480 caracteres), contendo **literalmente** os respectivos blocos JavaScript anteriormente embutidos no HTML.
+- `index.html` passou a referenciar esses dois arquivos por `<script src="..."></script>`; a ordem de scripts foi preservada: armazenamento local, biblioteca Supabase externa, configuração da nuvem, editor de desenho e aplicação.
+- Verificou-se que recolocar exatamente os dois blocos originais no HTML reconstruiria o arquivo anterior sem diferenças.
+- `sw.js` agora inclui os dois scripts no cache offline; versão do cache: `mesa-de-roteiro-local-v29-js-inicial`.
+- Permanecem no HTML os grandes blocos do editor e da aplicação para extração futura **após avaliação de risco**, e o registro simples do service worker.
+- **Pendentes:** validação de sintaxe JavaScript no ambiente de execução, teste em navegador, equivalência de interface, cache offline, autenticação Supabase, backups/restauração e sincronização real. Não realizar merge em `main` antes dos testes.
