@@ -1769,9 +1769,14 @@ function salvarAgora(){
     if(ok!==true)throw new Error("Gravação do desenho não confirmada.");
     if(S!==s)return false;
     if((s.revisao||0)!==revisao||interacaoDesenho(s)){s.sujo=true;atualizarEstadoSalvarDesenho(s,"não salvo");return true;}
-    var previa=s.tocou?miniatura(s):null;
+    // O desenho ja foi gravado: uma falha na miniatura nao invalida o salvamento.
+    var previa=null;
+    if(s.tocou){
+      try{previa=miniatura(s);}
+      catch(e){console.warn("Desenho salvo, mas a miniatura nao foi gerada.",e);}
+    }
     camadas.forEach(function(L,i){L.blob=rec.camadas[i].blob;L.sujo=false;});
-    if(s.tocou){s.painel.miniatura=previa;s.painel.temDesenho=true;}
+    if(s.tocou){if(previa)s.painel.miniatura=previa;s.painel.temDesenho=true;}
     if(s.opts.aoMudar)s.opts.aoMudar();
     // O callback pode iniciar outra edição: só a revisão confirmada fica limpa.
     s.sujo=(s.revisao||0)!==revisao;if(!s.sujo)s.erroSalvar=false;
