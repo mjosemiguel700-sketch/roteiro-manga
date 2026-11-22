@@ -2771,6 +2771,8 @@ document.addEventListener("keydown",function(ev){
 });
 
 /* ========== editor de desenho de um painel (tela 3) ========== */
+/* Impede que uma composição antiga abra a página errada após outra seleção. */
+var pedidoEditorPagina=0;
 function listaPlana(){
   var out=[];
   doc.paginas.forEach(function(pg,ip){
@@ -2783,6 +2785,7 @@ function abrirEditorDesenho(pid){
   var lista=listaPlana(), k=-1;
   lista.forEach(function(x,j){ if(x.pn.id===pid) k=j; });
   if(k<0) return;
+  pedidoEditorPagina++;
   selPainel=pid; pgAtual=lista[k].ip;
   var x=lista[k], ant=lista[k-1], prox=lista[k+1];
   window.EditorDesenho.abrir({
@@ -2805,7 +2808,8 @@ function abrirEditorCapitulo(indice){
   if(!doc||!window.EditorDesenho) return;
   var ip=typeof indice==="number"?indice:pgAtual;
   if(ip<0||ip>=doc.paginas.length) return;
-  var pg=doc.paginas[ip]; pgAtual=ip; selPainel=null;
+  var pg=doc.paginas[ip], documentoAbertura=doc, pedidoAbertura=++pedidoEditorPagina;
+  pgAtual=ip; selPainel=null;
   var qtdPaineis=(pg.paineis||[]).length;
   var layoutAtual=pg.layoutPag||(qtdPaineis<=6?"U6":"GR"+(qtdPaineis+(qtdPaineis%2)));
   var arvoreAtual=arvoreDoLayout(layoutAtual);
@@ -2819,7 +2823,7 @@ function abrirEditorCapitulo(indice){
   alternarLateral(false); aviso("Montando a página…");
   /* A base é a página já diagramada. Ela aparece bloqueada; todo traço novo entra nas camadas acima. */
   compPagina(pg,1143,true).then(function(base){
-    if(!doc||doc.paginas[ip]!==pg) return;
+    if(pedidoAbertura!==pedidoEditorPagina||doc!==documentoAbertura||pgAtual!==ip||doc.paginas[ip]!==pg) return;
     window.EditorDesenho.abrir({
       painel:painelInteiroDaPagina(pg),
       titulo:"Capítulo "+(doc.numero||1)+" · Página "+(ip+1)+" · sobreposição",
@@ -2884,7 +2888,11 @@ function abrirEditorCapitulo(indice){
       aoMudar:function(){ marcarSujo(); },
       aoFechar:function(){ var st=tela.scrollTop; desenhar(); tela.scrollTop=st; }
     });
-  }).catch(function(err){ console.error("montar página:",err); aviso("Não foi possível abrir esta página no editor."); });
+  }).catch(function(err){
+    if(pedidoAbertura!==pedidoEditorPagina||doc!==documentoAbertura)return;
+    console.error("montar página:",err);
+    aviso("Não foi possível abrir esta página no editor.");
+  });
 }
 /* ========== modo de leitura: a história inteira, sem ferramentas ========== */
 function limitarZoomLeitura(valor){var n=Number(valor);return Math.max(50,Math.min(250,isFinite(n)?n:100));}
