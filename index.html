@@ -5550,7 +5550,20 @@ function exportar(){
   x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height);
   fundoEm(x); camadasEm(x,false); desenharBorda(x); desenharBaloes(x,S.baloes,Math.max(S.dim.w,S.dim.h));
   if(f) x.restore();
-  c.toBlob(function(b){ baixar(b,(S&&S.opts.arquivo||"painel")+".png"); },"image/png");
+  var nomeArquivo=(S&&S.opts.arquivo||"painel")+".png";
+  var avisoExportacao=S&&S.opts&&S.opts.aviso;
+  try{
+    c.toBlob(function(b){
+      if(!b||!b.size){
+        if(avisoExportacao)avisoExportacao("Não foi possível gerar o PNG. Tente novamente ou diminua as dimensões do desenho.");
+        return;
+      }
+      try{baixar(b,nomeArquivo);}
+      catch(e){if(avisoExportacao)avisoExportacao("Não foi possível baixar o PNG. Verifique as permissões de download do navegador.");}
+    },"image/png");
+  }catch(e){
+    if(avisoExportacao)avisoExportacao("Não foi possível gerar o PNG. Tente novamente.");
+  }
 }
 
 function atualizarPaginaNoEditor(res,b,limpar,limparPainel){
