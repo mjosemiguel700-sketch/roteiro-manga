@@ -1,6 +1,6 @@
 # Plano de reorganização gradual — Mesa de Roteiro
 
-**Status:** Etapa 1 (extração do CSS) aplicada na branch de desenvolvimento; validação funcional visual/offline ainda pendente.
+**Status:** Etapas 1 e 2 (extração de CSS e dos blocos JavaScript) aplicadas na branch de desenvolvimento; validação funcional visual/offline ainda pendente.
 **Branch de trabalho:** `desenvolvimento/organizacao-codigo`
 **Referência inicial da `main`:** `7a7ab476877bd64c86aba5e1b6f67f0d02b84725` (22/11/2026).
 **Objetivo:** tornar o código mais fácil de manter sem alterar funcionalidades, aparência, dados persistidos ou o site publicado.
@@ -48,8 +48,8 @@ Extrair **um bloco por vez**, preservando os scripts clássicos e sua ordem até
 
 - [x] `js/armazenamento-local.js`: bloco de armazenamento local extraído literalmente, sem alterar seu conteúdo.
 - [x] `js/config-nuvem.js`: bloco de configuração pública extraído literalmente, sem alterar seu conteúdo.
-- [ ] `js/editor-desenho.js`: implementação do editor e `window.EditorDesenho`.
-- [ ] `js/app.js`: obras, capítulos, páginas, notas, interface e inicialização.
+- [x] `js/editor-desenho.js`: implementação do editor e `window.EditorDesenho` extraídos literalmente, sem alterar o código.
+- [x] `js/app.js`: obras, capítulos, páginas, notas, interface e inicialização extraídos literalmente, sem alterar o código.
 - [x] Manter o SDK Supabase carregado antes dos trechos que dependem dele. Ordem original preservada.
 - [ ] Atualizar app shell/caches do service worker a cada extração e validar abertura offline.
 
@@ -122,3 +122,12 @@ Executar a **Etapa 0**, depois fazer **apenas a extração do CSS** em um commit
 - `sw.js` agora inclui os dois scripts no cache offline; versão do cache: `mesa-de-roteiro-local-v29-js-inicial`.
 - Permanecem no HTML os grandes blocos do editor e da aplicação para extração futura **após avaliação de risco**, e o registro simples do service worker.
 - **Pendentes:** validação de sintaxe JavaScript no ambiente de execução, teste em navegador, equivalência de interface, cache offline, autenticação Supabase, backups/restauração e sincronização real. Não realizar merge em `main` antes dos testes.
+
+## Registro de execução — extração do editor e da aplicação (22/11/2026)
+
+- Criado `js/editor-desenho.js` a partir do bloco JavaScript original do editor (316.508 caracteres), sem modificar o seu conteúdo.
+- Criado `js/app.js` a partir do bloco JavaScript principal (272.058 caracteres), sem modificar o seu conteúdo.
+- Substituídos os respectivos `<script> ... </script>` por referências externas em `index.html`, mantendo a mesma ordem de execução dos scripts clássicos.
+- `sw.js` atualizado para a versão `mesa-de-roteiro-local-v30-js-separado` e os novos arquivos foram acrescentados ao app shell.
+- Pendente: testes de interface, cache/offline, autenticação, edição e salvamento/restauração no navegador. Alterações na `main` **não** autorizadas.
+- Próxima ação: validar o comportamento da versão de desenvolvimento com dados fictícios antes de avançar para divisão interna de módulos.
