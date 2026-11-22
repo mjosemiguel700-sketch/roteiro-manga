@@ -1,4 +1,4 @@
-const CACHE = "mesa-de-roteiro-local-v27-r2-integrado";
+const CACHE = "mesa-de-roteiro-local-v28-cache-isolado";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -18,7 +18,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("mesa-de-roteiro-local-") && key !== CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
