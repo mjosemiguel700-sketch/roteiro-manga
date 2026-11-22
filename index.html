@@ -5318,10 +5318,11 @@ function importarImagem(arquivo){
   if(!S||!arquivo) return;
   if(!/^image\//i.test(arquivo.type||"")){ aviso("Escolha um arquivo de imagem (JPG, PNG, WebP ou outro formato aceito pelo navegador)."); return; }
   if(arquivo.size>25*1024*1024){ aviso("Essa imagem tem mais de 25 MB. Reduza o tamanho do arquivo antes de importar."); return; }
+  var sessaoImportacao=S;
   var url=URL.createObjectURL(arquivo), img=new Image();
   img.onload=function(){
     URL.revokeObjectURL(url);
-    if(!S) return;
+    if(S!==sessaoImportacao) return;
     try{
       commitFlut(); fecharEdicaoBal();
       var maxW=Math.round(S.dim.w*0.82), maxH=Math.round(S.dim.h*0.82);
@@ -5333,7 +5334,11 @@ function importarImagem(arquivo){
       /* A base dos efeitos deve ser ImageData, não um elemento canvas. */
       L._baseEfeitos=L.cx.getImageData(0,0,S.dim.w,S.dim.h);
       /* Guarda uma cópia original para restaurar mesmo depois de filtros e ao reabrir o projeto. */
-      L.cv.toBlob(function(blob){ if(blob){ L.originalBlob=blob; agendarSalvar(); } },"image/png");
+      L.cv.toBlob(function(blob){
+        if(!blob||S!==sessaoImportacao||porId(L.id)!==L)return;
+        L.originalBlob=blob;
+        agendarSalvar();
+      },"image/png");
       var desenho=criarCamada("Desenho sobre: "+nome); desenho.tipo="desenho"; desenho.sobreImagemId=L.id;
       var posInsercao=S.camadas.indexOf(camadaAtiva()); if(posInsercao<0) posInsercao=S.camadas.length-1;
       S.camadas.splice(posInsercao+1,0,L,desenho); S.ativa=desenho.id; S.sel={x:Math.round((S.dim.w-w)/2),y:Math.round((S.dim.h-h)/2),w:w,h:h};
@@ -5343,7 +5348,7 @@ function importarImagem(arquivo){
       aviso("Imagem importada em uma camada própria, com uma camada de desenho separada por cima. Use Referências ou Camadas para editar cada parte.");
     }catch(e){ aviso("Não foi possível importar essa imagem. Tente uma imagem menor ou em JPG/PNG."); }
   };
-  img.onerror=function(){ URL.revokeObjectURL(url); aviso("Não foi possível abrir essa imagem. Tente JPG, PNG ou WebP."); };
+  img.onerror=function(){ URL.revokeObjectURL(url); if(S===sessaoImportacao)aviso("Não foi possível abrir essa imagem. Tente JPG, PNG ou WebP."); };
   img.src=url;
 }
 function retirarImagemAtiva(){
