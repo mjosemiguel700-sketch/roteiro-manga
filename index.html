@@ -6846,7 +6846,7 @@ async function midiaToken(c){
 /* Confere a autorização antes de usar: host, bucket, prefixo do uid, validade e cabeçalhos exatos. */
 function midiaValidarAutorizacao(a,c,metodo,sha,tipo){
   var agora=Date.now(),falha=function(m){return erroCopiaNuvem("nuvem_integridade",m);};
-  if(!a||typeof a!=="object"||typeof a.url!=="string"||!Number.isSafeInteger(a.expiresAt)||a.expiresAt<=agora||a.expiresAt>agora+MIDIA_EXPIRA_MS+1000||!a.headers||typeof a.headers!=="object")throw falha("A autorização da mídia é inválida ou expirou.");
+  if(!a||typeof a!=="object"||typeof a.url!=="string"||!Number.isSafeInteger(a.expiresAt)||!a.headers||typeof a.headers!=="object"||Array.isArray(a.headers))throw falha("A autorização da mídia veio incompleta do Worker.");
   var u;try{u=new URL(a.url);}catch(e){throw falha("A autorização da mídia contém um endereço inválido.");}
   if(u.protocol!=="https:"||u.host!==MIDIA_NUVEM.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!=="/"+MIDIA_NUVEM.bucket+"/"+c.uid+"/midia/"+sha)throw falha("O endereço autorizado não corresponde ao destino da mídia.");
   var q=u.searchParams,nomes=[];q.forEach(function(v,k){nomes.push(k);});
@@ -6854,6 +6854,13 @@ function midiaValidarAutorizacao(a,c,metodo,sha,tipo){
   if(nomes.length!==6||nomes.some(function(k){return permitidos.indexOf(k)<0;}))throw falha("A assinatura da mídia contém parâmetros inesperados.");
   var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date")||"",cred=q.get("X-Amz-Credential")||"";
   if(q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||!/^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||!/^\d{8}T\d{6}Z$/.test(data)||!/^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||!/^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw falha("A assinatura da mídia não corresponde ao formato esperado.");
+  // A data assinada pelo R2 e a validade informada devem concordar.
+  // O relógio do Windows pode diferir alguns segundos do relógio do Worker.
+  var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z");
+  var fimAssinado=instante+Number(exp)*1000;
+  if(!Number.isFinite(instante)||!Number.isSafeInteger(fimAssinado)||Math.abs(fimAssinado-a.expiresAt)>5000)throw falha("O prazo da autorização da mídia não confere com a assinatura R2.");
+  if(a.expiresAt<=agora)throw falha("A autorização da mídia venceu ou o relógio do dispositivo está adiantado. Confira a data e hora automáticas.");
+  if(instante>agora+120000)throw falha("O relógio do dispositivo parece atrasado mais de 2 minutos. Ative a data e hora automáticas.");
   var esperados=metodo==="PUT"?{"content-type":tipo,"if-none-match":"*","x-amz-meta-sha256":sha}:{};
   if(metodo==="PUT"&&(q.get("X-Amz-SignedHeaders")||"").indexOf("if-none-match")<0)throw falha("A assinatura da mídia não protege a regra de criação única.");
   var chaves=Object.keys(a.headers),ok=chaves.length===Object.keys(esperados).length&&chaves.every(function(k){return Object.prototype.hasOwnProperty.call(esperados,k.toLowerCase())&&a.headers[k]===esperados[k.toLowerCase()];});
