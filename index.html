@@ -6821,8 +6821,8 @@ function backupNuvemTemConteudo(p){
 /* MIDIA-NUVEM-INICIO */
 /* Mídia na nuvem (R2) por conteúdo. Desligada por padrão: só age com ativa:true e api configurada.
    Cópia na nuvem = backup v4 com referências (sha256). Download da cópia = arquivo v3 autocontido. */
-var MIDIA_NUVEM={ativa:true,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-backups"};
-var MIDIA_LIMITE_BYTES=50*1024*1024, MIDIA_TIMEOUT_MS=30000, MIDIA_EXPIRA_MS=900000;
+var MIDIA_NUVEM={ativa:true,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-midia"};
+var MIDIA_LIMITE_BYTES=25*1024*1024, MIDIA_TIMEOUT_MS=30000, MIDIA_EXPIRA_MS=900000;
 var MIDIA_TIPOS=["image/png","image/jpeg","image/webp","image/gif","application/octet-stream"];
 var MIDIA_RE_SHA=/^[a-f0-9]{64}$/;
 function midiaHex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(x){return x.toString(16).padStart(2,"0");}).join("");}
@@ -6864,7 +6864,15 @@ async function midiaPedirAutorizacao(c,rota,corpo){
   var token=await midiaToken(c);
   var r=await midiaFetch(MIDIA_NUVEM.api+rota,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify(corpo)});
   if(r.status===401)throw erroCopiaNuvem("nuvem_conta","A sessão expirou. Entre novamente para usar a mídia na nuvem.");
-  if(!r.ok)throw erroCopiaNuvem("nuvem_envio","A nuvem de mídia recusou o pedido. Nenhuma cópia foi confirmada.");
+  if(!r.ok){
+    var status=r.status;
+    if(status===403)throw erroCopiaNuvem("nuvem_permissao","O Worker de mídia recusou o acesso (HTTP 403). Confira a origem permitida e as permissões do Worker.");
+    if(status===404)throw erroCopiaNuvem("nuvem_configuracao","A rota de mídia não foi encontrada (HTTP 404). Confira a versão publicada do Worker.");
+    if(status===413)throw erroCopiaNuvem("nuvem_tamanho","A nuvem recusou o tamanho da imagem (HTTP 413). O Worker aceita até 25 MB por imagem.");
+    if(status===415)throw erroCopiaNuvem("nuvem_formato","O Worker recusou o formato da imagem (HTTP 415). Confira o tipo do arquivo.");
+    if(status>=500)throw erroCopiaNuvem("nuvem_envio","O Worker de mídia falhou (HTTP "+status+"). Confira o deploy, as variáveis e os segredos no Cloudflare.");
+    throw erroCopiaNuvem("nuvem_envio","A nuvem de mídia recusou o pedido (HTTP "+status+"). Confira o Worker antes de tentar novamente.");
+  }
   try{return await r.json();}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização da mídia veio em formato inválido.");}
 }
 /* Envia um blob pelo endereço pré-assinado. 412 = o mesmo conteúdo (mesmo hash) já existe: é sucesso. */
@@ -6893,7 +6901,7 @@ async function formaNuvemComMidia(pacote,c){
     if(valor==null)return null;
     var blob=typeof valor==="string"?window.EditorDesenho.dataParaBlob(valor):valor;
     if(!(blob instanceof Blob))throw erroCopiaNuvem("nuvem_integridade","Uma imagem do backup está em formato inválido. Use um backup local.");
-    if(blob.size<1||blob.size>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_tamanho","Uma imagem passa do limite de 50 MB para a nuvem. Use Baixar backup local.");
+    if(blob.size<1||blob.size>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_tamanho","Uma imagem passa do limite de 25 MB do Worker de mídia. Use Baixar backup local.");
     var sha=await midiaShaBytes(await blob.arrayBuffer()),tipo=midiaTipo(blob);
     if(!catalogo[sha]){catalogo[sha]={sha256:sha,tamanho:blob.size,tipo:tipo};pendentes.push({sha256:sha,tamanho:blob.size,tipo:tipo,blob:blob});}
     return {sha256:sha,tamanho:blob.size,tipo:tipo};
