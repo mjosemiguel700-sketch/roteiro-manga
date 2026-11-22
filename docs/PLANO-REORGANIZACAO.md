@@ -1,6 +1,6 @@
 # Plano de reorganização gradual — Mesa de Roteiro
 
-**Status:** planejamento; nenhuma etapa de refatoração foi executada.
+**Status:** Etapa 1 (extração do CSS) aplicada na branch de desenvolvimento; validação funcional visual/offline ainda pendente.
 **Branch de trabalho:** `desenvolvimento/organizacao-codigo`
 **Referência inicial da `main`:** `7a7ab476877bd64c86aba5e1b6f67f0d02b84725` (22/11/2026).
 **Objetivo:** tornar o código mais fácil de manter sem alterar funcionalidades, aparência, dados persistidos ou o site publicado.
@@ -34,10 +34,10 @@
 
 ## Etapa 1 — Extrair CSS com equivalência visual
 
-- [ ] Comparar o `<style>` do `index.html` com o `style.css` que já existe.
-- [ ] Escolher o CSS realmente usado como fonte de verdade; não substituir por um arquivo antigo sem conferência.
-- [ ] Mover CSS usado para `styles/app.css` (ou consolidar em `style.css`, após verificar equivalência).
-- [ ] Atualizar a referência do HTML e a lista de arquivos offline do `sw.js`; incrementar versão do cache.
+- [x] Comparar o `<style>` do `index.html` com o `style.css` que já existe. Resultado: diferentes; CSS inline foi mantido literalmente.
+- [x] Escolher o CSS realmente usado como fonte de verdade; não substituir por um arquivo antigo sem conferência.
+- [x] Mover CSS usado para `styles/app.css` (ou consolidar em `style.css`, após verificar equivalência).
+- [x] Atualizar a referência do HTML e a lista de arquivos offline do `sw.js`; incrementar versão do cache.
 - [ ] Validar desktop, celular, tema claro/escuro, editor e visualização offline.
 
 **Critério de saída:** interface equivalente antes/depois; estilos carregam online e offline.
@@ -104,3 +104,12 @@ A estrutura poderá ser refinada com o mapeamento das dependências. A ordem das
 Executar a **Etapa 0**, depois fazer **apenas a extração do CSS** em um commit separado e conferir equivalência visual e cache offline antes de mexer no JavaScript.
 
 > Este documento é apenas um plano de trabalho. A presença da branch não altera o site publicado, e os arquivos funcionais ainda não foram reorganizados.
+
+## Registro de execução — 22/11/2026
+
+- Criado `styles/app.css` com **os mesmos 89.157 caracteres** do bloco `<style>` que estava em `index.html`.
+- Substituído o bloco por `<link rel="stylesheet" href="./styles/app.css">`, sem modificar o restante do HTML. A transformação foi comparada com o original e é reversível.
+- Atualizado o `sw.js` para incluir `./styles/app.css` no cache offline, com nova versão `mesa-de-roteiro-local-v28-css-externo`.
+- O antigo `style.css` foi mantido intocado para evitar perda de estilos; ainda não é utilizado pelo HTML.
+- **Pendente:** testes de navegador, comparação visual, reabertura offline, atualização de PWA e regressão das telas principais. Não fazer merge na `main` até isso ser confirmado.
+- **Observação:** a Etapa 0 (backup dos dados reais no dispositivo do usuário e linha de base visual) ainda depende de validação no ambiente do usuário; essa tarefa não deve ser marcada como concluída.
