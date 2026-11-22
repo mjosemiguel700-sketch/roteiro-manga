@@ -1,10 +1,12 @@
-const CACHE = "mesa-de-roteiro-local-v29-js-inicial";
+const CACHE = "mesa-de-roteiro-local-v30-js-separado";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles/app.css",
   "./js/armazenamento-local.js",
   "./js/config-nuvem.js",
+  "./js/editor-desenho.js",
+  "./js/app.js",
   "./manifest.webmanifest",
   "./icon-192-192-1.png",
   "./icon-512.png"
