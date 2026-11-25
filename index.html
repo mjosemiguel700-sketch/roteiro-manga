@@ -1497,7 +1497,7 @@ window.MesaNuvem={
   url:"https://qtydeqbrouoclyczplhx.supabase.co",
   publishableKey:"sb_publishable_nTbFjJ4kfbBeB2v34qIbKQ_R6luHnge",
   client:null,
-  r2:{ativo:true,url:"https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-backups"}
+  r2:{ativo:false,url:"",accountId:"",bucket:""}
 };
 </script>
 <script>
@@ -3271,14 +3271,9 @@ function salvarAgora(){
     if(ok!==true)throw new Error("Gravação do desenho não confirmada.");
     if(S!==s)return false;
     if((s.revisao||0)!==revisao||interacaoDesenho(s)){s.sujo=true;atualizarEstadoSalvarDesenho(s,"não salvo");return true;}
-    // O desenho ja foi gravado: uma falha na miniatura nao invalida o salvamento.
-    var previa=null;
-    if(s.tocou){
-      try{previa=miniatura(s);}
-      catch(e){console.warn("Desenho salvo, mas a miniatura nao foi gerada.",e);}
-    }
+    var previa=s.tocou?miniatura(s):null;
     camadas.forEach(function(L,i){L.blob=rec.camadas[i].blob;L.sujo=false;});
-    if(s.tocou){if(previa)s.painel.miniatura=previa;s.painel.temDesenho=true;}
+    if(s.tocou){s.painel.miniatura=previa;s.painel.temDesenho=true;}
     if(s.opts.aoMudar)s.opts.aoMudar();
     // O callback pode iniciar outra edição: só a revisão confirmada fica limpa.
     s.sujo=(s.revisao||0)!==revisao;if(!s.sujo)s.erroSalvar=false;
@@ -5323,11 +5318,10 @@ function importarImagem(arquivo){
   if(!S||!arquivo) return;
   if(!/^image\//i.test(arquivo.type||"")){ aviso("Escolha um arquivo de imagem (JPG, PNG, WebP ou outro formato aceito pelo navegador)."); return; }
   if(arquivo.size>25*1024*1024){ aviso("Essa imagem tem mais de 25 MB. Reduza o tamanho do arquivo antes de importar."); return; }
-  var sessaoImportacao=S;
   var url=URL.createObjectURL(arquivo), img=new Image();
   img.onload=function(){
     URL.revokeObjectURL(url);
-    if(S!==sessaoImportacao) return;
+    if(!S) return;
     try{
       commitFlut(); fecharEdicaoBal();
       var maxW=Math.round(S.dim.w*0.82), maxH=Math.round(S.dim.h*0.82);
@@ -5339,11 +5333,7 @@ function importarImagem(arquivo){
       /* A base dos efeitos deve ser ImageData, não um elemento canvas. */
       L._baseEfeitos=L.cx.getImageData(0,0,S.dim.w,S.dim.h);
       /* Guarda uma cópia original para restaurar mesmo depois de filtros e ao reabrir o projeto. */
-      L.cv.toBlob(function(blob){
-        if(!blob||S!==sessaoImportacao||porId(L.id)!==L)return;
-        L.originalBlob=blob;
-        agendarSalvar();
-      },"image/png");
+      L.cv.toBlob(function(blob){ if(blob){ L.originalBlob=blob; agendarSalvar(); } },"image/png");
       var desenho=criarCamada("Desenho sobre: "+nome); desenho.tipo="desenho"; desenho.sobreImagemId=L.id;
       var posInsercao=S.camadas.indexOf(camadaAtiva()); if(posInsercao<0) posInsercao=S.camadas.length-1;
       S.camadas.splice(posInsercao+1,0,L,desenho); S.ativa=desenho.id; S.sel={x:Math.round((S.dim.w-w)/2),y:Math.round((S.dim.h-h)/2),w:w,h:h};
@@ -5353,7 +5343,7 @@ function importarImagem(arquivo){
       aviso("Imagem importada em uma camada própria, com uma camada de desenho separada por cima. Use Referências ou Camadas para editar cada parte.");
     }catch(e){ aviso("Não foi possível importar essa imagem. Tente uma imagem menor ou em JPG/PNG."); }
   };
-  img.onerror=function(){ URL.revokeObjectURL(url); if(S===sessaoImportacao)aviso("Não foi possível abrir essa imagem. Tente JPG, PNG ou WebP."); };
+  img.onerror=function(){ URL.revokeObjectURL(url); aviso("Não foi possível abrir essa imagem. Tente JPG, PNG ou WebP."); };
   img.src=url;
 }
 function retirarImagemAtiva(){
@@ -5560,20 +5550,7 @@ function exportar(){
   x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height);
   fundoEm(x); camadasEm(x,false); desenharBorda(x); desenharBaloes(x,S.baloes,Math.max(S.dim.w,S.dim.h));
   if(f) x.restore();
-  var nomeArquivo=(S&&S.opts.arquivo||"painel")+".png";
-  var avisoExportacao=S&&S.opts&&S.opts.aviso;
-  try{
-    c.toBlob(function(b){
-      if(!b||!b.size){
-        if(avisoExportacao)avisoExportacao("Não foi possível gerar o PNG. Tente novamente ou diminua as dimensões do desenho.");
-        return;
-      }
-      try{baixar(b,nomeArquivo);}
-      catch(e){if(avisoExportacao)avisoExportacao("Não foi possível baixar o PNG. Verifique as permissões de download do navegador.");}
-    },"image/png");
-  }catch(e){
-    if(avisoExportacao)avisoExportacao("Não foi possível gerar o PNG. Tente novamente.");
-  }
+  c.toBlob(function(b){ baixar(b,(S&&S.opts.arquivo||"painel")+".png"); },"image/png");
 }
 
 function atualizarPaginaNoEditor(res,b,limpar,limparPainel){
@@ -6467,10 +6444,12 @@ function salvarCacheOffline(fonteConfirmada){
 function atualizarEstadoBackup(){
   var alvo=el("estadoBackup");if(!alvo)return;var meta;
   try{meta=lerMetaLocal("backup-meta");}catch(e){alvo.textContent="Não foi possível ler o registro do último backup. Isso não indica ausência das suas cópias.";return;}
-  alvo.textContent=meta&&meta.em?"Último backup deste aparelho: "+dataNota(meta.em,true)+" · "+(meta.itens||0)+" item(ns).":"Último backup: ainda não registrado neste aparelho.";
-  /* Este modo não usa nuvem; o arquivo de backup é a forma de transportar os dados. */
+  alvo.textContent=meta&&meta.em?(meta.parcial===true?"Última cópia parcial deste aparelho: ":"Último backup deste aparelho: ")+dataNota(meta.em,true)+" · "+(meta.itens||0)+" item(ns)."+(meta.parcial===true?" Há desenhos livres sem imagem incluída; preserve seus backups completos anteriores.":""):"Último backup: ainda não registrado neste aparelho.";
 }
-function registrarBackup(pacote,destino){ var itens=(pacote.obras||[]).length+(pacote.capitulos||[]).length+(pacote.notas||[]).length; gravarMetaLocal("backup-meta",{em:Date.now(),itens:itens,destino:destino||"download",versao:pacote.versao||"antiga"}); atualizarEstadoBackup(); }
+function registrarBackup(pacote,destino,parcial){
+  var itens=(pacote.obras||[]).length+(pacote.capitulos||[]).length+(pacote.notas||[]).length;
+  gravarMetaLocal("backup-meta",{em:Date.now(),itens:itens,destino:destino||"download",versao:pacote.versao||"antiga",parcial:parcial===true});atualizarEstadoBackup();
+}
 
 var tAviso;
 function aviso(txt){
@@ -6610,7 +6589,7 @@ async function enviarContaNuvem(criar){
 }
 var temporizadorBackupNuvem=null, backupNuvemEmCurso=false;
 var COPIA_NUVEM={revisao:0,tentativas:0,pendente:null,ultima:null,lista:[],contextoLista:null,offset:0,cursorR2:null,fimR2:false,fimSupabase:false,consultando:false,baixando:false,bloqueio:null};
-function erroCopiaNuvem(codigo,mensagem){var e=new Error(mensagem);e.code=codigo;e.__mesaLocal=true;return e;}
+function erroCopiaNuvem(codigo,mensagem){var e=new Error(mensagem);e.code=codigo;return e;}
 /* Transporte opcional apenas para o JSON completo. Nenhuma URL assinada é
    persistida: a identidade usa projeto/API, conta e bucket públicos fixos. */
 function destinoCopiaConfigurado(){
@@ -6680,7 +6659,7 @@ async function chamarApiR2(c,rota,corpo){
 }
 function validarUrlAssinadaR2(c,res,metodo,nome,hash){
   conferirOperacaoR2(c);var t=c.transporte,u,agora=Date.now();
-  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 veio incompleta.");
+  if(!res||typeof res!=="object"||Array.isArray(res)||typeof res.url!=="string"||!Number.isSafeInteger(res.expiresAt)||res.expiresAt<=agora||res.expiresAt>agora+900000||!res.headers||typeof res.headers!=="object"||Array.isArray(res.headers))throw erroCopiaNuvem("nuvem_integridade","A autorização temporária R2 é inválida ou expirou.");
   try{u=new URL(res.url);}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização R2 contém um endereço inválido.");}
   var caminho="/"+t.bucket+"/"+c.uid+"/sincronizacao/versoes/"+nome;
   if(!caminhoVersaoCopia(c.uid+"/sincronizacao/versoes/"+nome,c.uid)||u.protocol!=="https:"||u.host!==t.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!==caminho)throw erroCopiaNuvem("nuvem_integridade","O endereço autorizado não corresponde ao destino e à conta esperados.");
@@ -6689,9 +6668,7 @@ function validarUrlAssinadaR2(c,res,metodo,nome,hash){
   var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date"),cred=q.get("X-Amz-Credential")||"";
   if(vistos.size!==6||q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||! /^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||! /^\d{8}T\d{6}Z$/.test(data||"")||! /^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||! /^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw erroCopiaNuvem("nuvem_integridade","A assinatura R2 não corresponde ao formato esperado.");
   var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z"),fim=instante+(+exp)*1000;
-  if(!Number.isFinite(instante)||!Number.isSafeInteger(fim)||Math.abs(fim-res.expiresAt)>5000||cred.split("/")[1]!==data.slice(0,8))throw erroCopiaNuvem("nuvem_integridade","O prazo informado pelo Worker não confere com a assinatura R2.");
-  if(fim<=agora)throw erroCopiaNuvem("nuvem_integridade","A autorização R2 expirou ou o relógio do dispositivo está adiantado. Confira a data e hora automáticas.");
-  if(instante>agora+120000)throw erroCopiaNuvem("nuvem_integridade","O relógio do dispositivo parece atrasado mais de 2 minutos. Ative a data e hora automáticas.");
+  if(!isFinite(instante)||fim<=agora||fim>agora+900000||Math.abs(fim-res.expiresAt)>1500||cred.split("/")[1]!==data.slice(0,8))throw erroCopiaNuvem("nuvem_integridade","A validade da assinatura R2 não pôde ser confirmada.");
   var headers=Object.create(null),esperados=metodo==="PUT"?{"content-type":"application/json","if-none-match":"*","x-amz-meta-write-id":nome,"x-amz-meta-sha256":hash}:{};
   if(metodo!=="PUT"&&metodo!=="GET")throw erroCopiaNuvem("nuvem_integridade","O método de transferência R2 é inválido.");
   Object.keys(res.headers).forEach(function(k){var chave=k.toLowerCase(),v=res.headers[k];if(Object.prototype.hasOwnProperty.call(headers,chave)||!Object.prototype.hasOwnProperty.call(esperados,chave)||typeof v!=="string"||v!==esperados[chave])throw erroCopiaNuvem("nuvem_integridade","Os cabeçalhos da autorização R2 divergem do envio esperado.");headers[chave]=v;});
@@ -6705,10 +6682,7 @@ async function enviarArquivoCopiaNuvem(c,p,arquivo){
   var nome=p.caminho.slice((c.uid+"/sincronizacao/versoes/").length),hash=await sha256Texto(p.texto);conferirOperacaoR2(c);
   if(!hash)throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 não está disponível.");
   var res=await chamarApiR2(c,"/v1/uploads",{name:nome,bytes:arquivo.size,sha256:hash}),aut=validarUrlAssinadaR2(c,res,"PUT",nome,hash);
-  return requisicaoR2(c,aut.url,{method:"PUT",headers:aut.headers,body:arquivo},900000,async function(r){if(!r.ok)throw erroRespostaR2(r.status);return{error:null};}).catch(function(e){
-    if(e&&e.name==="TypeError")throw erroCopiaNuvem("nuvem_rede","O navegador não conseguiu enviar o arquivo ao R2. Confira a política CORS do bucket mesa-roteiro-backups e a conexão.");
-    throw e;
-  });
+  return requisicaoR2(c,aut.url,{method:"PUT",headers:aut.headers,body:arquivo},900000,async function(r){if(!r.ok)throw erroRespostaR2(r.status);return{error:null};});
 }
 async function lerArquivoCopiaR2(c,caminho){
   var nome=caminho.slice((c.uid+"/sincronizacao/versoes/").length);
@@ -6743,7 +6717,6 @@ function normalizarErroEnvioNuvem(original,tamanhoBytes){
   /* O SDK admite statusCode simbólico e numérico, inclusive nas respostas
      legadas. Textos remotos ajudam a reconhecer casos antigos, mas nunca são
      reproduzidos na interface nem usados como códigos internos confiáveis. */
-  if(original&&original.__mesaLocal===true&&/^(nuvem_integridade|nuvem_configuracao|nuvem_caminho|nuvem_rede)$/.test(original.code||""))return original;
   var e=original||{}, codigos=[e.code,e.statusCode,e.error].filter(function(v){return typeof v==="string";}).map(function(v){return v.slice(0,100).toLowerCase().replace(/[^a-z0-9]/g,"");});
   var status=[e.status,e.statusCode,e.httpStatusCode].filter(function(v){return typeof v==="number"?Number.isInteger(v)&&v>=100&&v<=599:typeof v==="string"&&/^[1-5][0-9]{2}$/.test(v);}).map(Number);
   var mensagem=typeof e.message==="string"?e.message.slice(0,512).toLowerCase():"";
@@ -6827,8 +6800,8 @@ function backupNuvemTemConteudo(p){
 /* MIDIA-NUVEM-INICIO */
 /* Mídia na nuvem (R2) por conteúdo. Desligada por padrão: só age com ativa:true e api configurada.
    Cópia na nuvem = backup v4 com referências (sha256). Download da cópia = arquivo v3 autocontido. */
-var MIDIA_NUVEM={ativa:true,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-midia"};
-var MIDIA_LIMITE_BYTES=25*1024*1024, MIDIA_TIMEOUT_MS=30000, MIDIA_EXPIRA_MS=900000;
+var MIDIA_NUVEM={ativa:false,api:"https://mesa-midia.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-midia"};
+var MIDIA_LIMITE_BYTES=50*1024*1024, MIDIA_TIMEOUT_MS=30000, MIDIA_EXPIRA_MS=900000;
 var MIDIA_TIPOS=["image/png","image/jpeg","image/webp","image/gif","application/octet-stream"];
 var MIDIA_RE_SHA=/^[a-f0-9]{64}$/;
 function midiaHex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(x){return x.toString(16).padStart(2,"0");}).join("");}
@@ -6838,21 +6811,94 @@ async function midiaShaBytes(buf){
 }
 function usarMidiaNuvem(c){return !!(MIDIA_NUVEM.ativa&&MIDIA_NUVEM.api&&c&&c.transporte&&c.transporte.provedor==="r2");}
 function midiaTipo(blob){var t=(blob&&blob.type)||"";return MIDIA_TIPOS.indexOf(t)>=0?t:"application/octet-stream";}
-function midiaFetch(url,opcoes){
-  var controle=new AbortController(),timer=setTimeout(function(){controle.abort();},MIDIA_TIMEOUT_MS);
-  return fetch(url,Object.assign({},opcoes,{signal:controle.signal,credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer"}))
-    .catch(function(){throw erroCopiaNuvem("nuvem_envio","Não foi possível falar com a nuvem de mídia. Tente novamente; nenhuma cópia foi confirmada.");})
-    .finally(function(){clearTimeout(timer);});
+/* MIME de transporte continua restrito. O tipo de imagem original é só metadado da referência. */
+function midiaMimeImagem(tipo){return typeof tipo==="string"&&/^image\/[a-z0-9.+-]+$/i.test(tipo)&&!/[\r\n]/.test(tipo)?tipo.toLowerCase():"";}
+/* Assinaturas da tabela de imagens WHATWG. Identificar tipo não valida a decodificação. */
+function midiaDetectarTipo(bytes){
+  function bate(p){if(bytes.length<p.length)return false;for(var i=0;i<p.length;i++)if(p[i]!==null&&bytes[i]!==p[i])return false;return true;}
+  if(bate([0,0,1,0])||bate([0,0,2,0]))return "image/x-icon";
+  if(bate([66,77]))return "image/bmp";
+  if(bate([71,73,70,56,55,97])||bate([71,73,70,56,57,97]))return "image/gif";
+  if(bate([82,73,70,70,null,null,null,null,87,69,66,80,86,80]))return "image/webp";
+  if(bate([137,80,78,71,13,10,26,10]))return "image/png";
+  if(bate([255,216,255]))return "image/jpeg";
+  return "";
 }
-async function midiaToken(c){
-  var r=await c.client.auth.getSession(),s=r&&r.data&&r.data.session;
-  if(r&&r.error||!s||!s.user||s.user.id!==c.uid||typeof s.access_token!=="string"||!s.access_token)throw erroCopiaNuvem("nuvem_conta","Entre na sua conta para usar a mídia na nuvem.");
+async function midiaBlobParaImagem(blob,r){
+  /* O catálogo conhecido prevalece, inclusive nos legados deduplicados com MIME divergente. */
+  if(MIDIA_TIPOS.indexOf(blob.type)>=0&&blob.type!=="application/octet-stream")return blob;
+  var tipo=midiaMimeImagem(r&&r.mimeOriginal)||((r&&MIDIA_TIPOS.indexOf(r.tipo)>=0)?midiaMimeImagem(r.tipo):"")||midiaMimeImagem(r&&r.meta&&r.meta.tipo);
+  if(!tipo)tipo=midiaDetectarTipo(new Uint8Array(await blob.slice(0,14).arrayBuffer()));
+  if(!tipo)throw erroCopiaNuvem("nuvem_integridade","Uma imagem está sem identificação de formato e não pôde ser preparada para recuperação. Preserve seus backups e a imagem original; nenhuma cópia foi confirmada.");
+  return blob.slice(0,blob.size,tipo);
+}
+function midiaReferenciasPorSha(p){
+  var referencias=Object.create(null);
+  function incluir(r){if(r!=null)(referencias[r.sha256]||(referencias[r.sha256]=[])).push(r);}
+  (p.notas||[]).forEach(function(n){((n.dados&&n.dados.imagensRef)||[]).forEach(incluir);});
+  ((p.fichasPersonagem&&p.fichasPersonagem.imagens)||[]).forEach(incluir);
+  (p.desenhos||[]).forEach(function(d){((d.rec&&d.rec.camadas)||[]).forEach(function(c){incluir(c.blobRef);incluir(c.originalBlobRef);});});
+  return referencias;
+}
+
+function midiaAssinaturaDestino(){
+  return JSON.stringify({ativa:MIDIA_NUVEM.ativa===true,api:MIDIA_NUVEM.api,accountId:MIDIA_NUVEM.accountId,bucket:MIDIA_NUVEM.bucket});
+}
+function midiaConferirContexto(c,assinatura){
+  conferirContextoConta(c);
+  if(typeof assinatura==="string"&&assinatura!==midiaAssinaturaDestino())throw erroCopiaNuvem("nuvem_destino_alterado","O destino da mídia mudou. A cópia não foi confirmada; confira a configuração antes de tentar novamente.");
+  if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
+}
+async function midiaLerBytes(resposta,limite,c,sinal,assinatura){
+  midiaConferirContexto(c,assinatura);
+  if(!Number.isSafeInteger(limite)||limite<1||!resposta.body||typeof resposta.body.getReader!=="function")throw erroCopiaNuvem("nuvem_integridade","A nuvem não retornou um corpo de arquivo que possa ser conferido com segurança.");
+  var informado=resposta.headers&&resposta.headers.get("Content-Length");
+  if(informado&&/^\d+$/.test(informado)&&Number(informado)>limite){try{var cancelamento=resposta.body.cancel();if(cancelamento&&cancelamento.catch)cancelamento.catch(function(){});}catch(e){}throw erroCopiaNuvem("nuvem_integridade","O arquivo da nuvem excede o tamanho esperado. A leitura foi interrompida.");}
+  var leitor=resposta.body.getReader(),partes=[],total=0,terminou=false;
+  function cancelar(){try{var p=leitor.cancel();if(p&&p.catch)p.catch(function(){});}catch(e){}}
+  function conferir(){midiaConferirContexto(c,assinatura);if(sinal&&sinal.aborted)throw erroCopiaNuvem("nuvem_tempo","A transferência da mídia foi interrompida antes da confirmação.");}
+  if(sinal)sinal.addEventListener("abort",cancelar,{once:true});
+  try{
+    while(true){
+      conferir();var parte=await leitor.read();conferir();
+      if(parte.done){terminou=true;break;}
+      if(!(parte.value instanceof Uint8Array)||parte.value.byteLength>limite-total)throw erroCopiaNuvem("nuvem_integridade","O arquivo da nuvem excede o tamanho esperado ou contém uma resposta inválida.");
+      if(parte.value.byteLength){total+=parte.value.byteLength;partes.push(parte.value);}
+    }
+    conferir();if(!total)throw erroCopiaNuvem("nuvem_integridade","A nuvem retornou um arquivo vazio. A cópia não foi confirmada.");
+    var bytes=new Uint8Array(total),pos=0;partes.forEach(function(p){bytes.set(p,pos);pos+=p.byteLength;});return bytes;
+  }finally{
+    if(sinal)sinal.removeEventListener("abort",cancelar);if(!terminou)cancelar();try{leitor.releaseLock();}catch(e){}
+  }
+}
+async function midiaFetch(url,opcoes,c,ler,assinatura){
+  var destino=assinatura||midiaAssinaturaDestino();midiaConferirContexto(c,destino);
+  if(typeof AbortController!=="function"||typeof fetch!=="function"||typeof ler!=="function")throw erroCopiaNuvem("nuvem_configuracao","Este navegador não oferece a transferência segura da mídia.");
+  var controle=new AbortController(),timer;
+  try{
+    var prazo=new Promise(function(resolve,reject){timer=setTimeout(function(){controle.abort();reject(erroCopiaNuvem("nuvem_tempo","A transferência da mídia não terminou no prazo. Nenhuma cópia foi confirmada."));},MIDIA_TIMEOUT_MS);});
+    var pedido=Promise.resolve().then(function(){midiaConferirContexto(c,destino);return fetch(url,Object.assign({},opcoes,{signal:controle.signal,credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer"}));}).then(async function(r){
+      midiaConferirContexto(c,destino);if(controle.signal.aborted){try{var p=r.body&&r.body.cancel();if(p&&p.catch)p.catch(function(){});}catch(e){}throw erroCopiaNuvem("nuvem_tempo","A transferência da mídia terminou depois do prazo e não foi confirmada.");}
+      var resultado=await ler(r,controle.signal,destino);midiaConferirContexto(c,destino);
+      if(controle.signal.aborted)throw erroCopiaNuvem("nuvem_tempo","A transferência da mídia foi interrompida antes da confirmação.");return resultado;
+    });
+    return await Promise.race([pedido,prazo]);
+  }catch(e){
+    controle.abort();if(e&&(e.pendente||typeof e.code==="string"&&/^nuvem_/.test(e.code)))throw e;
+    throw erroCopiaNuvem("nuvem_envio","Não foi possível falar com a nuvem de mídia. Tente novamente; nenhuma cópia foi confirmada.");
+  }finally{clearTimeout(timer);}
+}
+async function midiaToken(c,assinatura){
+  midiaConferirContexto(c,assinatura);var r=await c.client.auth.getSession();midiaConferirContexto(c,assinatura);
+  var s=r&&r.data&&r.data.session;
+  if(r&&r.error||!s||!s.user||s.user.id!==c.uid||typeof s.access_token!=="string"||!s.access_token||/[\r\n]/.test(s.access_token))throw erroCopiaNuvem("nuvem_conta","Entre na sua conta para usar a mídia na nuvem.");
   return s.access_token;
 }
 /* Confere a autorização antes de usar: host, bucket, prefixo do uid, validade e cabeçalhos exatos. */
-function midiaValidarAutorizacao(a,c,metodo,sha,tipo){
+function midiaValidarAutorizacao(a,c,metodo,sha,tipo,tamanhoEsperado){
   var agora=Date.now(),falha=function(m){return erroCopiaNuvem("nuvem_integridade",m);};
-  if(!a||typeof a!=="object"||typeof a.url!=="string"||!Number.isSafeInteger(a.expiresAt)||!a.headers||typeof a.headers!=="object"||Array.isArray(a.headers))throw falha("A autorização da mídia veio incompleta do Worker.");
+  if((metodo!=="PUT"&&metodo!=="GET")||!MIDIA_RE_SHA.test(sha||""))throw falha("A operação de mídia não corresponde ao formato esperado.");
+  if(!a||typeof a!=="object"||Array.isArray(a)||typeof a.url!=="string"||!Number.isSafeInteger(a.expiresAt)||a.expiresAt<=agora||a.expiresAt>agora+MIDIA_EXPIRA_MS+1000||!a.headers||typeof a.headers!=="object"||Array.isArray(a.headers))throw falha("A autorização da mídia é inválida ou expirou.");
   var u;try{u=new URL(a.url);}catch(e){throw falha("A autorização da mídia contém um endereço inválido.");}
   if(u.protocol!=="https:"||u.host!==MIDIA_NUVEM.accountId+".r2.cloudflarestorage.com"||u.username||u.password||u.hash||u.pathname!=="/"+MIDIA_NUVEM.bucket+"/"+c.uid+"/midia/"+sha)throw falha("O endereço autorizado não corresponde ao destino da mídia.");
   var q=u.searchParams,nomes=[];q.forEach(function(v,k){nomes.push(k);});
@@ -6860,51 +6906,60 @@ function midiaValidarAutorizacao(a,c,metodo,sha,tipo){
   if(nomes.length!==6||nomes.some(function(k){return permitidos.indexOf(k)<0;}))throw falha("A assinatura da mídia contém parâmetros inesperados.");
   var exp=q.get("X-Amz-Expires"),data=q.get("X-Amz-Date")||"",cred=q.get("X-Amz-Credential")||"";
   if(q.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256"||!/^[1-9][0-9]{0,2}$/.test(exp||"")||+exp>900||!/^\d{8}T\d{6}Z$/.test(data)||!/^[A-Za-z0-9]+\/\d{8}\/auto\/s3\/aws4_request$/.test(cred)||!/^[a-f0-9]{64}$/.test(q.get("X-Amz-Signature")||""))throw falha("A assinatura da mídia não corresponde ao formato esperado.");
-  // A data assinada pelo R2 e a validade informada devem concordar.
-  // O relógio do Windows pode diferir alguns segundos do relógio do Worker.
-  var instante=Date.parse(data.slice(0,4)+"-"+data.slice(4,6)+"-"+data.slice(6,8)+"T"+data.slice(9,11)+":"+data.slice(11,13)+":"+data.slice(13,15)+"Z");
-  var fimAssinado=instante+Number(exp)*1000;
-  if(!Number.isFinite(instante)||!Number.isSafeInteger(fimAssinado)||Math.abs(fimAssinado-a.expiresAt)>5000)throw falha("O prazo da autorização da mídia não confere com a assinatura R2.");
-  if(a.expiresAt<=agora)throw falha("A autorização da mídia venceu ou o relógio do dispositivo está adiantado. Confira a data e hora automáticas.");
-  if(instante>agora+120000)throw falha("O relógio do dispositivo parece atrasado mais de 2 minutos. Ative a data e hora automáticas.");
+  if(metodo==="PUT"&&(!Number.isSafeInteger(tamanhoEsperado)||tamanhoEsperado<1||tamanhoEsperado>MIDIA_LIMITE_BYTES||!Number.isSafeInteger(a.bytes)||a.bytes!==tamanhoEsperado||MIDIA_TIPOS.indexOf(tipo)<0))throw falha("A autorização não corresponde ao tamanho ou tipo preparado para o envio.");
   var esperados=metodo==="PUT"?{"content-type":tipo,"if-none-match":"*","x-amz-meta-sha256":sha}:{};
-  if(metodo==="PUT"&&(q.get("X-Amz-SignedHeaders")||"").indexOf("if-none-match")<0)throw falha("A assinatura da mídia não protege a regra de criação única.");
-  var chaves=Object.keys(a.headers),ok=chaves.length===Object.keys(esperados).length&&chaves.every(function(k){return Object.prototype.hasOwnProperty.call(esperados,k.toLowerCase())&&a.headers[k]===esperados[k.toLowerCase()];});
+  var nomesAssinados=metodo==="PUT"?"content-length;content-type;host;if-none-match;x-amz-meta-sha256":"host";
+  if(q.get("X-Amz-SignedHeaders")!==nomesAssinados)throw falha("A assinatura da mídia não protege todos os campos exigidos para a operação.");
+  var vistos=Object.create(null),chaves=Object.keys(a.headers),ok=chaves.length===Object.keys(esperados).length&&chaves.every(function(k){var nome=k.toLowerCase();if(vistos[nome]||!Object.prototype.hasOwnProperty.call(esperados,nome)||a.headers[k]!==esperados[nome])return false;vistos[nome]=true;return true;});
   if(!ok)throw falha("Os cabeçalhos da autorização da mídia divergem do envio esperado.");
   return a;
 }
-async function midiaPedirAutorizacao(c,rota,corpo){
-  var token=await midiaToken(c);
-  var r=await midiaFetch(MIDIA_NUVEM.api+rota,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify(corpo)});
-  if(r.status===401)throw erroCopiaNuvem("nuvem_conta","A sessão expirou. Entre novamente para usar a mídia na nuvem.");
-  if(!r.ok){
-    var status=r.status;
-    if(status===403)throw erroCopiaNuvem("nuvem_permissao","O Worker de mídia recusou o acesso (HTTP 403). Confira a origem permitida e as permissões do Worker.");
-    if(status===404)throw erroCopiaNuvem("nuvem_configuracao","A rota de mídia não foi encontrada (HTTP 404). Confira a versão publicada do Worker.");
-    if(status===413)throw erroCopiaNuvem("nuvem_tamanho","A nuvem recusou o tamanho da imagem (HTTP 413). O Worker aceita até 25 MB por imagem.");
-    if(status===415)throw erroCopiaNuvem("nuvem_formato","O Worker recusou o formato da imagem (HTTP 415). Confira o tipo do arquivo.");
-    if(status>=500)throw erroCopiaNuvem("nuvem_envio","O Worker de mídia falhou (HTTP "+status+"). Confira o deploy, as variáveis e os segredos no Cloudflare.");
-    throw erroCopiaNuvem("nuvem_envio","A nuvem de mídia recusou o pedido (HTTP "+status+"). Confira o Worker antes de tentar novamente.");
-  }
-  try{return await r.json();}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização da mídia veio em formato inválido.");}
+async function midiaPedirAutorizacao(c,rota,corpo,assinatura){
+  var destino=assinatura||midiaAssinaturaDestino();midiaConferirContexto(c,destino);
+  if(["/v2/midia/uploads","/v2/midia/downloads"].indexOf(rota)<0)throw erroCopiaNuvem("nuvem_caminho","A operação de mídia não é permitida.");
+  var token=await midiaToken(c,destino);midiaConferirContexto(c,destino);
+  return midiaFetch(MIDIA_NUVEM.api+rota,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify(corpo)},c,async function(r,sinal){
+    if(r.status===401)throw erroCopiaNuvem("nuvem_conta","A sessão expirou. Entre novamente para usar a mídia na nuvem.");
+    if(r.status===429){
+      var recebidos=await midiaLerBytes(r,65536,c,sinal,destino);midiaConferirContexto(c,destino);
+      var codigo=null;try{var detalhe=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(recebidos));codigo=detalhe&&detalhe.codigo;}catch(e){}
+      var mensagem=codigo==="cota_envio"?"O limite diário de novos envios da conta foi atingido. As cópias anteriores permanecem preservadas.":codigo==="cota_pedidos"?"O limite temporário de pedidos da conta foi atingido.":"A nuvem limitou temporariamente os pedidos. Tente novamente mais tarde.";
+      var espera=r.headers.get("Retry-After"),segundos=typeof espera==="string"&&/^[1-9][0-9]{0,4}$/.test(espera)?Number(espera):0;
+      if(segundos>86400)segundos=0;
+      if(segundos)mensagem+=" Aguarde cerca de "+(segundos>=3600?Math.ceil(segundos/3600)+" hora(s)":segundos>=60?Math.ceil(segundos/60)+" minuto(s)":segundos+" segundo(s)")+" antes de tentar novamente.";
+      var limite=erroCopiaNuvem("nuvem_limite",mensagem);if(segundos)limite.repetirAposSegundos=segundos;throw limite;
+    }
+    if(!r.ok)throw erroCopiaNuvem("nuvem_envio","A nuvem de mídia recusou o pedido. Nenhuma cópia foi confirmada.");
+    var bytes=await midiaLerBytes(r,65536,c,sinal,destino);midiaConferirContexto(c,destino);
+    try{return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));}catch(e){throw erroCopiaNuvem("nuvem_integridade","A autorização da mídia veio em formato inválido.");}
+  },destino);
 }
-/* Envia um blob pelo endereço pré-assinado. 412 = o mesmo conteúdo (mesmo hash) já existe: é sucesso. */
+/* PUT aceito ou 412 indica somente gravação/existência. A confirmação exige releitura das mídias antes do sucesso da cópia. */
 async function midiaEnviar(c,m){
-  var a=midiaValidarAutorizacao(await midiaPedirAutorizacao(c,"/v2/midia/uploads",{sha256:m.sha256,bytes:m.tamanho,tipo:m.tipo}),c,"PUT",m.sha256,m.tipo);
-  var r=await midiaFetch(a.url,{method:"PUT",headers:a.headers,body:m.blob});
-  if(r.status===412)return "existente";
-  if(!r.ok)throw erroCopiaNuvem("nuvem_envio","Não foi possível enviar uma imagem à nuvem. Nenhuma cópia foi confirmada.");
-  return "enviada";
+  var destino=midiaAssinaturaDestino();midiaConferirContexto(c,destino);
+  if(!m||!MIDIA_RE_SHA.test(m.sha256||"")||!Number.isSafeInteger(m.tamanho)||m.tamanho<1||m.tamanho>MIDIA_LIMITE_BYTES||!(m.blob instanceof Blob)||m.blob.size!==m.tamanho||MIDIA_TIPOS.indexOf(m.tipo)<0)throw erroCopiaNuvem("nuvem_integridade","A imagem preparada não corresponde ao tamanho ou formato esperado.");
+  var pedido=await midiaPedirAutorizacao(c,"/v2/midia/uploads",{sha256:m.sha256,bytes:m.tamanho,tipo:m.tipo},destino);midiaConferirContexto(c,destino);
+  var a=midiaValidarAutorizacao(pedido,c,"PUT",m.sha256,m.tipo,m.tamanho);
+  return midiaFetch(a.url,{method:"PUT",headers:a.headers,body:m.blob},c,async function(r){
+    if(r.status!==412&&!r.ok)throw erroCopiaNuvem("nuvem_envio","Não foi possível enviar uma imagem à nuvem. Nenhuma cópia foi confirmada.");
+    if(r.body)await r.body.cancel();return r.status===412?"existente":"enviada";
+  },destino);
 }
 /* Baixa um objeto e confere o hash antes de devolver: nada é usado sem essa conferência. */
-async function midiaBaixar(c,sha,tipo){
-  var a=midiaValidarAutorizacao(await midiaPedirAutorizacao(c,"/v2/midia/downloads",{sha256:sha}),c,"GET",sha,null);
-  var r=await midiaFetch(a.url,{method:"GET"});
-  if(!r.ok)throw erroCopiaNuvem("nuvem_envio","Uma imagem da cópia não está disponível na nuvem. A restauração foi interrompida.");
-  var buf=await r.arrayBuffer();
-  if(buf.byteLength<1||buf.byteLength>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_integridade","Uma imagem da nuvem tem tamanho inválido. A restauração foi interrompida.");
-  if(await midiaShaBytes(buf)!==sha)throw erroCopiaNuvem("nuvem_integridade","Uma imagem da nuvem não confere com o registro. A restauração foi interrompida.");
-  return new Blob([buf],{type:tipo});
+async function midiaBaixar(c,sha,tipo,tamanhoEsperado,assinatura){
+  var destino=assinatura||midiaAssinaturaDestino();midiaConferirContexto(c,destino);
+  if(!MIDIA_RE_SHA.test(sha||"")||MIDIA_TIPOS.indexOf(tipo)<0||!Number.isSafeInteger(tamanhoEsperado)||tamanhoEsperado<1||tamanhoEsperado>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_integridade","O registro da imagem não informa hash, tipo e tamanho válidos.");
+  var pedido=await midiaPedirAutorizacao(c,"/v2/midia/downloads",{sha256:sha},destino);midiaConferirContexto(c,destino);
+  var a=midiaValidarAutorizacao(pedido,c,"GET",sha,null);
+  var bytes=await midiaFetch(a.url,{method:"GET"},c,async function(r,sinal){
+    if(!r.ok)throw erroCopiaNuvem("nuvem_envio","Uma imagem da cópia não está disponível na nuvem. A cópia não foi confirmada.");
+    return midiaLerBytes(r,tamanhoEsperado,c,sinal,destino);
+  },destino);
+  midiaConferirContexto(c,destino);
+  if(bytes.byteLength!==tamanhoEsperado)throw erroCopiaNuvem("nuvem_integridade","Uma imagem da nuvem não tem o tamanho esperado. A cópia não foi confirmada.");
+  var hash=await midiaShaBytes(bytes);midiaConferirContexto(c,destino);
+  if(hash!==sha)throw erroCopiaNuvem("nuvem_integridade","Uma imagem da nuvem não confere com o registro. A cópia não foi confirmada.");
+  return new Blob([bytes],{type:tipo});
 }
 /* v3 (local) -> v4 (nuvem): troca cada imagem por referência. Não envia nada: só calcula hashes.
    Devolve também a lista de blobs que ainda precisam ser enviados. */
@@ -6914,44 +6969,75 @@ async function formaNuvemComMidia(pacote,c){
     if(valor==null)return null;
     var blob=typeof valor==="string"?window.EditorDesenho.dataParaBlob(valor):valor;
     if(!(blob instanceof Blob))throw erroCopiaNuvem("nuvem_integridade","Uma imagem do backup está em formato inválido. Use um backup local.");
-    if(blob.size<1||blob.size>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_tamanho","Uma imagem passa do limite de 25 MB do Worker de mídia. Use Baixar backup local.");
+    if(blob.size<1||blob.size>MIDIA_LIMITE_BYTES)throw erroCopiaNuvem("nuvem_tamanho","Uma imagem passa do limite de 50 MB para a nuvem. Use Baixar backup local.");
     var sha=await midiaShaBytes(await blob.arrayBuffer()),tipo=midiaTipo(blob);
     if(!catalogo[sha]){catalogo[sha]={sha256:sha,tamanho:blob.size,tipo:tipo};pendentes.push({sha256:sha,tamanho:blob.size,tipo:tipo,blob:blob});}
-    return {sha256:sha,tamanho:blob.size,tipo:tipo};
+    var referencia={sha256:sha,tamanho:blob.size,tipo:tipo};
+    if(tipo==="application/octet-stream"){var imagem=await midiaBlobParaImagem(blob,{mimeOriginal:midiaMimeImagem(blob.type)});referencia.mimeOriginal=imagem.type;}
+    return referencia;
   }
   var notas=Array.isArray(copia.notas)?copia.notas:[];
-  for(var i=0;i<notas.length;i++){var d=notas[i].dados;if(d&&Array.isArray(d.imagensDados)){d.imagensRef=[];for(var j=0;j<d.imagensDados.length;j++){var im=d.imagensDados[j],r=await ref(im.src);d.imagensRef.push({meta:im.meta,sha256:r.sha256,tamanho:r.tamanho,tipo:r.tipo});}delete d.imagensDados;}}
+  for(var i=0;i<notas.length;i++){var d=notas[i].dados;if(d&&Array.isArray(d.imagensDados)){d.imagensRef=[];for(var j=0;j<d.imagensDados.length;j++){var im=d.imagensDados[j],r=await ref(im.src);d.imagensRef.push(Object.assign({meta:im.meta},r));}delete d.imagensDados;}}
   var fichas=copia.fichasPersonagem&&Array.isArray(copia.fichasPersonagem.imagens)?copia.fichasPersonagem.imagens:[];
-  for(var f=0;f<fichas.length;f++){var fr=await ref(fichas[f].src);fichas[f]={chave:fichas[f].chave,nome:fichas[f].nome,sha256:fr.sha256,tamanho:fr.tamanho,tipo:fr.tipo};}
+  for(var f=0;f<fichas.length;f++){var fr=await ref(fichas[f].src);fichas[f]=Object.assign({chave:fichas[f].chave,nome:fichas[f].nome},fr);}
   var desenhos=Array.isArray(copia.desenhos)?copia.desenhos:[];
   for(var k=0;k<desenhos.length;k++){var camadas=(desenhos[k].rec&&desenhos[k].rec.camadas)||[];for(var q=0;q<camadas.length;q++){var cam=camadas[q];cam.blobRef=await ref(cam.blob);delete cam.blob;cam.originalBlobRef=await ref(cam.originalBlob);delete cam.originalBlob;}}
   copia.versao=4;copia.modo="referencias";
   copia.midia=Object.keys(catalogo).sort().map(function(s){return catalogo[s];});
+  var plano=validarFormaNuvemV4(copia);if(plano.avisos.length)throw erroCopiaNuvem("nuvem_integridade","A cópia de referências contém imagens ausentes. Preserve um backup local antes de tentar novamente.");
   return {pacote:copia,pendentes:pendentes};
 }
 /* Valida a forma v4 sem depender de dados embutidos: referências bem formadas e todas no catálogo. */
 function validarFormaNuvemV4(p){
-  var falha=function(m){var e=new Error("Cópia v4: "+m);e.code="backup_formato";return e;};
-  if(p.versao!==4||p.modo!=="referencias"||!Array.isArray(p.midia))throw falha("cabeçalho inválido");
+  function falha(c,m){var e=new Error("Cópia v4 · "+c+": "+m);e.code="backup_formato";throw e;}
+  function objeto(v,c){if(!v||typeof v!=="object"||Array.isArray(v))falha(c,"deve ser um objeto");}
+  objeto(p,"backup");
+  if(p.versao!==4||p.modo!=="referencias"||p.formato!=="mesa-de-roteiro-backup")falha("cabeçalho","formato, versão ou modo inválido");
+  ["obras","capitulos","notas","desenhos","midia"].forEach(function(k){if(!Array.isArray(p[k]))falha(k,"grupo obrigatório ausente ou inválido");});
   var catalogo=Object.create(null);
-  p.midia.forEach(function(m){if(!m||typeof m.sha256!=="string"||!MIDIA_RE_SHA.test(m.sha256)||!Number.isSafeInteger(m.tamanho)||m.tamanho<1||m.tamanho>MIDIA_LIMITE_BYTES||MIDIA_TIPOS.indexOf(m.tipo)<0)throw falha("item do catálogo inválido");catalogo[m.sha256]=true;});
-  function conferir(r){if(!r||typeof r.sha256!=="string"||!catalogo[r.sha256])throw falha("referência fora do catálogo");}
-  (p.notas||[]).forEach(function(n){((n.dados&&n.dados.imagensRef)||[]).forEach(function(r){conferir(r);});});
-  ((p.fichasPersonagem&&p.fichasPersonagem.imagens)||[]).forEach(conferir);
-  (p.desenhos||[]).forEach(function(d){((d.rec&&d.rec.camadas)||[]).forEach(function(cam){if(cam.blob||cam.originalBlob)throw falha("dados embutidos em cópia de referências");conferir(cam.blobRef);if(cam.originalBlobRef)conferir(cam.originalBlobRef);});});
-  return true;
+  p.midia.forEach(function(m,i){
+    var c="midia["+(i+1)+"]";objeto(m,c);
+    if(typeof m.sha256!=="string"||!MIDIA_RE_SHA.test(m.sha256)||!Number.isSafeInteger(m.tamanho)||m.tamanho<1||m.tamanho>MIDIA_LIMITE_BYTES||MIDIA_TIPOS.indexOf(m.tipo)<0)falha(c,"hash, tamanho ou tipo inválido");
+    if(Object.prototype.hasOwnProperty.call(catalogo,m.sha256))falha(c,"hash repetido no catálogo");catalogo[m.sha256]=m;
+  });
+  function referencia(r,c){
+    objeto(r,c);if(Object.prototype.hasOwnProperty.call(r,"src"))falha(c+".src","dados embutidos em cópia de referências");var m=typeof r.sha256==="string"&&catalogo[r.sha256];
+    if(!m)falha(c,"referência fora do catálogo");
+    if(Object.prototype.hasOwnProperty.call(r,"tamanho")&&(!Number.isSafeInteger(r.tamanho)||r.tamanho!==m.tamanho))falha(c+".tamanho","não corresponde ao catálogo");
+    /* O produtor antigo deduplicava bytes iguais com MIME distintos. O catálogo é a autoridade;
+       um tipo presente na referência deve ser permitido, mas não precisa ser igual ao primeiro. */
+    if(Object.prototype.hasOwnProperty.call(r,"tipo")&&MIDIA_TIPOS.indexOf(r.tipo)<0)falha(c+".tipo","tipo de mídia não permitido");
+    if(Object.prototype.hasOwnProperty.call(r,"mimeOriginal")&&!midiaMimeImagem(r.mimeOriginal))falha(c+".mimeOriginal","tipo original de imagem inválido");
+  }
+  /* Valida os mesmos metadados e destinos da importação, sem inventar pixels ou baixar objetos. */
+  return validarBackupParaImportacao(p,referencia);
+}
+async function verificarMidiasDaCopia(pacote,c){
+  if(!pacote||pacote.versao!==4)return null;
+  var destino=midiaAssinaturaDestino();midiaConferirContexto(c,destino);var plano=validarFormaNuvemV4(pacote);if(plano.avisos.length)throw erroCopiaNuvem("nuvem_integridade","A cópia contém referências a imagens ausentes. Nenhuma cópia foi confirmada.");
+  var referencias=midiaReferenciasPorSha(pacote);
+  for(var i=0;i<pacote.midia.length;i++){
+    var m=pacote.midia[i];midiaConferirContexto(c,destino);var blob=await midiaBaixar(c,m.sha256,m.tipo,m.tamanho,destino);midiaConferirContexto(c,destino);
+    var usadas=referencias[m.sha256]||[];
+    for(var j=0;j<usadas.length;j++){await midiaBlobParaImagem(blob,usadas[j]);midiaConferirContexto(c,destino);}
+  }
+  return destino;
 }
 /* v4 (nuvem) -> v3 (arquivo autocontido): baixa e confere cada imagem, depois reconstrói os dados embutidos. */
 async function hidratarNuvemParaArquivo(pacote,c){
-  validarFormaNuvemV4(pacote);
+  var plano=validarFormaNuvemV4(pacote),somenteLivres=plano.avisos.length===1&&desenhosLivresSemPixels(pacote,true).length>0;
+  if(plano.avisos.length&&!somenteLivres)throw erroCopiaNuvem("nuvem_integridade","A cópia contém imagens ausentes de notas ou fichas. A recuperação foi interrompida antes de baixar as imagens.");
+  var destino=midiaAssinaturaDestino();midiaConferirContexto(c,destino);
   var copia=dadosProfundos(pacote),tamanhos={};
   (copia.midia||[]).forEach(function(m){tamanhos[m.sha256]=m;});
   var cache=Object.create(null);
   async function obter(r){
     if(r==null)return null;
     var m=tamanhos[r.sha256];
-    if(!cache[r.sha256])cache[r.sha256]=await midiaBaixar(c,r.sha256,m.tipo);
-    return window.EditorDesenho.blobParaData(cache[r.sha256]);
+    midiaConferirContexto(c,destino);
+    if(!cache[r.sha256])cache[r.sha256]=await midiaBaixar(c,r.sha256,m.tipo,m.tamanho,destino);
+    midiaConferirContexto(c,destino);var imagem=await midiaBlobParaImagem(cache[r.sha256],r);midiaConferirContexto(c,destino);
+    var dados=await window.EditorDesenho.blobParaData(imagem);midiaConferirContexto(c,destino);return dados;
   }
   var notas=copia.notas||[];
   for(var i=0;i<notas.length;i++){var d=notas[i].dados;if(d&&Array.isArray(d.imagensRef)){d.imagensDados=[];for(var j=0;j<d.imagensRef.length;j++){var r=d.imagensRef[j];d.imagensDados.push({meta:r.meta,src:await obter(r)});}delete d.imagensRef;}}
@@ -6970,12 +7056,12 @@ async function resumoCopiaNuvem(p){
   if(!resumo)throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 não está disponível. Use um backup local e tente em uma página segura.");
   return resumo;
 }
-async function validarTextoCopiaNuvem(texto,estrito){
+async function validarTextoCopiaNuvem(texto,estrito,opcoes){
   var v=await verificarTextoBackup(texto);
   if(!v.ok||(estrito&&v.legado))throw erroCopiaNuvem("nuvem_integridade","A verificação SHA-256 da cópia falhou ou está ausente.");
-  if(v.pacote&&v.pacote.versao===4){validarFormaNuvemV4(v.pacote);v.plano={avisos:[],total:0};return v;}
-  var plano=validarBackupParaImportacao(v.pacote);
-  if(estrito&&plano.avisos.length)throw erroCopiaNuvem("nuvem_integridade","A cópia contém referências a imagens ausentes. Preserve seus backups e confira as imagens.");
+  var referenciasMidia=!!(v.pacote&&v.pacote.versao===4),plano=referenciasMidia?validarFormaNuvemV4(v.pacote):validarBackupParaImportacao(v.pacote);
+  var somenteLivres=opcoes&&opcoes.permitirLivresIncompletos===true&&plano.avisos.length===1&&desenhosLivresSemPixels(v.pacote,referenciasMidia).length>0;
+  if(estrito&&plano.avisos.length&&!somenteLivres)throw erroCopiaNuvem("nuvem_integridade","A cópia contém referências a imagens ausentes. Preserve seus backups e confira as imagens.");
   v.plano=plano;return v;
 }
 async function lerTextoCopiaNuvem(c,caminho,origem){
@@ -7017,7 +7103,9 @@ async function enviarBackupNuvemAutomatico(forcar){
   clearTimeout(temporizadorBackupNuvem);temporizadorBackupNuvem=null;
   if(forcar===true){COPIA_NUVEM.tentativas=0;COPIA_NUVEM.pendente=null;COPIA_NUVEM.bloqueio=null;limparFalhaCopiaNuvem();}
   backupNuvemEmCurso=true;
-  var revisao=COPIA_NUVEM.revisao,geracaoEnvio=CONTA_NUVEM.geracao,adiar=false,falhou=false,confirmou=false;
+  var revisao=COPIA_NUVEM.revisao,geracaoEnvio=CONTA_NUVEM.geracao,adiar=false,falhou=false,confirmou=false,assinaturaPreparoMidia=null;
+  /* Só vale durante esta preparação; nenhum plano é reutilizado entre tentativas. */
+  function conferirPreparoMidia(){if(assinaturaPreparoMidia!==null)midiaConferirContexto(c,assinaturaPreparoMidia);}
   try{
     var c=await contextoCopiaNuvem(true),p=COPIA_NUVEM.pendente;
     conferirContextoConta(c);
@@ -7028,19 +7116,34 @@ async function enviarBackupNuvemAutomatico(forcar){
       var pacote=await criarBackup();
       conferirContextoConta(c);
       if(!backupNuvemTemConteudo(pacote)){if(alvo)alvo.textContent="Nenhum trabalho local · cópias anteriores preservadas";return false;}
-      var formaResumo=usarMidiaNuvem(c)?(await formaNuvemComMidia(pacote,c)).pacote:pacote;var resumo=await resumoCopiaNuvem(formaResumo),anterior=COPIA_NUVEM.ultima;
+      var comMidia=usarMidiaNuvem(c);assinaturaPreparoMidia=comMidia?midiaAssinaturaDestino():null;
+      var forma=comMidia?await formaNuvemComMidia(pacote,c):{pacote:pacote,pendentes:[]};
+      pacote=null;conferirPreparoMidia();
+      var formaResumo=forma.pacote,resumo=await resumoCopiaNuvem(formaResumo),anterior=COPIA_NUVEM.ultima;
+      formaResumo=null;conferirPreparoMidia();
       conferirContextoConta(c);
       if(!anterior)try{anterior=lerMetaLocal("backup-nuvem-versao-v1");}catch(e){anterior=null;}
       if(forcar!==true&&anterior&&anterior.uid===c.uid&&mesmoDestinoCopia(anterior,c)&&anterior.resumo===resumo&&caminhoVersaoCopia(anterior.caminho,c.uid)){
+        /* Sem novo envio: os Blobs preparados já não são necessários. */
+        forma=null;
         var antiga=await validarTextoCopiaNuvem(await lerTextoCopiaNuvem(c,anterior.caminho),true);
-        var resumoAnterior=await resumoCopiaNuvem(antiga.pacote);conferirContextoConta(c);
+        var resumoAnterior=await resumoCopiaNuvem(antiga.pacote);conferirContextoConta(c);conferirPreparoMidia();
         if(resumoAnterior!==resumo)throw erroCopiaNuvem("nuvem_integridade","A cópia anterior não corresponde aos trabalhos locais. Use Enviar cópia agora para criar outra versão.");
+        if(antiga.pacote.versao===4&&alvo)alvo.textContent="Conferindo imagens da cópia anterior…";
+        var midiasAnteriores=await verificarMidiasDaCopia(antiga.pacote,c);await confirmarContaCopia(c);midiaConferirContexto(c,midiasAnteriores);conferirPreparoMidia();
         if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
         COPIA_NUVEM.ultima=anterior;COPIA_NUVEM.tentativas=0;
         confirmou=true;limparFalhaCopiaNuvem();
         if(alvo)alvo.textContent="Cópia anterior verificada · sem novas alterações";return true;
       }
-      var forma=usarMidiaNuvem(c)?await formaNuvemComMidia(pacote,c):{pacote:pacote,pendentes:[]};for(var pi=0;pi<forma.pendentes.length;pi++){await midiaEnviar(c,forma.pendentes[pi]);conferirContextoConta(c);}var texto=await prepararBackup(forma.pacote);await validarTextoCopiaNuvem(texto,true);
+      for(var pi=0;pi<forma.pendentes.length;pi++){
+        conferirPreparoMidia();await midiaEnviar(c,forma.pendentes[pi]);conferirContextoConta(c);conferirPreparoMidia();
+        /* Apenas a fila temporária: catálogo e dados originais permanecem intactos. */
+        forma.pendentes[pi]=null;
+      }
+      forma.pendentes=[];conferirPreparoMidia();
+      var texto=await prepararBackup(forma.pacote);forma=null;conferirPreparoMidia();
+      await validarTextoCopiaNuvem(texto,true);conferirPreparoMidia();
       conferirContextoConta(c);
       p=Object.assign({uid:c.uid,caminho:c.uid+"/sincronizacao/versoes/"+nomeVersaoCopia(),texto:texto,resumo:resumo,revisao:revisao,enviada:false},referenciaDestinoCopia(c));
       COPIA_NUVEM.pendente=p;
@@ -7048,6 +7151,7 @@ async function enviarBackupNuvemAutomatico(forcar){
     await confirmarContaCopia(c);
     conferirContextoConta(c);
     if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
+    conferirPreparoMidia();
     if(!p.enviada){
       if(alvo)alvo.textContent="Enviando nova versão da nuvem…";
       var arquivoEnvio=new Blob([p.texto],{type:"application/json"}), falhaEnvio=null;
@@ -7076,7 +7180,10 @@ async function enviarBackupNuvemAutomatico(forcar){
     var relido=await lerTextoCopiaNuvem(c,p.caminho);
     conferirContextoConta(c);
     if(relido!==p.texto)throw erroCopiaNuvem("nuvem_integridade","A releitura da nuvem divergiu do arquivo enviado. A cópia não foi confirmada.");
-    await validarTextoCopiaNuvem(relido,true);await confirmarContaCopia(c);
+    var copiaVerificada=await validarTextoCopiaNuvem(relido,true);
+    if(copiaVerificada.pacote.versao===4&&alvo)alvo.textContent="Conferindo imagens da cópia…";
+    conferirPreparoMidia();
+    var midiasVerificadas=await verificarMidiasDaCopia(copiaVerificada.pacote,c);await confirmarContaCopia(c);midiaConferirContexto(c,midiasVerificadas);conferirPreparoMidia();
     conferirContextoConta(c);
     if(window.__mesaArmazenamento&&window.__mesaArmazenamento.recuperacao)window.__mesaArmazenamento.recuperacao.impedirGravacao();
     var meta=Object.assign({uid:c.uid,resumo:p.resumo,caminho:p.caminho,em:Date.now()},referenciaDestinoCopia(c));
@@ -7158,12 +7265,14 @@ async function baixarCopiaNuvem(indice){
   try{
     if(!baixador)throw erroCopiaNuvem("nuvem_download","Download indisponível neste navegador.");
     alvo.textContent="Baixando e verificando a cópia…";
-    var texto=await lerTextoCopiaNuvem(c,item.caminho,item),ver=await validarTextoCopiaNuvem(texto,!item.legado);await confirmarContaCopia(c);if(ver.pacote.versao===4){var arquivoV3=await hidratarNuvemParaArquivo(ver.pacote,c);conferirContextoConta(c);texto=await prepararBackup(arquivoV3);ver=await validarTextoCopiaNuvem(texto,true);}
+    var texto=await lerTextoCopiaNuvem(c,item.caminho,item),ver=await validarTextoCopiaNuvem(texto,!item.legado,{permitirLivresIncompletos:true});await confirmarContaCopia(c);if(ver.pacote.versao===4){var arquivoV3=await hidratarNuvemParaArquivo(ver.pacote,c);conferirContextoConta(c);texto=await prepararBackup(arquivoV3);ver=await validarTextoCopiaNuvem(texto,true,{permitirLivresIncompletos:true});}
     conferirContextoConta(c);
     var p=ver.pacote,resumo=(p.obras||[]).length+" obra(s), "+(p.capitulos||[]).length+" capítulo(s), "+(p.notas||[]).length+" nota(s), "+(p.desenhos||[]).length+" desenho(s).";
-    await baixador.save({filename:item.legado?"mesa-de-roteiro-copia-antiga.json":"mesa-de-roteiro-"+item.nome,data:texto});
+    if(!confirmarBackupParcial(p)){alvo.textContent="Download cancelado. Nenhum arquivo foi preparado para salvar.";return false;}
+    var parcial=ver.plano.avisos.length>0;
+    await baixador.save({filename:parcial?"mesa-de-roteiro-copia-parcial-"+(item.legado?"antiga.json":item.nome):item.legado?"mesa-de-roteiro-copia-antiga.json":"mesa-de-roteiro-"+item.nome,data:texto});
     if(c.geracao!==CONTA_NUVEM.geracao)return true;
-    alvo.textContent=(ver.legado?"Cópia antiga baixada sem SHA-256; confira o conteúdo.":"Arquivo verificado por SHA-256 e preparado para download.")+" "+resumo+(ver.plano.avisos.length?" Atenção: "+ver.plano.avisos.join("; ")+".":"")+" Preserve um backup local antes de usar Importar backup.";
+    alvo.textContent=(parcial?"Cópia parcial preparada para download. ":"")+(ver.legado?"Cópia antiga baixada sem SHA-256; confira o conteúdo.":"Arquivo verificado por SHA-256 e preparado para download.")+" "+resumo+(ver.plano.avisos.length?" Atenção: "+ver.plano.avisos.join("; ")+".":"")+" Preserve um backup local antes de usar Importar backup.";
     return true;
   }catch(e){if(c.geracao===CONTA_NUVEM.geracao)alvo.textContent="O download não foi confirmado. A cópia pode estar ausente, inacessível ou inválida. Seus trabalhos locais permanecem intactos.";return false;}
   finally{COPIA_NUVEM.baixando=false;}
@@ -7218,13 +7327,13 @@ function atualizarPastaBackup(){
   ar.nomePastaBackup().then(function(n){ alvo.textContent=n?"Pasta de backup: "+n+". O navegador poderá pedir autorização novamente.":"Pasta de backup: não escolhida."; if(bt) bt.disabled=!n; });
 }
 /* Os pixels das camadas e as imagens das notas seguem juntos no arquivo. */
-async function criarBackup(){
+async function criarBackup(opcoes){
   if(acaoTextoAtiva){var ocupado=new Error("Backup adiado: uma operação local ainda está em andamento.");ocupado.code="backup_ocupado";throw ocupado;}
-  var pacote=await executarAcaoTexto(criarBackupSalvo,true);
+  var pacote=await executarAcaoTexto(function(){return criarBackupSalvo(opcoes);},true);
   if(!pacote)throw new Error("Backup interrompido: aguarde a operação em andamento e confirme o salvamento das alterações antes de tentar novamente.");
   return pacote;
 }
-async function criarBackupSalvo(){
+async function criarBackupSalvo(opcoes){
   /* Salvar o desenho pode atualizar os metadados do capítulo via aoMudar. */
   var desenhos=window.EditorDesenho&&window.EditorDesenho.exportarDados?await window.EditorDesenho.exportarDados():[];
   if(await salvarPendenciasTexto()!==true)throw new Error("Backup interrompido: não foi possível confirmar os metadados após salvar o desenho.");
@@ -7241,35 +7350,75 @@ async function criarBackupSalvo(){
     var nd=pacote.notas[ni].dados, refs=Array.isArray(nd.imagens)?nd.imagens:[]; nd.imagensDados=[];
     for(var nj=0;nj<refs.length;nj++){var rec=await bdLer(notaImagemChave(pacote.notas[ni].id,refs[nj].id));if(!rec||!rec.src){var erro=new Error("Backup interrompido: uma imagem da nota não está disponível. Preserve os backups anteriores e verifique a nota antes de tentar novamente.");erro.code="backup_incompleto";throw erro;}nd.imagensDados.push({meta:refs[nj],src:rec.src});}
   }
-  conferirDesenhosReferenciados(pacote);
+  conferirDesenhosReferenciados(pacote,!!(opcoes&&opcoes.permitirLivresIncompletos===true));
   pacote.fichasPersonagem=await exportarFichasPersonagem();
   return pacote;
 }
-function conferirDesenhosReferenciados(pacote){
+function desenhosLivresSemPixels(pacote,referenciasMidia){
+  var encontrados=Object.create(null),desenhos=Array.isArray(pacote&&pacote.desenhos)?pacote.desenhos:[];
+  desenhos.forEach(function(v){
+    var camadas=v&&v.rec&&v.rec.camadas,completo=Array.isArray(camadas)&&camadas.length>0;
+    if(completo)for(var i=0;i<camadas.length;i++)if(!camadas[i]||!(referenciasMidia?camadas[i].blobRef:camadas[i].blob)){completo=false;break;}
+    if(completo)encontrados[String(v.id)]=true;
+  });
+  return (Array.isArray(pacote&&pacote.desenhosLivres)?pacote.desenhosLivres:[]).filter(function(d){return !encontrados[String(d.id)];});
+}
+function confirmarBackupParcial(pacote){
+  var faltas=desenhosLivresSemPixels(pacote);if(!faltas.length)return true;
+  return window.confirm(faltas.length+(faltas.length===1?" desenho livre está sem imagem incluída. Ele pode estar vazio ou indisponível.":" desenhos livres estão sem imagem incluída. Eles podem estar vazios ou indisponíveis.")+"\n\nDeseja salvar uma CÓPIA PARCIAL com os dados disponíveis? Ela não recupera as imagens ausentes. Preserve seus backups completos anteriores. Nenhum desenho será apagado ou preenchido com uma imagem em branco.");
+}
+function artesPaginaSemPixels(pacote,referenciasMidia){
+  var encontrados=Object.create(null),desenhos=Array.isArray(pacote&&pacote.desenhos)?pacote.desenhos:[],faltas=[];
+  desenhos.forEach(function(v){
+    var camadas=v&&v.rec&&v.rec.camadas,completo=Array.isArray(camadas)&&camadas.length>0;
+    if(completo)for(var i=0;i<camadas.length;i++)if(!camadas[i]||!(referenciasMidia?camadas[i].blobRef:camadas[i].blob)){completo=false;break;}
+    if(completo)encontrados[String(v.id)]=true;
+  });
+  (Array.isArray(pacote&&pacote.capitulos)?pacote.capitulos:[]).forEach(function(c){
+    var paginas=c&&c.dados&&c.dados.paginas;
+    (Array.isArray(paginas)?paginas:[]).forEach(function(pg){
+      if(!pg||pg.temArtePagina!==true)return;
+      var idValido=(typeof pg.id==="string"&&pg.id.length>0)||(typeof pg.id==="number"&&isFinite(pg.id)&&pg.id!==0);
+      if(!idValido||!encontrados[String(idArtePagina(pg))])faltas.push(pg);
+    });
+  });
+  return faltas;
+}
+function conferirDesenhosReferenciados(pacote,permitirLivresIncompletos,referenciasMidia){
   var encontrados=Object.create(null);
-  (pacote.desenhos||[]).forEach(function(v){if(v&&v.rec&&Array.isArray(v.rec.camadas)&&v.rec.camadas.length&&v.rec.camadas.every(function(c){return c&&c.blob;}))encontrados[String(v.id)]=true;});
+  (pacote.desenhos||[]).forEach(function(v){if(v&&v.rec&&Array.isArray(v.rec.camadas)&&v.rec.camadas.length&&v.rec.camadas.every(function(c){return c&&(referenciasMidia?c.blobRef:c.blob);}))encontrados[String(v.id)]=true;});
   (pacote.capitulos||[]).forEach(function(c){((c.dados&&c.dados.paginas)||[]).forEach(function(pg){(pg.paineis||[]).forEach(function(pn){if(pn.temDesenho&&!encontrados[String(pn.id)]){var erro=new Error("Um painel referencia um desenho indisponível. O backup completo foi interrompido; preserve suas cópias anteriores.");erro.code="backup_incompleto";throw erro;}});});});
+  if(artesPaginaSemPixels(pacote,referenciasMidia).length){var faltaPagina=new Error("Uma página referencia uma arte de sobreposição indisponível. O backup foi interrompido; preserve suas cópias anteriores.");faltaPagina.code="backup_incompleto";throw faltaPagina;}
+  var faltas=desenhosLivresSemPixels(pacote,referenciasMidia);
+  if(faltas.length&&permitirLivresIncompletos!==true){var e=new Error("Há "+faltas.length+" desenho(s) livre(s) sem imagem incluída. Podem estar vazios ou indisponíveis. O backup completo foi interrompido; preserve as cópias anteriores. Use Baixar backup para avaliar uma cópia parcial.");e.code="backup_incompleto";throw e;}
+  return faltas;
 }
 async function baixarBackup(){
   if(!baixador){ aviso("Download indisponível neste navegador."); return; }
   try{
-    var pacote=await criarBackup(), texto=await prepararBackup(pacote), conf=await verificarTextoBackup(texto);
+    var pacote=await criarBackup({permitirLivresIncompletos:true}),parcial=desenhosLivresSemPixels(pacote).length>0;
+    if(!confirmarBackupParcial(pacote)){el("integridadeBackup").textContent="Backup cancelado. Nenhum arquivo foi preparado para download.";return false;}
+    var texto=await prepararBackup(pacote),conf=await verificarTextoBackup(texto);
     if(!conf.ok) throw new Error("verificacao_falhou");
-    await baixador.save({filename:window.__mesaArmazenamento.nomeVersao("mesa-de-roteiro-backup"),data:texto});
-    registrarBackup(pacote,"download");
-    el("integridadeBackup").textContent=conf.legado?"Backup baixado; este navegador não conseguiu calcular a verificação.":"Backup completo verificado (SHA-256) antes do download.";
-    aviso("Backup baixado e verificado. Guarde uma cópia fora do computador.");
-  }catch(e){ el("integridadeBackup").textContent="Falha ao criar/verificar o backup: "+(e&&e.message?e.message:"erro desconhecido")+"."; aviso("O backup não foi confirmado. Seus dados atuais não foram alterados."); }
+    await baixador.save({filename:window.__mesaArmazenamento.nomeVersao(parcial?"mesa-de-roteiro-backup-parcial":"mesa-de-roteiro-backup"),data:texto});
+    registrarBackup(pacote,"download",parcial);
+    el("integridadeBackup").textContent=parcial?"Cópia parcial preparada para download. Há desenhos livres sem imagem incluída. "+(conf.legado?"Este navegador não conseguiu calcular a verificação.":"O conteúdo disponível foi verificado por SHA-256."):conf.legado?"Backup baixado; este navegador não conseguiu calcular a verificação.":"Backup completo verificado (SHA-256) antes do download.";
+    aviso(parcial?"Cópia parcial preparada. Preserve seus backups completos anteriores.":"Backup baixado e verificado. Guarde uma cópia fora do computador.");return true;
+  }catch(e){ el("integridadeBackup").textContent="Falha ao criar/verificar o backup: "+(e&&e.message?e.message:"erro desconhecido")+"."; aviso("O backup não foi confirmado. Seus dados atuais não foram alterados.");return false; }
 }
 async function salvarBackupNaPasta(){
   try{
-    var pacote=await criarBackup(), texto=await prepararBackup(pacote), ar=window.__mesaArmazenamento, nome=ar.nomeVersao("mesa-de-roteiro-backup"), r=await ar.salvarEmPasta(nome,texto,async function(t){return (await verificarTextoBackup(t)).ok;});
-    registrarBackup(pacote,"pasta"); el("integridadeBackup").textContent="Versão "+r.arquivo+" gravada e relida com verificação SHA-256."; aviso("Backup completo salvo e verificado na pasta escolhida.");
-  }catch(e){ el("integridadeBackup").textContent="Falha ao salvar na pasta: "+(e&&e.message?e.message:"erro desconhecido")+". Nenhum dado existente foi removido."; aviso("A versão não foi confirmada; tente novamente ou use Baixar backup."); }
+    var pacote=await criarBackup({permitirLivresIncompletos:true}),parcial=desenhosLivresSemPixels(pacote).length>0;
+    if(!confirmarBackupParcial(pacote)){el("integridadeBackup").textContent="Backup cancelado. Nenhum arquivo foi salvo na pasta.";return false;}
+    var texto=await prepararBackup(pacote),ar=window.__mesaArmazenamento,nome=ar.nomeVersao(parcial?"mesa-de-roteiro-backup-parcial":"mesa-de-roteiro-backup"),r=await ar.salvarEmPasta(nome,texto,async function(t){return (await verificarTextoBackup(t)).ok;});
+    registrarBackup(pacote,"pasta",parcial);
+    el("integridadeBackup").textContent=parcial?"Cópia parcial "+r.arquivo+" gravada e relida com verificação SHA-256. Há desenhos livres sem imagem incluída.":"Versão "+r.arquivo+" gravada e relida com verificação SHA-256.";
+    aviso(parcial?"Cópia parcial salva. Preserve seus backups completos anteriores.":"Backup completo salvo e verificado na pasta escolhida.");return true;
+  }catch(e){ el("integridadeBackup").textContent="Falha ao salvar na pasta: "+(e&&e.message?e.message:"erro desconhecido")+". Nenhum dado existente foi removido."; aviso("A versão não foi confirmada; tente novamente ou use Baixar backup.");return false; }
 }
 /* Pré-validação pura: não grava, não normaliza IDs e preserva campos desconhecidos. */
-function validarBackupParaImportacao(pacote){
-  var avisos=[], faltasNotas=0, faltasFichas=0, fichasLegadas=null;
+function validarBackupParaImportacao(pacote,validarReferenciaV4){
+  var avisos=[], faltasNotas=0, faltasFichas=0, fichasLegadas=null, referenciasMidia=typeof validarReferenciaV4==="function";
   function falha(campo,motivo){var e=new Error(campo+": "+motivo);e.code="backup_formato";throw e;}
   function objeto(v,c){if(!v||typeof v!=="object"||Array.isArray(v))falha(c,"deve ser um objeto");}
   function identificador(v,c){if(!((typeof v==="string"&&v.length)||(typeof v==="number"&&isFinite(v)&&v!==0)))falha(c,"identificador inválido");}
@@ -7291,9 +7440,13 @@ function validarBackupParaImportacao(pacote){
     if(!dados||!/^[A-Za-z0-9+/]*={0,2}$/.test(dados)||dados.length%4===1||(dados.indexOf("=")>=0&&dados.length%4!==0))falha(c,"conteúdo Base64 inválido");
   }
   function metaImagem(m,c){objeto(m,c);identificador(m.id,c+".id");campos(m,["nome","tipo"],c,texto);campos(m,["tamanho"],c,numero);campos(m,["criadoEm"],c,data);}
-  function anexos(d,c){
-    var referencias=registros(d.imagens,c+".imagens",metaImagem,true), recebidas=new Set();
-    registros(d.imagensDados,c+".imagensDados",function(im,p){metaImagem(im.meta,p+".meta");imagem(im.src,p+".src");var chave=String(im.meta.id);if(recebidas.has(chave))falha(p+".meta.id","imagem repetida");recebidas.add(chave);},false);
+  function anexos(d,c,grupo){
+    if(referenciasMidia&&grupo!=="notas"){
+      ["imagens","imagensDados","imagensRef"].forEach(function(k){if(d[k]!=null&&(!Array.isArray(d[k])||d[k].length))falha(c+"."+k,"anexos deste grupo não são recuperados pelo formato v4");});return;
+    }
+    if(referenciasMidia&&Object.prototype.hasOwnProperty.call(d,"imagensDados"))falha(c+".imagensDados","uma nota v4 deve usar referências de mídia");
+    var referencias=registros(d.imagens,c+".imagens",metaImagem,true), recebidas=new Set(), esperadas=referenciasMidia?new Set(referencias.map(function(im){return String(im.id);})):null, campo=referenciasMidia?"imagensRef":"imagensDados";
+    registros(d[campo],c+"."+campo,function(im,p){metaImagem(im.meta,p+".meta");if(referenciasMidia){if(!esperadas.has(String(im.meta.id)))falha(p+".meta.id","imagem sem referência correspondente na nota");validarReferenciaV4(im,p);}else imagem(im.src,p+".src");var chave=String(im.meta.id);if(recebidas.has(chave))falha(p+".meta.id","imagem repetida");recebidas.add(chave);},false);
     referencias.forEach(function(im){if(!recebidas.has(String(im.id)))faltasNotas++;});
   }
   function tracos(v,c){lista(v,c,function(t,p){objeto(t,p);campos(t,["t","c"],p,texto);campos(t,["w"],p,numero);lista(t.p,p+".p",function(pt,pp){if(!Array.isArray(pt)||pt.length<2)falha(pp,"ponto inválido");pt.forEach(function(n,i){numero(n,pp+"["+(i+1)+"]");});});});}
@@ -7307,7 +7460,10 @@ function validarBackupParaImportacao(pacote){
     lista(p.forma,c+".forma",numero);
   }
   function pagina(pg,c){
-    campos(pg,["layoutPag"],c,texto);registros(pg.paineis,c+".paineis",painel,false);visual(pg.visual,c+".visual");
+    campos(pg,["layoutPag"],c,texto);
+    if(pg.temArtePagina!=null&&typeof pg.temArtePagina!=="boolean")falha(c+".temArtePagina","deve ser verdadeiro ou falso");
+    if(pg.temArtePagina===true)identificador(pg.id,c+".id");
+    registros(pg.paineis,c+".paineis",painel,false);visual(pg.visual,c+".visual");
     if(pg.composicaoLivre!=null){objeto(pg.composicaoLivre,c+".composicaoLivre");Object.keys(pg.composicaoLivre).forEach(function(k){var q=pg.composicaoLivre[k],p=c+".composicaoLivre[quadro]";objeto(q,p);campos(q,["x","y","w","h","z"],p,numero);});}
   }
   function documento(d,c,grupo){
@@ -7319,15 +7475,19 @@ function validarBackupParaImportacao(pacote){
       if(d.paginasSeparadas&&(!Array.isArray(d.paginas)||!d.paginas.length))falha(c+".paginas","as páginas externas não estão incluídas no arquivo");
     }
     if(grupo==="notas"){campos(d,["texto","tipo"],c,texto);if(typeof d.tags!=="string")textos(d.tags,c+".tags");}
-    anexos(d,c);
+    anexos(d,c,grupo);
   }
   function desenhos(v,c){
     registros(v,c,function(item,p){
       if(/^(nota-imagem|ficha-imagem)\//.test(String(item.id)))falha(p+".id","esta chave é reservada às imagens de notas e fichas");
       objeto(item.rec,p+".rec");var r=item.rec;campos(r,["w","h"],p+".rec",numero);
+      if(referenciasMidia&&!Array.isArray(r.camadas))falha(p+".rec.camadas","deve ser uma lista");
       registros(r.camadas,p+".rec.camadas",function(l,lc){
         campos(l,["nome","tipo","modo"],lc,texto);campos(l,["op"],lc,numero);
-        ["blob","originalBlob"].forEach(function(k){if(l[k]!=null&&l[k]!=="")imagem(l[k],lc+"."+k);});
+        if(referenciasMidia){
+          ["blob","originalBlob"].forEach(function(k){if(Object.prototype.hasOwnProperty.call(l,k))falha(lc+"."+k,"dados embutidos em cópia de referências");});
+          validarReferenciaV4(l.blobRef,lc+".blobRef");if(l.originalBlobRef!=null)validarReferenciaV4(l.originalBlobRef,lc+".originalBlobRef");
+        }else ["blob","originalBlob"].forEach(function(k){if(l[k]!=null&&l[k]!=="")imagem(l[k],lc+"."+k);});
         if(l.manequim3d!=null){objeto(l.manequim3d,lc+".manequim3d");["estado","local"].forEach(function(k){if(l.manequim3d[k]!=null)objeto(l.manequim3d[k],lc+".manequim3d."+k);});}
       },false);
       registros(r.baloes,p+".rec.baloes",function(b,bc){campos(b,["txt","tipo","fonte","cor","contorno"],bc,texto);campos(b,["x","y","w","h","px","py","fs","rot","esp"],bc,numero);},false);
@@ -7341,12 +7501,13 @@ function validarBackupParaImportacao(pacote){
       if(f.notas!=null){objeto(f.notas,p+".notas");campos(f.notas,["geral","vistas","expressoes","roupas","detalhes"],p+".notas",escalar);}
       registros(f.imagens,p+".imagens",function(im,ip){campos(im,["nome","vista"],ip,escalar);var chave="ficha-imagem/"+f.id+"/"+im.id;if(esperadas.has(chave))falha(ip+".id","duas referências usam o mesmo destino de imagem");esperadas.add(chave);},true);
     },true);
-    lista(v.imagens,c+".imagens",function(im,p){objeto(im,p);if(typeof im.chave!=="string"||!esperadas.has(im.chave))falha(p+".chave","imagem sem referência correspondente na ficha");if(recebidas.has(im.chave))falha(p+".chave","imagem repetida");recebidas.add(im.chave);campos(im,["nome"],p,escalar);imagem(im.src,p+".src");});
+    lista(v.imagens,c+".imagens",function(im,p){objeto(im,p);if(typeof im.chave!=="string"||!esperadas.has(im.chave))falha(p+".chave","imagem sem referência correspondente na ficha");if(recebidas.has(im.chave))falha(p+".chave","imagem repetida");recebidas.add(im.chave);campos(im,["nome"],p,escalar);if(referenciasMidia){if(Object.prototype.hasOwnProperty.call(im,"src"))falha(p+".src","dados embutidos em cópia de referências");validarReferenciaV4(im,p);}else imagem(im.src,p+".src");});
     esperadas.forEach(function(chave){if(!recebidas.has(chave))faltasFichas++;});
   }
   objeto(pacote,"backup");
   if(pacote.formato!=null&&pacote.formato!=="mesa-de-roteiro-backup")falha("formato","este arquivo pertence a outro formato");
-  if(pacote.versao!=null&&!((typeof pacote.versao==="number"||typeof pacote.versao==="string")&&/^[123]$/.test(String(pacote.versao))))falha("versao","versão de backup não suportada");
+  if(referenciasMidia?pacote.versao!==4:pacote.versao!=null&&!((typeof pacote.versao==="number"||typeof pacote.versao==="string")&&/^[123]$/.test(String(pacote.versao))))falha("versao","versão de backup não suportada");
+  if(referenciasMidia)campos(pacote,["criadoEm"],"backup",data);
   if(pacote.integridade!=null){
     var integ=pacote.integridade;objeto(integ,"integridade");
     if(integ.algoritmo==="SHA-256"){if(typeof integ.conteudo!=="string"||!/^[a-f0-9]{64}$/i.test(integ.conteudo))falha("integridade.conteudo","soma SHA-256 ausente ou inválida");}
@@ -7357,6 +7518,9 @@ function validarBackupParaImportacao(pacote){
     registros(pacote[g],g,function(item,p){if(String(item.id).indexOf("/")>=0)falha(p+".id","identificadores de documentos não podem conter barra");objeto(item.dados,p+".dados");documento(item.dados,p+".dados",g);},true);total+=pacote[g].length;
   });
   desenhos(pacote.desenhos,"desenhos");
+  if(referenciasMidia){
+    try{conferirDesenhosReferenciados(pacote,true,true);}catch(e){falha("desenhos",e&&e.message?e.message:"referência de desenho indisponível");}
+  }else if(artesPaginaSemPixels(pacote).length)falha("capitulos.paginas.temArtePagina","uma página marcada como desenhada está sem a arte de sobreposição correspondente; preserve as cópias anteriores");
   registros(pacote.desenhosLivres,"desenhosLivres",function(d,c){if(typeof d.titulo!=="string"||!d.titulo)falha(c+".titulo","nome do desenho ausente ou inválido");campos(d,["criadoEm","atualizadoEm"],c,data);},true);
   if(pacote.fichasPersonagem!=null)fichas(pacote.fichasPersonagem,"fichasPersonagem");
   lista(pacote.preferenciasLocal,"preferenciasLocal",function(p,c){
@@ -7366,6 +7530,8 @@ function validarBackupParaImportacao(pacote){
       fichas({fichas:fichasLegadas,imagens:[]},c+".fichasAntigas");
     }
   });
+  var faltasLivres=desenhosLivresSemPixels(pacote,referenciasMidia).length;
+  if(faltasLivres)avisos.push(faltasLivres+(faltasLivres===1?" desenho livre sem imagem incluída; pode estar vazio ou indisponível":" desenhos livres sem imagem incluída; podem estar vazios ou indisponíveis"));
   if(faltasNotas)avisos.push(faltasNotas+" referência(s) de nota sem imagem embutida");
   if(faltasFichas)avisos.push(faltasFichas+" referência(s) de ficha sem imagem embutida");
   return {total:total,fichasLegadas:fichasLegadas,avisos:avisos};
@@ -7376,11 +7542,35 @@ async function importarBackupArquivo(arquivo){
 }
 function prepararPlanoImportacao(pacote,plano){
   var textos=[],imagens=[],chavesTexto=Object.create(null),chavesImagem=Object.create(null);
+  var livresPreservados=Object.create(null),livresSemImagem=Object.create(null),livresMesclados=null;
+  desenhosLivresSemPixels(pacote).forEach(function(v){livresSemImagem[String(v.id)]=true;});
+  /* Decide o cadastro e os pixels juntos. Mantém o critério anterior de datas;
+     no empate, vence o arquivo. Os registros de origem não são modificados. */
+  if(Array.isArray(pacote.desenhosLivres)){
+    var porId=Object.create(null);
+    lerListaEssencial("desenhos-livres").forEach(function(v){
+      var k=String(v.id),antes=porId[k];
+      if(!antes||(Number(v.atualizadoEm)||0)>=(Number(antes.atualizadoEm)||0))porId[k]=v;
+    });
+    pacote.desenhosLivres.forEach(function(v){
+      var k=String(v.id),antes=porId[k];
+      if(antes&&livresSemImagem[k]){livresPreservados[k]=true;return;}
+      if(!antes||(Number(v.atualizadoEm)||0)>=(Number(antes.atualizadoEm)||0)){
+        porId[k]=v;delete livresPreservados[k];
+      }else livresPreservados[k]=true;
+    });
+    livresMesclados=Object.keys(porId).map(function(k){return porId[k];}).sort(function(a,b){return (Number(b.atualizadoEm)||0)-(Number(a.atualizadoEm)||0);});
+  }
   function texto(chave,valor){if(chavesTexto[chave])throw new Error("O backup usa o mesmo destino de texto mais de uma vez.");chavesTexto[chave]=true;textos.push({chave:chave,valor:JSON.stringify(valor)});}
-  function imagem(idImagem,rec){var k=typeof idImagem+":"+idImagem;if(chavesImagem[k])throw new Error("O backup usa o mesmo destino de imagem mais de uma vez.");chavesImagem[k]=true;imagens.push({id:idImagem,rec:rec});}
+  function imagem(idImagem,rec){
+    /* Uma nota ou ficha não pode reintroduzir uma escrita no desenho protegido. */
+    if(livresPreservados[String(idImagem)]||livresSemImagem[String(idImagem)])throw new Error("O backup contém uma imagem que conflita com um desenho livre local preservado. A importação foi cancelada.");
+    var k=typeof idImagem+":"+idImagem;if(chavesImagem[k])throw new Error("O backup usa o mesmo destino de imagem mais de uma vez.");chavesImagem[k]=true;imagens.push({id:idImagem,rec:rec});
+  }
+  var desenhosRecebidos=(pacote.desenhos||[]).filter(function(v){return !livresPreservados[String(v.id)]&&!livresSemImagem[String(v.id)];});
   var ed=window.EditorDesenho;
-  if((pacote.desenhos||[]).length&&(!ed||!ed.prepararDadosImportacao))throw new Error("O importador de desenhos não está disponível.");
-  (ed&&ed.prepararDadosImportacao?ed.prepararDadosImportacao(pacote.desenhos||[]):[]).forEach(function(v){imagem(v.id,v.rec);});
+  if(desenhosRecebidos.length&&(!ed||!ed.prepararDadosImportacao))throw new Error("O importador de desenhos não está disponível.");
+  (ed&&ed.prepararDadosImportacao?ed.prepararDadosImportacao(desenhosRecebidos):[]).forEach(function(v){imagem(v.id,v.rec);});
   var pf=pacote.fichasPersonagem||(plano.fichasLegadas!==null?{fichas:plano.fichasLegadas,imagens:[]}:null);
   if(pf){
     var fichas=lerListaEssencial("fichas-personagem-v1").map(normalizarFichaPersonagem);
@@ -7388,17 +7578,7 @@ function prepararPlanoImportacao(pacote,plano){
     texto("mesa:fichas-personagem-v1",fichas);
     (pf.imagens||[]).forEach(function(im){imagem(im.chave,{src:im.src,nome:String(im.nome||"Referência")});});
   }
-  /* Mescla por id: desenhos livres que existem só neste aparelho continuam listados.
-     Em caso de mesmo id, vale o registro com atualização mais recente. Uma lista local ilegível interrompe a importação (lerListaEssencial lança erro). */
-  if(Array.isArray(pacote.desenhosLivres)){
-    var porId=Object.create(null);
-    lerListaEssencial("desenhos-livres").concat(pacote.desenhosLivres).forEach(function(v){
-      var k=String(v.id), antes=porId[k];
-      if(!antes||(Number(v.atualizadoEm)||0)>=(Number(antes.atualizadoEm)||0))porId[k]=v;
-    });
-    var livresMesclados=Object.keys(porId).map(function(k){return porId[k];}).sort(function(a,b){return (Number(b.atualizadoEm)||0)-(Number(a.atualizadoEm)||0);});
-    texto("mesa:desenhos-livres",dadosProfundos(livresMesclados));
-  }
+  if(livresMesclados!==null)texto("mesa:desenhos-livres",dadosProfundos(livresMesclados));
   ["obras","capitulos","notas"].forEach(function(grupo){pacote[grupo].forEach(function(item){
     var dadosItem=dadosProfundos(item.dados);
     if(Array.isArray(dadosItem.imagensDados)){
@@ -7408,7 +7588,7 @@ function prepararPlanoImportacao(pacote,plano){
     }
     texto("mesa:roteiros/local/"+grupo+"/"+item.id,dadosItem);
   });});
-  return{textos:textos,imagens:imagens};
+  return{textos:textos,imagens:imagens,livresPreservados:Object.keys(livresPreservados).length};
 }
 function comTravaImportacao(acao){
   if(navigator.locks&&navigator.locks.request)return navigator.locks.request("mesa-importacao-local-v1",{mode:"exclusive",ifAvailable:true},function(trava){if(!trava){var e=new Error("Outra aba está importando ou recuperando dados. Aguarde e tente novamente.");e.code="trava_recuperacao_ocupada";throw e;}return acao();});
@@ -7445,7 +7625,7 @@ async function importarBackupSalvo(arquivo){
     if(!ver.ok) throw new Error("A verificação SHA-256 falhou; a importação foi cancelada.");
     if(ver.pacote&&ver.pacote.versao===4) throw new Error("Esta é uma cópia da nuvem com mídia guardada na nuvem. Use Baixar cópia da nuvem e importe o arquivo baixado.");
     var plano=validarBackupParaImportacao(pacote), mensagem="Importar "+plano.total+" item(ns)? Itens com o mesmo identificador serão substituídos.";
-    if(Array.isArray(pacote.desenhosLivres))mensagem+=" A lista de desenhos livres será combinada com a do arquivo; nenhum desenho livre deste aparelho será removido da lista.";
+    if(Array.isArray(pacote.desenhosLivres))mensagem="Importar "+plano.total+" item(ns)? A lista de desenhos livres será combinada com a do arquivo. Para o mesmo identificador, a versão local mais recente será preservada; em empate, vale a versão do arquivo. Se o arquivo não incluir a imagem de um desenho livre, o desenho local correspondente será mantido. Os demais itens com identificadores repetidos serão substituídos.";
     if(plano.avisos.length)mensagem+="\n\nAtenção: "+plano.avisos.join("; ")+". As referências serão preservadas, mas as imagens ausentes não podem ser recuperadas deste arquivo.";
     mensagem+="\n\nFeche outras abas da Mesa de Roteiro antes de continuar. Se houver falha, será tentada a recuperação dos registros anteriores.";
     if(!window.confirm(mensagem)) return false;
@@ -7470,8 +7650,9 @@ async function importarBackupSalvo(arquivo){
     await carregarListas();
     mostrarEntradaInicial();
     el("integridadeBackup").textContent=ver.legado?"Backup antigo importado sem soma de verificação.":"Backup verificado por SHA-256 e importado.";
-    if(plano.avisos.length)el("integridadeBackup").textContent+=" Atenção: "+plano.avisos.join("; ")+". As referências foram preservadas.";
-    aviso("Backup importado com sucesso.");
+    if(operacoes.livresPreservados)el("integridadeBackup").textContent+=" "+operacoes.livresPreservados+(operacoes.livresPreservados===1?" desenho livre local não foi substituído pelo arquivo.":" desenhos livres locais não foram substituídos pelo arquivo.");
+    if(plano.avisos.length)el("integridadeBackup").textContent="Importação parcial: "+el("integridadeBackup").textContent+" Atenção: "+plano.avisos.join("; ")+". As referências foram preservadas.";
+    aviso(plano.avisos.length?"Backup importado com pendências de imagem.":"Backup importado com sucesso.");
     agendarBackupNuvem();
     return true;
   }catch(e){
@@ -8230,7 +8411,12 @@ async function duplicarPaginaSegura(pg,imagens){
   }
   /* A sobreposição do editor de página tem um registro independente dos painéis. */
   var arte=await bdLer(idArtePagina(pg));
-  if(arte!==null){validarRegistroDuplicacao(arte,false);imagens.push({id:idArtePagina(c),rec:arte});}
+  if(arte===null){
+    if(pg.temArtePagina===true)throw erroDuplicacaoEstrutura("A arte de sobreposição da página original não está disponível. Nenhuma duplicação foi aplicada.");
+  }else{
+    validarRegistroDuplicacao(arte,pg.temArtePagina===true);imagens.push({id:idArtePagina(c),rec:arte});
+    if(arte.camadas.length)c.temArtePagina=true;
+  }
   return c;
 }
 function erroEstrutura(mensagem){var e=new Error(mensagem);e.code="estrutura_incompleta";return e;}
@@ -8949,8 +9135,6 @@ document.addEventListener("keydown",function(ev){
 });
 
 /* ========== editor de desenho de um painel (tela 3) ========== */
-/* Impede que uma composição antiga abra a página errada após outra seleção. */
-var pedidoEditorPagina=0;
 function listaPlana(){
   var out=[];
   doc.paginas.forEach(function(pg,ip){
@@ -8963,7 +9147,6 @@ function abrirEditorDesenho(pid){
   var lista=listaPlana(), k=-1;
   lista.forEach(function(x,j){ if(x.pn.id===pid) k=j; });
   if(k<0) return;
-  pedidoEditorPagina++;
   selPainel=pid; pgAtual=lista[k].ip;
   var x=lista[k], ant=lista[k-1], prox=lista[k+1];
   window.EditorDesenho.abrir({
@@ -8981,13 +9164,12 @@ function abrirEditorDesenho(pid){
 
 /* Página composta: os painéis ficam unidos na base; a arte criada aqui é uma sobreposição independente. */
 function idArtePagina(pg){ return "pagina-inteira-"+pg.id; }
-function painelInteiroDaPagina(pg){ return {id:idArtePagina(pg),tamanho:"pagina",borda:0,sobreposto:true}; }
+function painelInteiroDaPagina(pg){ return {id:idArtePagina(pg),tamanho:"pagina",borda:0,sobreposto:true,temDesenho:pg.temArtePagina===true}; }
 function abrirEditorCapitulo(indice){
   if(!doc||!window.EditorDesenho) return;
   var ip=typeof indice==="number"?indice:pgAtual;
   if(ip<0||ip>=doc.paginas.length) return;
-  var pg=doc.paginas[ip], documentoAbertura=doc, pedidoAbertura=++pedidoEditorPagina;
-  pgAtual=ip; selPainel=null;
+  var capituloDaSessao=doc,pg=doc.paginas[ip],chaveArteDaSessao=idArtePagina(pg); pgAtual=ip; selPainel=null;
   var qtdPaineis=(pg.paineis||[]).length;
   var layoutAtual=pg.layoutPag||(qtdPaineis<=6?"U6":"GR"+(qtdPaineis+(qtdPaineis%2)));
   var arvoreAtual=arvoreDoLayout(layoutAtual);
@@ -9001,7 +9183,7 @@ function abrirEditorCapitulo(indice){
   alternarLateral(false); aviso("Montando a página…");
   /* A base é a página já diagramada. Ela aparece bloqueada; todo traço novo entra nas camadas acima. */
   compPagina(pg,1143,true).then(function(base){
-    if(pedidoAbertura!==pedidoEditorPagina||doc!==documentoAbertura||pgAtual!==ip||doc.paginas[ip]!==pg) return;
+    if(doc!==capituloDaSessao||!doc.paginas||doc.paginas[ip]!==pg||idArtePagina(pg)!==chaveArteDaSessao) return;
     window.EditorDesenho.abrir({
       painel:painelInteiroDaPagina(pg),
       titulo:"Capítulo "+(doc.numero||1)+" · Página "+(ip+1)+" · sobreposição",
@@ -9063,14 +9245,17 @@ function abrirEditorCapitulo(indice){
       aoFalharEstrutura:function(){informarFalhaEstrutural({editorPendente:true},true);},
       aviso:aviso,
       falas:function(){ return []; },
-      aoMudar:function(){ marcarSujo(); },
+      /* O editor só chama aoMudar depois de confirmar os pixels no IndexedDB. */
+      aoMudar:function(){
+        if(doc!==capituloDaSessao||!doc.paginas||doc.paginas[ip]!==pg||idArtePagina(pg)!==chaveArteDaSessao)return;
+        /* Páginas antigas podem não ter ID. Não crie nem migre identificadores. */
+        var idValido=(typeof pg.id==="string"&&pg.id.length>0)||(typeof pg.id==="number"&&isFinite(pg.id)&&pg.id!==0);
+        if(idValido)pg.temArtePagina=true;
+        marcarSujo();
+      },
       aoFechar:function(){ var st=tela.scrollTop; desenhar(); tela.scrollTop=st; }
     });
-  }).catch(function(err){
-    if(pedidoAbertura!==pedidoEditorPagina||doc!==documentoAbertura)return;
-    console.error("montar página:",err);
-    aviso("Não foi possível abrir esta página no editor.");
-  });
+  }).catch(function(err){ console.error("montar página:",err); aviso("Não foi possível abrir esta página no editor."); });
 }
 /* ========== modo de leitura: a história inteira, sem ferramentas ========== */
 function limitarZoomLeitura(valor){var n=Number(valor);return Math.max(50,Math.min(250,isFinite(n)?n:100));}
@@ -9278,6 +9463,7 @@ async function compPagina(pg,W,semSobre){
   /* As camadas do editor de página formam a sobreposição final, sem alterar painel algum. */
   if(!semSobre){
     var artePagina=await window.EditorDesenho.compor(idArtePagina(pg),painelInteiroDaPagina(pg),1600,false);
+    if(pg.temArtePagina===true&&!artePagina)throw new Error("A arte de sobreposição desta página não está disponível. A composição foi interrompida.");
     if(artePagina) cx.drawImage(artePagina,0,0,W,H);
   }
   return out;
