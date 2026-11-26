@@ -1497,7 +1497,7 @@ window.MesaNuvem={
   url:"https://qtydeqbrouoclyczplhx.supabase.co",
   publishableKey:"sb_publishable_nTbFjJ4kfbBeB2v34qIbKQ_R6luHnge",
   client:null,
-  r2:{ativo:false,url:"",accountId:"",bucket:""}
+  r2:{ativo:false,url:"https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev",accountId:"d90994b604856f19411d68d5fedfc888",bucket:"mesa-roteiro-backups"}
 };
 </script>
 <script>
@@ -7309,14 +7309,16 @@ async function sha256Texto(texto){
   return Array.prototype.map.call(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0");}).join("");
 }
 async function prepararBackup(pacote){
-  var texto=JSON.stringify(pacote), soma=await sha256Texto(texto);
+  /* A integridade recebida descreve a versão anterior, nunca o conteúdo a recalcular. */
+  var corpo=Object.create(null);Object.keys(pacote).forEach(function(k){if(k!=="integridade")corpo[k]=pacote[k];});
+  var texto=JSON.stringify(corpo), soma=await sha256Texto(texto);
   pacote.integridade={algoritmo:soma?"SHA-256":"indisponivel",conteudo:soma,tamanho:texto.length};
   return JSON.stringify(pacote,null,2);
 }
 async function verificarTextoBackup(texto){
   var p=JSON.parse(texto), i=p.integridade;
   if(!i||i.algoritmo!=="SHA-256"||!i.conteudo) return {ok:true,legado:true,pacote:p};
-  var copia={}; Object.keys(p).forEach(function(k){if(k!=="integridade") copia[k]=p[k];});
+  var copia=Object.create(null); Object.keys(p).forEach(function(k){if(k!=="integridade") copia[k]=p[k];});
   var soma=await sha256Texto(JSON.stringify(copia));
   return {ok:!!soma&&soma===i.conteudo,legado:false,pacote:p};
 }
