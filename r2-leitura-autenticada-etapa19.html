@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/YhBR+JAdDJMXgWFlufmJ+fUaWaMTNzdZsnCKV4kAkY='; style-src 'sha256-jDcAQ/GmkG1U6A0K5VX47+T6T1DqwYiDCAmEw+guTbM='; connect-src https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/token https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/user https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/logout https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev/v1/downloads https://mesa-midia.mesa-roteiro-d90994b6.workers.dev/v2/midia/downloads https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com/mesa-roteiro-backups/ https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com/mesa-roteiro-midia/; worker-src 'none'; base-uri 'none'; form-action 'none'"><title>Conferir leitura autenticada R2</title><style>body{font:17px system-ui,sans-serif;color:#172333;background:#f5f7fb;margin:24px}main{max-width:760px;margin:auto;padding:24px;background:white;border:1px solid #ccd5e2;border-radius:12px}p{line-height:1.5}label{display:block;margin:16px 0}input{display:block;width:100%;box-sizing:border-box;font:inherit;padding:10px;margin-top:6px}button{font:inherit;padding:12px 18px}pre{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}</style></head>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-B7ajgF2pWEBVhLwtk3YjtZnP8c7LfwUz0Leeq8FKr08='; style-src 'sha256-jDcAQ/GmkG1U6A0K5VX47+T6T1DqwYiDCAmEw+guTbM='; connect-src https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/token https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/user https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/logout https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev/v1/downloads https://mesa-midia.mesa-roteiro-d90994b6.workers.dev/v2/midia/downloads https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com/mesa-roteiro-backups/ https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com/mesa-roteiro-midia/; worker-src 'none'; base-uri 'none'; form-action 'none'"><title>Conferir leitura autenticada R2</title><style>body{font:17px system-ui,sans-serif;color:#172333;background:#f5f7fb;margin:24px}main{max-width:760px;margin:auto;padding:24px;background:white;border:1px solid #ccd5e2;border-radius:12px}p{line-height:1.5}label{display:block;margin:16px 0}input{display:block;width:100%;box-sizing:border-box;font:inherit;padding:10px;margin-top:6px}button{font:inherit;padding:12px 18px}pre{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}</style></head>
 <body><main><h1>Conferir leitura autenticada R2</h1><p>Este teste lê somente um backup e uma imagem fictícios conhecidos. Não abre sua biblioteca e não envia, altera ou apaga trabalhos.</p><p>Entre na conta indicada no chat. E-mail e senha seguem somente ao login oficial do projeto. A sessão deste teste fica apenas na memória da página e será encerrada ao terminar. Não feche antes da confirmação do logout.</p><form id="login" method="post" autocomplete="off"><label>E-mail<input id="email" type="email" required maxlength="320" autocomplete="off"></label><label>Senha<input id="password" type="password" required maxlength="4096" autocomplete="off"></label><button id="start" type="submit" disabled>Entrar e conferir arquivos fictícios</button></form><button id="retry" type="button" hidden>Tentar encerrar esta sessão novamente</button><p id="status" role="status">Pronto. Nenhum pedido foi enviado.</p><pre id="result"></pre><p>O teste usa uma sessão nova e solicita logout somente dela. Fechar a página não comprova o logout; o token de acesso já emitido pode continuar válido até expirar. Esta conferência não conclui a integração R2.</p></main><script type="module">const createAuthenticatedDiagnostic=function createAuthenticatedDiagnostic({origin,isBrave,transport=globalThis.fetch,cryptoProvider=globalThis.crypto,now=()=>Date.now(),makeSignal=ms=>AbortSignal.timeout(ms)}={}){
   const AUTH='https://qtydeqbrouoclyczplhx.supabase.co/auth/v1';
   const KEY='sb_publishable_nTbFjJ4kfbBeB2v34qIbKQ_R6luHnge';
@@ -11,7 +11,7 @@
     {id:'media',api:'https://mesa-midia.mesa-roteiro-d90994b6.workers.dev/v2/midia/downloads',bytes:1237,sha:'79d07b1a38dd9ea3d83f1e18d4cdd8bb4a67eab719c954cdce7c2ffdfbf3ce9f'},
   ];
   const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
-  const report={stage:19,outcome:'falha',reason:null,accountConfirmed:false,events:[],objects:[],logout:{attempted:false,status:null,confirmed:false}};
+  const report={stage:19,outcome:'falha',reason:null,accountConfirmed:false,identity:{loginIdPresent:false,loginOwnerMatches:null,loginEmailMatchesInput:null,userIdPresent:false,userIdFormatValid:false,userOwnerMatches:null,userEmailMatchesInput:null,nestedUserIdPresent:false},events:[],objects:[],logout:{attempted:false,status:null,confirmed:false}};
   let token=null,pending=null,retryPending=null,running=false,completed=false,primaryFailure=null;
   class Fault extends Error{constructor(code){super(code);this.code=code;}}
   const ensure=(ok,code)=>{if(!ok)throw new Fault(code);};
@@ -92,21 +92,30 @@
     return snapshot();
   }
   async function execute(credentials){
-    let uid=null,loginBody=null,email=null,password=null,loginAnswer=null;
+    let uid=null,loginBody=null,email=null,password=null,loginAnswer=null,submittedEmail=null;
     try{
       ensure(origin===SITE,'origem');
       let brave=false;try{brave=typeof isBrave==='function'&&await isBrave()===true;}catch{}
       ensure(brave,'navegador');
       email=credentials?.email;password=credentials?.password;
       ensure(typeof email==='string'&&email.length<=320&&!/[\r\n]/.test(email)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())&&typeof password==='string'&&password.length>0&&password.length<=4096,'credenciais');
-      loginBody=JSON.stringify({email:email.trim(),password});email=null;password=null;credentials=null;
+      submittedEmail=email.trim().toLowerCase();loginBody=JSON.stringify({email:email.trim(),password});email=null;password=null;credentials=null;
       const login=await request('login',AUTH+'/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:loginBody});loginBody=null;
       loginAnswer=await readJson(login);
       if(tokenValid(loginAnswer?.access_token))token=loginAnswer.access_token;
+      const loginId=loginAnswer?.user?.id;
+      report.identity.loginIdPresent=typeof loginId==='string';
+      report.identity.loginOwnerMatches=typeof loginId==='string'?await digest(encoder.encode(loginId))===OWNER_HASH:null;
+      report.identity.loginEmailMatchesInput=typeof loginAnswer?.user?.email==='string'?loginAnswer.user.email.trim().toLowerCase()===submittedEmail:null;
       loginAnswer=null;expectedResponse(login,200,'login');ensure(token,'login');
       const userResult=await request('user',AUTH+'/user',{method:'GET',headers:{apikey:KEY,Authorization:'Bearer '+token}});expectedResponse(userResult,200,'conta');
       const user=await readJson(userResult);uid=user?.id;
-      ensure(typeof uid==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(uid)&&await digest(encoder.encode(uid))===OWNER_HASH,'conta');
+      report.identity.userIdPresent=typeof uid==='string';
+      report.identity.userIdFormatValid=typeof uid==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(uid);
+      report.identity.userOwnerMatches=report.identity.userIdFormatValid?await digest(encoder.encode(uid))===OWNER_HASH:null;
+      report.identity.userEmailMatchesInput=typeof user?.email==='string'?user.email.trim().toLowerCase()===submittedEmail:null;
+      report.identity.nestedUserIdPresent=typeof user?.user?.id==='string';
+      ensure(report.identity.userIdFormatValid&&report.identity.userOwnerMatches===true,'conta');
       report.accountConfirmed=true;
       for(const fixture of fixtures){
         let authorization=null,target=null;
@@ -123,7 +132,7 @@
       completed=true;
     }catch(error){primaryFailure=error instanceof Fault?error.code:'rede';}
     finally{
-      credentials=null;email=null;password=null;loginBody=null;loginAnswer=null;uid=null;
+      credentials=null;email=null;password=null;loginBody=null;loginAnswer=null;uid=null;submittedEmail=null;
       if(token)await logout();
       running=false;
     }
