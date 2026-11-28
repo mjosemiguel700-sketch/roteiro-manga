@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/YhBR+JAdDJMXgWFlufmJ+fUaWaMTNzdZsnCKV4kAkY='; style-src 'sha256-jDcAQ/GmkG1U6A0K5VX47+T6T1DqwYiDCAmEw+guTbM='; connect-src https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/token https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/user https://qtydeqbrouoclyczplhx.supabase.co/auth/v1/logout https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev/v1/downloads https://mesa-midia.mesa-roteiro-d90994b6.workers.dev/v2/midia/downloads https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com/mesa-roteiro-backups/ https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com/mesa-roteiro-midia/; worker-src 'none'; base-uri 'none'; form-action 'none'"><title>Conferir leitura autenticada R2</title><style>body{font:17px system-ui,sans-serif;color:#172333;background:#f5f7fb;margin:24px}main{max-width:760px;margin:auto;padding:24px;background:white;border:1px solid #ccd5e2;border-radius:12px}p{line-height:1.5}label{display:block;margin:16px 0}input{display:block;width:100%;box-sizing:border-box;font:inherit;padding:10px;margin-top:6px}button{font:inherit;padding:12px 18px}pre{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}</style></head>
+<body><main><h1>Conferir leitura autenticada R2</h1><p>Este teste lê somente um backup e uma imagem fictícios conhecidos. Não abre sua biblioteca e não envia, altera ou apaga trabalhos.</p><p>Entre na conta indicada no chat. E-mail e senha seguem somente ao login oficial do projeto. A sessão deste teste fica apenas na memória da página e será encerrada ao terminar. Não feche antes da confirmação do logout.</p><form id="login" method="post" autocomplete="off"><label>E-mail<input id="email" type="email" required maxlength="320" autocomplete="off"></label><label>Senha<input id="password" type="password" required maxlength="4096" autocomplete="off"></label><button id="start" type="submit" disabled>Entrar e conferir arquivos fictícios</button></form><button id="retry" type="button" hidden>Tentar encerrar esta sessão novamente</button><p id="status" role="status">Pronto. Nenhum pedido foi enviado.</p><pre id="result"></pre><p>O teste usa uma sessão nova e solicita logout somente dela. Fechar a página não comprova o logout; o token de acesso já emitido pode continuar válido até expirar. Esta conferência não conclui a integração R2.</p></main><script type="module">const createAuthenticatedDiagnostic=function createAuthenticatedDiagnostic({origin,isBrave,transport=globalThis.fetch,cryptoProvider=globalThis.crypto,now=()=>Date.now(),makeSignal=ms=>AbortSignal.timeout(ms)}={}){
+  const AUTH='https://qtydeqbrouoclyczplhx.supabase.co/auth/v1';
+  const KEY='sb_publishable_nTbFjJ4kfbBeB2v34qIbKQ_R6luHnge';
+  const SITE='https://mjosemiguel700-sketch.github.io';
+  const OWNER_HASH='4836aa68b631df258caa7929fe366c110873e821ae5ca8505509a9a1437d18bc';
+  const R2='https://d90994b604856f19411d68d5fedfc888.r2.cloudflarestorage.com';
+  const fixtures=[
+    {id:'backup',api:'https://mesa-roteiro-backups-api.mesa-roteiro-d90994b6.workers.dev/v1/downloads',name:'20261127235700343-b06db0b96b869ee54ed0ba29f9394b8e.json',bytes:12822,sha:'dcb6e5647b27605f0e62eabcae5a4555d9870f8d9a31f3beb8c23af5c4d1bbd5'},
+    {id:'media',api:'https://mesa-midia.mesa-roteiro-d90994b6.workers.dev/v2/midia/downloads',bytes:1237,sha:'79d07b1a38dd9ea3d83f1e18d4cdd8bb4a67eab719c954cdce7c2ffdfbf3ce9f'},
+  ];
+  const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
+  const report={stage:19,outcome:'falha',reason:null,accountConfirmed:false,events:[],objects:[],logout:{attempted:false,status:null,confirmed:false}};
+  let token=null,pending=null,retryPending=null,running=false,completed=false,primaryFailure=null;
+  class Fault extends Error{constructor(code){super(code);this.code=code;}}
+  const ensure=(ok,code)=>{if(!ok)throw new Fault(code);};
+  const snapshot=()=>JSON.parse(JSON.stringify(report));
+  const digest=async bytes=>Array.from(new Uint8Array(await cryptoProvider.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
+  const tokenValid=value=>typeof value==='string'&&value.length>=20&&value.length<=8192&&!/[\r\n]/.test(value);
+  function until(promise,signal){
+    return new Promise((resolve,reject)=>{
+      const abort=()=>reject(new Fault('prazo'));
+      signal?.addEventListener?.('abort',abort,{once:true});
+      if(signal?.aborted)abort();
+      Promise.resolve(promise).then(resolve,reject).finally(()=>signal?.removeEventListener?.('abort',abort));
+    });
+  }
+  function discard(response){try{const p=response?.body?.cancel();p?.catch?.(()=>{});}catch{}}
+  async function request(step,url,init){
+    const signal=makeSignal(12000);
+    let response;
+    try{ensure(!signal?.aborted,'prazo');response=await until(transport(url,{...init,mode:'cors',credentials:'omit',redirect:'error',cache:'no-store',signal}),signal);}
+    catch(error){report.events.push({step,status:null,responseType:null});throw error instanceof Fault?error:new Fault('rede');}
+    const status=Number.isInteger(response?.status)&&response.status>=100&&response.status<=599?response.status:null;
+    const responseType=['basic','cors','opaque','opaqueredirect','default','error'].includes(response?.type)?response.type:null;
+    report.events.push({step,status,responseType});
+    return{response,signal,status,responseType};
+  }
+  function expectedResponse(result,status,code){
+    if(result.status!==status||result.responseType!=='cors'){discard(result.response);throw new Fault(code);}
+  }
+  async function readBytes(response,limit,signal){
+    const reader=response?.body?.getReader?.();ensure(reader,'resposta');
+    const chunks=[];let length=0,done=false;
+    try{
+      while(true){
+        const part=await until(reader.read(),signal);
+        if(part.done){done=true;break;}
+        ensure(part.value instanceof Uint8Array&&part.value.length<=limit-length,'leitura');
+        length+=part.value.length;chunks.push(part.value);
+      }
+    }finally{if(!done){try{reader.cancel()?.catch?.(()=>{});}catch{}}try{reader.releaseLock();}catch{}}
+    ensure(!signal?.aborted,'prazo');
+    const bytes=new Uint8Array(length);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
+  }
+  async function readJson(result){
+    const bytes=await readBytes(result.response,65536,result.signal);
+    try{return JSON.parse(decoder.decode(bytes));}catch{throw new Fault('resposta');}
+  }
+  function signedUrl(answer,uid,fixture){
+    ensure(answer&&typeof answer==='object'&&!Array.isArray(answer)&&typeof answer.url==='string'&&answer.url.length<=4096,'destino');
+    let url;try{url=new URL(answer.url);}catch{throw new Fault('destino');}
+    const path=fixture.id==='backup'?'/mesa-roteiro-backups/'+uid+'/sincronizacao/versoes/'+fixture.name:'/mesa-roteiro-midia/'+uid+'/midia/'+fixture.sha;
+    ensure(url.origin===R2&&url.pathname===path&&!url.port&&!url.username&&!url.password&&!url.hash,'destino');
+    const expected=['X-Amz-Algorithm','X-Amz-Credential','X-Amz-Date','X-Amz-Expires','X-Amz-SignedHeaders','X-Amz-Signature'];const seen=new Set();
+    for(const [key]of url.searchParams){ensure(expected.includes(key)&&!seen.has(key),'destino');seen.add(key);}
+    const q=url.searchParams,stamp=q.get('X-Amz-Date')||'',expiry=q.get('X-Amz-Expires')||'',credential=q.get('X-Amz-Credential')||'';
+    ensure(seen.size===6&&q.get('X-Amz-Algorithm')==='AWS4-HMAC-SHA256'&&q.get('X-Amz-SignedHeaders')==='host'&&/^[a-f0-9]{64}$/.test(q.get('X-Amz-Signature')||'')&&/^[1-9][0-9]{0,2}$/.test(expiry)&&+expiry<=900&&/^\d{8}T\d{6}Z$/.test(stamp),'destino');
+    const credentialParts=/^[A-Za-z0-9]+\/(\d{8})\/auto\/s3\/aws4_request$/.exec(credential);
+    ensure(credentialParts&&credentialParts[1]===stamp.slice(0,8),'destino');
+    const iso=stamp.slice(0,4)+'-'+stamp.slice(4,6)+'-'+stamp.slice(6,8)+'T'+stamp.slice(9,11)+':'+stamp.slice(11,13)+':'+stamp.slice(13,15)+'Z';
+    const signedAt=Date.parse(iso),clock=now();
+    ensure(Number.isFinite(signedAt)&&new Date(signedAt).toISOString().replace(/[-:]/g,'').replace('.000','')===stamp&&signedAt<=clock+1500,'destino');
+    ensure(Number.isSafeInteger(answer.expiresAt)&&answer.expiresAt>clock&&answer.expiresAt<=clock+901000&&Math.abs(answer.expiresAt-(signedAt+(+expiry)*1000))<=1500,'destino');
+    ensure(answer.headers&&typeof answer.headers==='object'&&!Array.isArray(answer.headers)&&Object.keys(answer.headers).length===0,'destino');
+    return url.href;
+  }
+  async function logout(){
+    report.logout.attempted=true;report.logout.confirmed=false;
+    try{
+      const result=await request('logout',AUTH+'/logout?scope=local',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+token}});
+      report.logout.status=result.status;discard(result.response);
+      ensure(result.status===204&&result.responseType==='cors','logout');
+      token=null;report.logout.confirmed=true;
+    }catch{report.logout.status=report.events.at(-1)?.step==='logout'?report.events.at(-1).status:null;}
+  }
+  function finish(){
+    if(token){report.outcome='logout-pendente';report.reason='logout';}
+    else if(completed&&report.logout.confirmed){report.outcome='confirmado';report.reason=null;}
+    else{report.outcome=['origem','navegador','credenciais'].includes(primaryFailure)?'bloqueado':'falha';report.reason=primaryFailure||'resposta';}
+    return snapshot();
+  }
+  async function execute(credentials){
+    let uid=null,loginBody=null,email=null,password=null,loginAnswer=null;
+    try{
+      ensure(origin===SITE,'origem');
+      let brave=false;try{brave=typeof isBrave==='function'&&await isBrave()===true;}catch{}
+      ensure(brave,'navegador');
+      email=credentials?.email;password=credentials?.password;
+      ensure(typeof email==='string'&&email.length<=320&&!/[\r\n]/.test(email)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())&&typeof password==='string'&&password.length>0&&password.length<=4096,'credenciais');
+      loginBody=JSON.stringify({email:email.trim(),password});email=null;password=null;credentials=null;
+      const login=await request('login',AUTH+'/token?grant_type=password',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:loginBody});loginBody=null;
+      loginAnswer=await readJson(login);
+      if(tokenValid(loginAnswer?.access_token))token=loginAnswer.access_token;
+      loginAnswer=null;expectedResponse(login,200,'login');ensure(token,'login');
+      const userResult=await request('user',AUTH+'/user',{method:'GET',headers:{apikey:KEY,Authorization:'Bearer '+token}});expectedResponse(userResult,200,'conta');
+      const user=await readJson(userResult);uid=user?.id;
+      ensure(typeof uid==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(uid)&&await digest(encoder.encode(uid))===OWNER_HASH,'conta');
+      report.accountConfirmed=true;
+      for(const fixture of fixtures){
+        let authorization=null,target=null;
+        try{
+          const body=fixture.id==='backup'?{name:fixture.name}:{sha256:fixture.sha};
+          const result=await request(fixture.id+'-authorize',fixture.api,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});expectedResponse(result,200,'autorizacao');
+          authorization=await readJson(result);target=signedUrl(authorization,uid,fixture);authorization=null;
+          const file=await request(fixture.id+'-read',target,{method:'GET',headers:{}});target=null;expectedResponse(file,200,'leitura');
+          const bytes=await readBytes(file.response,fixture.bytes,file.signal);ensure(bytes.length===fixture.bytes,'leitura');
+          const matches=await digest(bytes)===fixture.sha;ensure(matches,'hash');
+          report.objects.push({id:fixture.id,bytes:bytes.length,sha256Equal:matches});
+        }finally{authorization=null;target=null;}
+      }
+      completed=true;
+    }catch(error){primaryFailure=error instanceof Fault?error.code:'rede';}
+    finally{
+      credentials=null;email=null;password=null;loginBody=null;loginAnswer=null;uid=null;
+      if(token)await logout();
+      running=false;
+    }
+    return finish();
+  }
+  return Object.freeze({
+    run(credentials){if(!pending){running=true;let input={email:credentials?.email,password:credentials?.password};pending=Promise.resolve().then(()=>{const supplied=input;input=null;return execute(supplied);});}return pending;},
+    retryLogout(){
+      if(running||!token)return Promise.resolve(snapshot());
+      if(!retryPending){running=true;retryPending=Promise.resolve().then(async()=>{try{await logout();return finish();}finally{running=false;retryPending=null;}});}return retryPending;
+    },
+    needsAttention(){return running||token!==null;},
+  });
+};
+const form=document.getElementById('login'),emailField=document.getElementById('email'),passwordField=document.getElementById('password'),button=document.getElementById('start'),retry=document.getElementById('retry'),status=document.getElementById('status'),output=document.getElementById('result');
+const diagnostic=createAuthenticatedDiagnostic({origin:location.origin,isBrave:()=>navigator.brave?.isBrave?.()});
+function show(report){output.textContent=JSON.stringify(report,null,2);retry.hidden=report.outcome!=='logout-pendente';status.textContent=report.outcome==='confirmado'?'Teste concluído: dois arquivos fictícios conferidos e logout desta sessão confirmado.':report.outcome==='logout-pendente'?'O teste não foi finalizado porque o logout não foi confirmado. Mantenha esta página aberta e tente encerrar a sessão novamente.':'Teste não confirmado. Nenhum trabalho real foi aberto. Confira o resultado abaixo.';}
+form.addEventListener('submit',async event=>{event.preventDefault();if(button.disabled)return;button.disabled=true;let email=emailField.value,password=passwordField.value;emailField.value='';passwordField.value='';emailField.disabled=true;passwordField.disabled=true;status.textContent='Conferindo somente os dois arquivos fictícios. Aguarde o encerramento da sessão.';const work=diagnostic.run({email,password});email=null;password=null;show(await work);});
+retry.addEventListener('click',async()=>{retry.disabled=true;status.textContent='Tentando encerrar somente a sessão deste teste.';try{show(await diagnostic.retryLogout());}finally{retry.disabled=false;}});
+window.addEventListener('beforeunload',event=>{if(diagnostic.needsAttention()){event.preventDefault();event.returnValue='';}});
+button.disabled=location.origin!=='https://mjosemiguel700-sketch.github.io';
+if(button.disabled)status.textContent='Teste bloqueado neste endereço. Nenhum pedido foi enviado.';</script></body></html>
